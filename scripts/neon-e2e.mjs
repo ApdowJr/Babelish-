@@ -218,5 +218,117 @@ if (jwtA) {
   ok('object storage tests', false, 'no JWT for user A');
 }
 
+console.log('\n── 6. Content pipeline: drafts → human approval → version audit ──');
+{
+  const admin = await import('../functions/api/admin.ts');
+  const pool = new Pool({ connectionString: env.DATABASE_URL_UNPOOLED, max: 1 });
+  const q = async (text, params) => pool.query(text, params);
+
+  try {
+    await admin.ensureSchema(q);
+    ok('content schema ensured (idempotent DDL)', true);
+
+    const validChapter = {
+      cefr: 'A1',
+      title: `E2E chapter ${stamp}`,
+      description: 'pipeline fixture',
+      lessons: [
+        {
+          title: 'Greetings',
+          goal: 'greet someone',
+          exercises: [
+            { type: 'choose', prompt: 'Pick', question: 'hola', options: ['hello', 'bye', 'ok', 'no'], answer: ['hello'] },
+            { type: 'choose', prompt: 'Pick', question: 'adiós', options: ['bye', 'hi', 'yes', 'up'], answer: ['bye'] },
+            { type: 'choose', prompt: 'Pick', question: 'gracias', options: ['thanks', 'please', 'sorry', 'now'], answer: ['thanks'] },
+            { type: 'type', prompt: 'Translate into Spanish', question: 'good morning', answer: ['buenos días', 'buenos dias'] },
+          ],
+        },
+      ],
+    };
+    const broken = { ...validChapter, lessons: [{ ...validChapter.lessons[0], exercises: [] }] };
+    ok('validator rejects lesson without exercises', admin.validateChapterPayload(broken).ok === false);
+    ok('validator accepts a well-formed chapter', admin.validateChapterPayload(validChapter).ok === true);
+    ok(
+      'report validator rejects unknown kind',
+      admin.validateReport({ kind: 'nonsense', reason: 'x' }).ok === false
+    );
+    ok(
+      'report validator accepts a real one',
+      admin.validateReport({ kind: 'message', reason: 'Sounds wrong', quote: 'hola', languageId: 'es' }).ok === true
+    );
+
+    const { id: draftA } = await admin.insertDraft(q, {
+      languageId: 'es',
+      title: validChapter.title,
+      cefr: 'A1',
+      source: 'ai',
+      payload: validChapter,
+    });
+    ok('draft inserted into review queue', /^cd_[0-9a-f]{12}$/.test(draftA), `id=${draftA}`);
+
+    const before = await admin.fetchDashboard(q);
+    ok('dashboard lists the queued draft', before.drafts.some((d) => d.id === draftA));
+
+    const approve1 = await admin.approveDraft(q, draftA, 'e2e');
+    ok('first approval → version 1', approve1.ok && approve1.version === 1);
+
+    const approve2 = await admin.approveDraft(q, draftA, 'e2e');
+    ok('re-approval → version 2 (audit never silent)', approve2.ok && approve2.version === 2);
+
+    const { id: draftB } = await admin.insertDraft(q, {
+      languageId: 'es',
+      title: `E2E rejected ${stamp}`,
+      cefr: 'A1',
+      source: 'ai',
+      payload: validChapter,
+    });
+    const reject = await admin.rejectDraft(q, draftB, 'e2e', 'inaccurate');
+    ok('rejection recorded', reject.ok === true);
+
+    const after = await admin.fetchDashboard(q);
+    const rowA = after.drafts.find((d) => d.id === draftA);
+    const versionsA = after.versions.filter((v) => v.chapter_ref === draftA);
+    ok('draft A status = approved', rowA?.status === 'approved', `by=${rowA?.reviewed_by ?? '?'}`);
+    ok('draft B status = rejected', after.drafts.find((d) => d.id === draftB)?.status === 'rejected');
+    ok('2 version rows for draft A', versionsA.length === 2, `versions=${versionsA.map((v) => v.version).join(',')}`);
+    ok(
+      'rejection wrote no version row',
+      after.versions.filter((v) => v.chapter_ref === draftB).length === 0
+    );
+    const html = admin.renderDashboard(after);
+    ok('dashboard HTML escapes user content', !html.includes('<script>alert') && html.includes('e2e'));
+
+    const { id: reportId } = await admin.insertReport(q, {
+      userId: A.user?.id ?? 'e2e',
+      languageId: 'es',
+      kind: 'message',
+      quote: '<script>alert(1)</script> kiero tembo',
+      reason: 'Sounds wrong',
+    });
+    ok('learner report queued', /^lr_[0-9a-f]{12}$/.test(reportId), `id=${reportId}`);
+    const resolve = await admin.resolveReport(q, reportId, 'checked with a native speaker');
+    ok('report resolved with note', resolve.ok === true);
+    const dash2 = await admin.fetchDashboard(q);
+    const report = dash2.reports.find((r) => r.id === reportId);
+    ok('report status = resolved', report?.status === 'resolved');
+    ok('report quote is escaped in HTML', dash2 && admin.renderDashboard(dash2).includes('&lt;script&gt;'));
+
+    await q('delete from content_versions where chapter_ref in ($1, $2)', [draftA, draftB]);
+    await q('delete from content_drafts where id in ($1, $2)', [draftA, draftB]);
+    await q('delete from learner_reports where id = $1', [reportId]);
+    const cleaned = await admin.fetchDashboard(q);
+    ok(
+      'fixtures cleaned up',
+      !cleaned.drafts.some((d) => d.id === draftA || d.id === draftB) &&
+        !cleaned.versions.some((v) => v.chapter_ref === draftA) &&
+        !cleaned.reports.some((r) => r.id === reportId)
+    );
+  } catch (err) {
+    ok('content pipeline suite', false, err instanceof Error ? err.message : String(err));
+  } finally {
+    await pool.end();
+  }
+}
+
 console.log(`\n── Result: ${pass} passed, ${fail} failed ──────────────`);
 process.exit(fail > 0 ? 1 : 0);

@@ -46,7 +46,8 @@
     "lint": "expo lint",
     "build": "expo export --platform android --platform ios",
     "check:functions": "tsc -p functions/tsconfig.json --noEmit",
-    "neon:e2e": "node scripts/neon-e2e.mjs"
+    "neon:e2e": "node --experimental-strip-types scripts/neon-e2e.mjs",
+    "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs"
   },
   "private": true
 }

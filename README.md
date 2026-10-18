@@ -26,6 +26,9 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Learner profile** — name, job, interests, goals, native language | ✅ Feeds every AI prompt with their real life |
 | **Adaptive difficulty** — per-skill analytics pick the weakest skill | ✅ Tutor level auto-rises A1 → B2 |
 | **Daily plan** — "~10 min" card tuned to due reviews + weak spots | ✅ Includes a real streak counter |
+| **Review dashboard** — AI drafts need human approval to publish | ✅ `/admin` (deployed) + `npm run review:dashboard` (local) |
+| **Report 🚩** — "this sounds wrong" on any tutor message | ✅ Offline-first queue → human review queue |
+| **Versioned curriculum** — append-only audit of every approval | ✅ Version row written before status ever flips |
 
 Languages live: Spanish, Arabic, Mandarin, French, Hindi, Japanese, German,
 Portuguese, Russian, Swahili.

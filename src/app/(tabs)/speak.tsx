@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
@@ -33,6 +34,7 @@ import {
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
+import { flushReportQueue, sendReport } from '@/lib/reports';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 type ChatMessage = TutorMessage & { fromVoice?: boolean };
@@ -59,7 +61,7 @@ const BAND_SOFT_BG = {
 const SLOW_RATE = 0.55;
 
 export default function SpeakScreen() {
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const { targetLanguageId, nativeLanguageId } = usePreferences();
   const { lessonsCompleted } = useLearning();
   const { profile } = useProfile();
@@ -272,6 +274,37 @@ export default function SpeakScreen() {
     const draft = practice.draft.trim();
     if (!draft) return;
     finishPractice(phrase, draft);
+  }
+
+  // Drain reports queued while offline (or before the endpoint existed).
+  useEffect(() => {
+    void flushReportQueue(getAccessToken);
+  }, [getAccessToken]);
+
+  function reportMessage(item: ChatMessage) {
+    Alert.alert('Report this message', 'What is wrong with it?', [
+      { text: 'Sounds wrong', onPress: () => void submitReport('Sounds wrong', item.text) },
+      {
+        text: 'Wrong translation',
+        onPress: () => void submitReport('Wrong translation', item.translation ?? item.text),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
+  async function submitReport(reason: string, quote: string) {
+    const outcome = await sendReport(getAccessToken, {
+      languageId: targetLanguageId,
+      kind: 'message',
+      quote,
+      reason,
+    });
+    Alert.alert(
+      'Thanks for the flag 🚩',
+      outcome === 'sent'
+        ? 'Sent to the content review queue.'
+        : 'Saved on this device — it will sync automatically.'
+    );
   }
 
   function toggleReveal(index: number) {
@@ -601,6 +634,15 @@ export default function SpeakScreen() {
                   <Text style={styles.listenLabel}>
                     {revealed.includes(index) ? 'Hide' : 'Translate'}
                   </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => reportMessage(item)}
+                  style={styles.listenRow}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Report this message as wrong"
+                >
+                  <Ionicons name="flag-outline" size={14} color={colors.textFaint} />
                 </Pressable>
               </View>
             </View>

@@ -63,6 +63,18 @@ export async function requestDownloadUrl(jwt: string, key: string): Promise<{ ur
   );
 }
 
+export type ReportPayload = {
+  languageId: string;
+  kind: string;
+  quote: string;
+  reason: string;
+};
+
+/** Files a "this sounds wrong" report into the human review queue. */
+export async function postReport(jwt: string, report: ReportPayload): Promise<{ id: string }> {
+  return call<{ id: string }>('/api/reports', jwt, { method: 'POST', body: report });
+}
+
 /** Uploads bytes to a presigned URL (S3-compatible; content type is signed). */
 export async function uploadWithPresignedUrl(
   uploadUrl: string,

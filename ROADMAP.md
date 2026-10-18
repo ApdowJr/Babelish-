@@ -83,10 +83,12 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] Proofs: 57/57 node tests (analytics · daily plan · adaptive · profile prompt, compiled + run standalone) · `npx tsc --noEmit` · `npx expo lint` · `npx expo-doctor` 20/20 · `npm run build` (Hermes bundles, bytecode-verified) · `npm run neon:e2e` 15/15 regression
 
 ### 🗓 Phase 4 — Trust & accuracy (the moat)
-- [ ] Human review dashboard: every AI-drafted chapter must be approved before publish
-- [ ] Native-speaker contributor program (per language, paid review)
-- [ ] Learner reporting: "this sounds wrong" → review queue
-- [ ] Versioned curriculum: content changes are auditable, never silently rewrite history
+- [x] Human review dashboard: every AI-drafted chapter must be approved before publish — `/admin` on the `api` Function **and** runnable locally today via `npm run review:dashboard`; one shared implementation (`functions/api/admin.ts`), HTTP Basic gated (constant-time compare), full-payload review + approve/reject with notes
+- [x] Native-speaker contributor program (per language, paid review) — program defined: roster (6 beta languages), per-cycle deliverables, reviewer checklist, rates contract; `docs/CONTENT_REVIEW.md` (onboarding is operational)
+- [x] Learner reporting: "this sounds wrong" → review queue — 🚩 flag on every tutor bubble → queue-first on-device (never lost) → `POST /api/reports` (JWT) → dashboard queue → human resolves with a note
+- [x] Versioned curriculum: content changes are auditable, never silently rewrite history — `content_versions` is append-only and written **before** the status flip; rejections write no version; publishes ride git; version history rendered on the dashboard
+- [x] Proofs: 46/46 standalone tests (XSS escaping · validators · dashboard rendering) · `npm run neon:e2e` **35/35** (20 new content-pipeline checks against the live DB) · live dashboard smoke (submit → approve → v1, reject, report resolve) · `tsc` app + functions · `expo lint` · `expo-doctor` 20/20 · `npm run build`
+- [ ] Deploy `api` Function changes (`/admin` + `/api/reports` + `ADMIN_PASSWORD`) — requires a Neon API key (batch with the final git push); the local dashboard + queued reports cover the gap until then
 
 ### 🗓 Phase 5 — Retention & scale
 - [ ] Streaks, XP, leagues (ethical gamification — no dark patterns)
