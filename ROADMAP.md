@@ -1,0 +1,159 @@
+# Nativa — Roadmap to the 2027 Language Learning App
+
+> **Vision:** An AI language tutor that speaks *every* language like a native speaker —
+> accurate curriculum, real pronunciation, real scenarios, personalized to each learner.
+
+Working name: **Nativa** (rename freely; it's one constant in `app.json`).
+
+---
+
+## 1. Product Pillars (what "real" means)
+
+| Pillar | 2027 standard |
+|---|---|
+| **Native-level AI speech** | The AI speaks in the target language at all times, with locale-correct TTS voices (accent, gender, region), natural pacing, and slang/formality awareness (tú vs usted, register shifts). |
+| **Accurate chapters** | Curriculum per language follows real proficiency frameworks (CEFR A1→C2), not invented content. Every chapter passes a human-review pipeline before shipping. |
+| **Real scenarios** | Role-play from real life: airport, job interview, doctor, dating, bargaining in a market — each scenario is scripted *and* free-form, with culturally accurate behavior. |
+| **Pronunciation** | Speech-to-text + phoneme-level scoring. The learner speaks; we score accuracy and show exactly which sounds to fix, with reference audio from the native voice. |
+| **Personalization** | Examples use the learner's own name, job, hobbies, and past mistakes. The AI adapts difficulty live based on performance. |
+
+---
+
+## 2. Tech Stack (locked)
+
+| Layer | Choice | Why |
+|---|---|---|
+| App | **Expo (React Native) + expo-router** | One codebase, OTA updates, native audio APIs |
+| Language | **TypeScript** everywhere | Safety as the codebase grows |
+| Auth/DB | **Supabase** (Auth + Postgres + RLS) | Real email/password + OAuth, row-level security per user |
+| AI (chat) | **OpenAI-compatible LLM API** (configurable URL/model) | Swap providers without code changes |
+| TTS | **expo-speech** (on-device native voices) + cloud TTS API | Device voices give instant, offline pronunciation; cloud voices give studio quality |
+| STT/scoring | Speech-recognition adapter (pluggable) | Score pronunciation per phoneme |
+| State | React Context + hooks (Zustand later if needed) | Simple until it isn't |
+
+**Configuration:** all secrets live in `.env` (see `.env.example`). The app runs in
+**demo mode** (scripted AI) until you paste real keys — so the UI is always testable.
+
+---
+
+## 3. Phases
+
+### ✅ Phase 0 — Foundations (this build)
+- [x] Project scaffold (Expo + TypeScript + expo-router)
+- [x] Design system: tokens (color, spacing, typography, radius), core components
+- [x] **Real auth**: Sign up / Sign in / Forgot password via Supabase, session persistence
+- [x] Auth gate + protected routes
+- [x] Tab shell: Home · Learn · Speak · Profile
+- [x] AI service layer (chat + TTS adapters) with native-speaker system prompts
+- [x] Seed language data (real dialects, native names, speaker counts)
+
+### 🗓 Phase 1 — Learning content engine
+- [ ] Chapter model: units → lessons → exercises (multiple choice, typing, listening, speaking)
+- [ ] CEFR-aligned curriculum generator (AI-drafted → human-approved flag in DB)
+- [ ] Language detail screen: chapter list with progress
+- [ ] Lesson player with 4 exercise types
+- [ ] Spaced-repetition review (leitner boxes) for vocabulary
+
+### 🗓 Phase 2 — Speaking & pronunciation
+- [ ] Scenario role-play screen (AI stays in character, in-language only)
+- [ ] Voice I/O: record → STT → AI reply → TTS playback
+- [ ] Pronunciation scoring with per-sound feedback + reference audio
+- [ ] "Slow down / repeat / translate" controls during conversations
+
+### 🗓 Phase 3 — Personalization
+- [ ] Learner profile (name, job, interests, native language, goals)
+- [ ] Context injection: AI generates examples using the learner's real life
+- [ ] Adaptive difficulty from per-skill analytics (listening/speaking/reading/writing)
+- [ ] Daily plan: 10-minute path tuned to weak spots
+
+### 🗓 Phase 4 — Trust & accuracy (the moat)
+- [ ] Human review dashboard: every AI-drafted chapter must be approved before publish
+- [ ] Native-speaker contributor program (per language, paid review)
+- [ ] Learner reporting: "this sounds wrong" → review queue
+- [ ] Versioned curriculum: content changes are auditable, never silently rewrite history
+
+### 🗓 Phase 5 — Retention & scale
+- [ ] Streaks, XP, leagues (ethical gamification — no dark patterns)
+- [ ] Offline lessons (download packs per language)
+- [ ] Notifications: smart reminders based on the learner's own schedule
+- [ ] Referral + family plans; free tier = 1 scenario/day, premium = unlimited
+
+### 🗓 Phase 6 — Launch
+- [ ] App Store / Play Store compliance (kids' privacy, speech data handling)
+- [ ] Analytics events (privacy-first, no third-party ad SDKs)
+- [ ] Beta per language (start: Spanish, Arabic, Japanese, French, Hindi, Mandarin)
+- [ ] Feedback loop → weekly curriculum updates
+
+---
+
+## 4. AI Architecture (how "native speaker" is engineered)
+
+```
+System prompt (per language + dialect + register)
+  + learner profile (name, job, level, weak spots)
+  + conversation history
+  + lesson context (current chapter/scenario)
+        │
+        ▼
+   LLM ──► replies strictly in target language (enforced by prompt + validator)
+        │
+        ├──► TTS (locale voice: e.g. es-MX female, ar-EG male, ja-JP)
+        └──► translation layer (separate call, user-toggleable)
+```
+
+Rules baked into every AI call:
+1. **In-language-only mode** — the AI never breaks into English (except when the learner taps "explain").
+2. **Register control** — formal/informal, regional vocabulary (vosotros vs ustedes, etc.).
+3. **Level adaptation** — CEFR band controls sentence complexity and idiom density.
+4. **Correction protocol** — mistakes get a gentle recast in-language, then the correction.
+5. **Output validation** — responses are checked against the expected script family
+   (e.g., Arabic → Arabic script) before display; invalid output is retried.
+
+## 5. Accuracy Pipeline (why our chapters are real)
+
+```
+Draft (AI, CEFR-mapped) → Automated checks → Human native review → Published
+                                                          │
+Learner report ──────────────► Review queue ◄──────────────┘
+```
+
+- No chapter ships without a human approval flag in Postgres.
+- Every published version is immutable; edits create new versions.
+- Contributors are native speakers with linguistic credentials where possible.
+
+## 6. Monetization (aligned with learning, not against it)
+
+- **Free:** 1 full chapter per language + 1 scenario/day + basic AI chat (text).
+- **Premium (~$12/mo):** unlimited scenarios, voice conversations, pronunciation scoring, offline packs, all languages.
+- **Family / Student tiers** at launch+3 months.
+
+## 7. Success Metrics (North stars)
+
+- **D1 / D7 retention** per language cohort
+- **Conversations completed per learner/week** (speaking minutes)
+- **Pronunciation score improvement** over 30 days
+- **Human-review pass rate** (curriculum quality proxy)
+- **Free → Premium conversion**
+
+## 8. Key Risks & Mitigations
+
+| Risk | Mitigation |
+|---|---|
+| AI invents inaccurate content | Mandatory human review gate (Phase 4) before any curriculum publishes |
+| Bad TTS accents (robotic/wrong region) | Per-locale voice selection + cloud TTS fallback + contributor audio for hero content |
+| API costs balloon | Cache lesson content, cap free-tier calls, smaller models for translations |
+| Speech privacy concerns | Consent copy, on-device STT where possible, delete-raw-audio default |
+
+---
+
+## How to run what's built so far
+
+```bash
+cd nativa
+cp .env.example .env      # paste Supabase + AI keys (or leave blank → demo mode)
+npm install
+npx expo start            # scan QR with Expo Go, or press i / a
+```
+
+Roadmap order is deliberate: **auth + shell now → content → voice → personalization → trust.**
+The trust phase (human review) is what makes this *real* rather than another AI wrapper.
