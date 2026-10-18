@@ -21,7 +21,8 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
 | **Translations** — toggle English under every AI message | ✅ |
 | **Language library** — real dialects, native names, speaker counts | ✅ 10 languages |
-| **Voice input & pronunciation scoring** | 🗓 Phase 2 |
+| **Voice input** — speak your replies (record → Whisper STT → AI reply) | ✅ Any OpenAI-compatible endpoint |
+| **Pronunciation scoring** — per-word green/amber/red chips + reference audio | ✅ Accent-blind, works typed in demo mode |
 
 Languages live: Spanish, Arabic, Mandarin, French, Hindi, Japanese, German,
 Portuguese, Russian, Swahili.
@@ -46,7 +47,9 @@ npx expo start          # scan the QR with Expo Go (SDK 58)
    project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
 3. **AI tutor** — put any OpenAI-compatible endpoint in `.env`
    (OpenAI, OpenRouter, Groq, or a local server). The tutor gets a native-speaker system
-   prompt per language and can't break into English.
+   prompt per language and can't break into English. The same endpoint powers **voice
+   input** (`/audio/transcriptions`, `whisper-1` by default — override with
+   `EXPO_PUBLIC_AI_STT_MODEL`); without a key, speaking practice still works by typing.
 
 Without keys, the app stays fully usable in **demo mode** — scripted native lines,
 on-device accounts — and the Profile tab shows exactly what's connected.
@@ -63,10 +66,11 @@ src/
     review.tsx          # daily Leitner review of missed words
   components/           # Button · TextField · Chip · Logo · Screen
   context/              # AuthContext (Neon Auth · Supabase · demo mode)
-  lib/                  # neon auth & api clients · supabase · ai tutor engine · curriculum service & SRS
+  lib/                  # neon auth & api clients · supabase · ai tutor engine · voice recorder · pronunciation scoring · curriculum service & SRS
   state/                # preferences · learning (progress, vocab, XP · cloud sync)
   data/
     languages.ts        # language seed data (real dialects & scenarios)
+    practice.ts         # per-scenario key phrases for pronunciation practice
     curriculum/         # bundled CEFR content (Spanish A1 full + 9 samplers)
   theme/                # design tokens (colors · spacing · typography)
 functions/

@@ -65,11 +65,14 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] Proofs: `npm run neon:e2e` (15/15 checks) · `npm run build` · `npx expo lint` · `tsc` (app + functions) · `expo-doctor` 20/20
 - [ ] Neon **AI Gateway** — paid-plan feature; app keeps OpenAI-compatible `EXPO_PUBLIC_AI_*` path (re-add `aiGateway: true` to `neon.ts` after upgrade)
 
-### 🗓 Phase 2 — Speaking & pronunciation
-- [ ] Scenario role-play screen (AI stays in character, in-language only)
-- [ ] Voice I/O: record → STT → AI reply → TTS playback
-- [ ] Pronunciation scoring with per-sound feedback + reference audio
-- [ ] "Slow down / repeat / translate" controls during conversations
+### ✅ Phase 2 — Speaking & pronunciation (shipped 2026-10-18)
+- [x] Scenario role-play studio on the Speak tab: scenario chips · in-language-only tutor (existing native-speaker prompt) · per-scenario key-phrase phrasebook for all 10 languages (`src/data/practice.ts`)
+- [x] **Voice I/O**: record (`expo-audio`, in Expo Go) → STT via OpenAI-compatible `/audio/transcriptions` (`whisper-1` by default, `EXPO_PUBLIC_AI_STT_MODEL`) → AI reply → native TTS playback; 30s cap, mic-permission flow, graceful "type instead" fallback
+- [x] **Pronunciation scoring** (`src/lib/pronunciation.ts`): word-level Levenshtein alignment → exact/close/missed per word + extras, accent/tashkeel/punctuation-blind, char-based for 中文/日本語; score card with per-word color chips + "I heard" transcript + TTS reference audio (slow); best score per phrase persisted (`src/lib/speaking.ts`)
+- [x] **Conversation controls**: Listen (repeat) · 🐢 Slow (rate 0.55) · per-message Translate on every tutor bubble + global translation toggle
+- [x] Works in **demo mode**: typed practice gets the same word-by-word scoring without any AI key; voice needs the same `EXPO_PUBLIC_AI_*` endpoint as chat
+- [x] Proofs: 19/19 scoring-engine tests (compiled + node-run) · `npx tsc --noEmit` · `npx expo lint` · `npx expo-doctor` 20/20 · `npm run build` (Hermes bundles)
+- [ ] On-device pass in Expo Go (mic record → STT round-trip needs a real phone + AI key)
 
 ### 🗓 Phase 3 — Personalization
 - [ ] Learner profile (name, job, interests, native language, goals)

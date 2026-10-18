@@ -14,6 +14,7 @@ import { getLanguage, type Language } from '@/data/languages';
 const API_URL = process.env.EXPO_PUBLIC_AI_API_URL?.replace(/\/+$/, '');
 const API_KEY = process.env.EXPO_PUBLIC_AI_API_KEY;
 const MODEL = process.env.EXPO_PUBLIC_AI_MODEL ?? 'gpt-4o-mini';
+const STT_MODEL = process.env.EXPO_PUBLIC_AI_STT_MODEL ?? 'whisper-1';
 
 export const isAIConfigured = Boolean(
   API_URL && API_KEY && !API_KEY.includes('your-key') && !API_KEY.includes('sk-...')
@@ -177,13 +178,42 @@ function scriptMatches(text: string, language: Language): boolean {
 /* ── Speech (native voices via expo-speech) ─────────────────────────────── */
 
 /** Speaks text with the locale's native voice, e.g. es-ES, ar-EG, ja-JP. */
-export function speakNative(text: string, ttsLocale: string): void {
+export function speakNative(text: string, ttsLocale: string, rate = 0.92): void {
   Speech.stop();
-  Speech.speak(text, { language: ttsLocale, rate: 0.92, pitch: 1.0 });
+  Speech.speak(text, { language: ttsLocale, rate, pitch: 1.0 });
 }
 
 export function stopSpeaking(): void {
   Speech.stop();
+}
+
+/* ── Speech-to-text (OpenAI-compatible /audio/transcriptions) ────────────── */
+
+/**
+ * Transcribes a recorded audio file (m4a from expo-audio) to text in the
+ * target language. Needs the same AI endpoint + key as the chat tutor —
+ * the `language` hint keeps Whisper honest about which language to expect.
+ */
+export async function transcribeSpeech(audioUri: string, languageId: string): Promise<string> {
+  if (!isAIConfigured || !API_URL || !API_KEY) {
+    throw new Error('Voice input needs an AI key — set EXPO_PUBLIC_AI_API_KEY.');
+  }
+  const form = new FormData();
+  form.append('file', { uri: audioUri, name: 'speech.m4a', type: 'audio/m4a' } as unknown as Blob);
+  form.append('model', STT_MODEL);
+  form.append('language', languageId);
+  form.append('response_format', 'json');
+
+  const res = await fetch(`${API_URL}/audio/transcriptions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${API_KEY}` },
+    body: form,
+  });
+  if (!res.ok) throw new Error(`Transcription failed (HTTP ${res.status}).`);
+  const data = (await res.json()) as { text?: string };
+  const text = String(data?.text ?? '').trim();
+  if (!text) throw new Error("I couldn't catch that — try again or type instead.");
+  return text;
 }
 
 /* ── Demo mode: scripted native lines per language ──────────────────────── */

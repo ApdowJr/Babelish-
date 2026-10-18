@@ -11,6 +11,8 @@
     "eslint": "^9.39.5",
     "eslint-config-expo": "~58.0.4",
     "expo": "~58.0.14",
+    "expo-asset": "~58.0.16",
+    "expo-audio": "~58.0.9",
     "expo-constants": "~58.0.12",
     "expo-font": "~58.0.8",
     "expo-linear-gradient": "~58.0.3",
