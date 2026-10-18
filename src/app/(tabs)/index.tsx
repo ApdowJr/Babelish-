@@ -13,11 +13,15 @@ import { getLanguage } from '@/data/languages';
 import { findContinueLesson } from '@/lib/curriculum/store';
 import { activeToday, computeStreak, weakestSkill } from '@/lib/analytics';
 import { buildDailyPlan, planTotalMinutes } from '@/lib/dailyPlan';
+import { levelForXp, weekKey, weeklyXp } from '@/lib/xp';
+import { rankLabel, tierForXp, weeklyProgress } from '@/lib/league';
+import { fetchLeague, postWeeklyXp } from '@/lib/neonApi';
+import { isNeonConfigured } from '@/lib/neon';
 import type { Lesson } from '@/lib/curriculum/types';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 export default function HomeScreen() {
-  const { user, isDemo } = useAuth();
+  const { user, isDemo, getAccessToken } = useAuth();
   const { targetLanguageId } = usePreferences();
   const language = getLanguage(targetLanguageId);
   const { progress, dueCount } = useLearning();
@@ -43,6 +47,38 @@ export default function HomeScreen() {
   const streakAtRisk = streak > 0 && !activeToday(analytics.events);
   const speakAverage =
     analytics.speak.count > 0 ? analytics.speak.scoreSum / analytics.speak.count : null;
+
+  // Gamification from the published rules (never manipulative): lifetime
+  // level + tier, and this week's XP toward the tier's gentle target.
+  const now = new Date();
+  const weeklyNow = weeklyXp(analytics.xp, now);
+  const level = levelForXp(analytics.xp.lifetime);
+  const tier = tierForXp(analytics.xp.lifetime);
+  const weekProgress = weeklyProgress(weeklyNow, tier);
+
+  // Best-effort league rank: the leaderboard routes ship with the api
+  // Function; until then (or while offline) the tier UI stands alone.
+  const week = weekKey(now);
+  const [rankText, setRankText] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (isDemo || !isNeonConfigured) return;
+    void (async () => {
+      try {
+        const jwt = await getAccessToken();
+        if (!jwt || cancelled) return;
+        await postWeeklyXp(jwt, week, weeklyNow);
+        const board = await fetchLeague(jwt, week);
+        if (!cancelled) setRankText(rankLabel(board.rank, board.total));
+      } catch {
+        // offline or leaderboard not deployed yet — silent, tier UI still works
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken, isDemo, week, weeklyNow]);
+
   const plan = buildDailyPlan({
     dueCount,
     weakSkill: weakestSkill(analytics),
@@ -66,9 +102,14 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>{greeting},</Text>
           <Text style={styles.name}>{user?.displayName ?? 'friend'} 👋</Text>
         </View>
-        <View style={styles.streakChip}>
-          <Text style={styles.streakEmoji}>🔥</Text>
-          <Text style={styles.streakText}>{streak > 0 ? `Day ${streak}` : 'Start today'}</Text>
+        <View style={styles.chipsRow}>
+          <View style={styles.xpChip}>
+            <Text style={styles.xpChipText}>✨ {analytics.xp.lifetime} XP</Text>
+          </View>
+          <View style={styles.streakChip}>
+            <Text style={styles.streakEmoji}>🔥</Text>
+            <Text style={styles.streakText}>{streak > 0 ? `Day ${streak}` : 'Start today'}</Text>
+          </View>
         </View>
       </View>
 
@@ -152,6 +193,27 @@ export default function HomeScreen() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
+
+      <Text style={styles.sectionLabel}>LEAGUE</Text>
+      <View style={styles.leagueCard}>
+        <View style={styles.leagueHead}>
+          <Text style={styles.leagueTier}>
+            {tier.emoji} {tier.name} league
+          </Text>
+          <Text style={styles.leagueLevel}>⭐ Level {level.level}</Text>
+        </View>
+        <View style={styles.xpTrack}>
+          <View style={[styles.xpFill, { width: `${Math.round(weekProgress.pct * 100)}%` }]} />
+        </View>
+        <Text style={styles.leagueSub}>
+          {weeklyNow} / {weekProgress.goal} XP this week
+          {weekProgress.met ? ' — target met 🎉' : ` · ${weekProgress.remaining} to go`}
+        </Text>
+        <Text style={styles.leagueNote}>
+          {rankText ??
+            'Tiers come from lifetime XP and never demote — the weekly bar is a guide, not a rule.'}
+        </Text>
+      </View>
 
       <Text style={styles.sectionLabel}>TODAY&apos;S PLAN · ~{planTotalMinutes(plan)} MIN</Text>
       <View style={styles.planCard}>
@@ -240,6 +302,36 @@ const styles = StyleSheet.create({
   },
   streakEmoji: { fontSize: 14 },
   streakText: { ...typography.caption, color: colors.text, fontWeight: '600' },
+  chipsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  xpChip: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  xpChipText: { ...typography.caption, color: colors.accent, fontWeight: '600' },
+  leagueCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+  },
+  leagueHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  leagueTier: { ...typography.bodyStrong, color: colors.text },
+  leagueLevel: { ...typography.caption, color: colors.textMuted },
+  xpTrack: {
+    height: 8,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+    marginTop: spacing.md,
+  },
+  xpFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radii.pill },
+  leagueSub: { ...typography.caption, color: colors.text, marginTop: spacing.sm },
+  leagueNote: { ...typography.micro, color: colors.textMuted, marginTop: spacing.xs },
   demoBanner: {
     flexDirection: 'row',
     alignItems: 'center',

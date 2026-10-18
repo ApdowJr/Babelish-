@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
@@ -7,10 +8,18 @@ import { useAuth } from '@/context/AuthContext';
 import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip, useProfile } from '@/state/profile';
+import { useAnalytics } from '@/state/analytics';
+import { useSubscription } from '@/state/subscription';
 import { getLanguage } from '@/data/languages';
 import { isAIConfigured } from '@/lib/ai';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { isNeonConfigured } from '@/lib/neon';
+import { levelForXp } from '@/lib/xp';
+import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
+import { FAMILY_SEATS, referralCode } from '@/lib/plans';
+import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
+import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
+import { loadCurriculum } from '@/lib/curriculum/store';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 function StatusDot({ ok }: { ok: boolean }) {
@@ -27,10 +36,77 @@ function nativeLabel(id: string): string {
 
 export default function ProfileScreen() {
   const { user, signOut, isDemo, isNeon } = useAuth();
-  const { targetLanguageId, nativeLanguageId, setNativeLanguage } = usePreferences();
-  const { xp, level, lessonsCompleted, wordsMastered, dueCount, lastSyncedAt } = useLearning();
+  const {
+    targetLanguageId,
+    nativeLanguageId,
+    setNativeLanguage,
+    reminderKey,
+    setReminderKey,
+  } = usePreferences();
+  const { lessonsCompleted, wordsMastered, dueCount, lastSyncedAt } = useLearning();
   const { profile, updateProfile } = useProfile();
+  const { state: analytics } = useAnalytics();
+  const { plan, redeem, resetToFree } = useSubscription();
   const target = getLanguage(targetLanguageId);
+
+  const lifetimeXp = analytics.xp.lifetime;
+  const level = levelForXp(lifetimeXp);
+  const myReferralCode = referralCode(user?.id ?? 'nativa-demo');
+
+  // Target-language pack stats — content is bundled, so this is instant
+  // and purely local (no download, no network, ever).
+  const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadCurriculum(targetLanguageId)
+      .then((chapters) => {
+        if (cancelled) return;
+        const exercises = chapters.reduce(
+          (n, chapter) => n + chapter.lessons.reduce((m, lesson) => m + lesson.exercises.length, 0),
+          0
+        );
+        setPack(buildPack({ languageId: targetLanguageId, chapters: chapters.length, exercises, phrases: 0 }));
+      })
+      .catch(() => {
+        if (!cancelled) setPack(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [targetLanguageId]);
+
+  async function pickReminder(hour: number, minute: number, turningOff: boolean) {
+    if (turningOff) {
+      await cancelDailyReminder();
+      setReminderKey(null);
+      return;
+    }
+    const slot = { hour, minute, label: '', icon: '' };
+    // Copy is deliberately streak-free: a daily repeat must stay true all week.
+    const result = await scheduleDailyReminder(slot, {
+      languageName: target.name,
+      streak: 0,
+      name: profile.displayName || undefined,
+    });
+    if (result === 'scheduled') {
+      setReminderKey(slotKey(hour, minute));
+    } else if (result === 'denied') {
+      Alert.alert(
+        'Notifications blocked',
+        'Allow notifications for Nativa in your system settings, then pick a time again.'
+      );
+    } else {
+      Alert.alert('Reminder unavailable', 'This device could not schedule the reminder.');
+    }
+  }
+
+  function shareReferral() {
+    void Share.share({
+      message: `I'm learning ${target.name} with Natativa 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://nativa.app`,
+    }).catch(() => {
+      // sharing dismissed — nothing to do
+    });
+  }
 
   const initials = (user?.displayName ?? 'L')
     .split(' ')
@@ -153,6 +229,118 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
+      <Text style={styles.sectionLabel}>PLAN</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Current plan</Text>
+          <Text style={styles.rowValue}>
+            {plan === 'premium' ? '⭐ Premium' : 'Free · 1 scenario/day'}
+          </Text>
+        </View>
+        {plan === 'free' ? (
+          <>
+            <View style={styles.rowDivider} />
+            <View style={styles.profileField}>
+              <Text style={styles.fieldLabel}>
+                Premium removes the daily scenario limit, and a family plan covers up to {FAMILY_SEATS} learners.
+                Replays of scenarios you already started today are always free.
+              </Text>
+              <Button
+                label="Start premium (beta)"
+                onPress={() => {
+                  const label = redeem('NATIVA-BETA');
+                  if (label) {
+                    Alert.alert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
+                  } else {
+                    Alert.alert('Code not accepted', 'Ask support for a valid beta code.');
+                  }
+                }}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.rowDivider} />
+            <View style={styles.profileField}>
+              <Text style={styles.fieldLabel}>
+                Premium is active on this device. Billing activates at launch.
+              </Text>
+              <Button label="Return to free plan" variant="secondary" onPress={() => resetToFree()} />
+            </View>
+          </>
+        )}
+        <View style={styles.rowDivider} />
+        <View style={styles.profileField}>
+          <Text style={styles.fieldLabel}>
+            Invite friends with your code — you both get a premium month at launch.
+          </Text>
+          <View style={styles.referralRow}>
+            <View style={styles.referralCodeBox}>
+              <Text style={styles.referralCode}>{myReferralCode}</Text>
+            </View>
+            <Button label="Share" variant="secondary" onPress={shareReferral} style={styles.referralShare} />
+          </View>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>DAILY REMINDER</Text>
+      <View style={styles.group}>
+        <View style={styles.profileField}>
+          <Text style={styles.fieldLabel}>
+            One calm reminder at a time you pick. Scheduled on-device — nothing leaves your phone.
+          </Text>
+          <View style={styles.chipWrap}>
+            {REMINDER_SLOTS.map((slot) => {
+              const key = slotKey(slot.hour, slot.minute);
+              const on = reminderKey === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => void pickReminder(slot.hour, slot.minute, on)}
+                  style={[styles.choiceChip, on && styles.choiceChipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={`${slot.label} reminder at ${key}`}
+                >
+                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>
+                    {slot.icon} {slot.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.profileHint}>
+            {reminderKey ? `Reminder set for ${reminderKey} daily — tap the time again to turn it off.` : 'Off — pick a time to get one daily reminder.'}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>OFFLINE</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>
+            {target.flag} {target.name} pack
+          </Text>
+          <Text style={[styles.rowValue, { color: colors.success }]}>Installed ✓</Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Contents</Text>
+          <Text style={styles.rowValue}>
+            {pack ? `${pack.chapters} chapters · ${formatPackSize(pack.kb)}` : 'Bundled'}
+          </Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Voice input (speaking)</Text>
+          <Text style={[styles.rowValue, { color: colors.warning }]}>Needs internet</Text>
+        </View>
+        <Text style={styles.profileHint}>
+          Every language ships inside the app — lessons, reviews and voice playback all work offline.{' '}
+          {OFFLINE_CAPABILITIES.tts}. {OFFLINE_CAPABILITIES.sync}
+        </Text>
+      </View>
+
       <Text style={styles.sectionLabel}>LEARNING</Text>
       <View style={styles.group}>
         <View style={styles.row}>
@@ -165,7 +353,7 @@ export default function ProfileScreen() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Level</Text>
           <Text style={styles.rowValue}>
-            {level} · {xp} XP
+            {level.level} · {lifetimeXp} XP
           </Text>
         </View>
         <View style={styles.rowDivider} />
@@ -318,6 +506,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     lineHeight: 16,
   },
+  referralRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
+  referralCodeBox: {
+    flex: 1,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  referralCode: { ...typography.bodyStrong, color: colors.accent, letterSpacing: 1.5 },
+  referralShare: { minWidth: 96 },
   group: {
     backgroundColor: colors.surface,
     borderWidth: 1,

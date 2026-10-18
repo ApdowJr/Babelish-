@@ -29,6 +29,11 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Review dashboard** — AI drafts need human approval to publish | ✅ `/admin` (deployed) + `npm run review:dashboard` (local) |
 | **Report 🚩** — "this sounds wrong" on any tutor message | ✅ Offline-first queue → human review queue |
 | **Versioned curriculum** — append-only audit of every approval | ✅ Version row written before status ever flips |
+| **XP, levels & leagues** — published rules, lifetime tiers that never demote | ✅ Weekly rank privacy-first (own rank + field size only) |
+| **Free tier = 1 scenario/day** — replays of today's scenarios stay free | ✅ On-device gate; beta premium code until billing lands |
+| **Daily reminders** — one local notification at a learner-chosen time | ✅ expo-notifications, local-only, no push servers |
+| **Offline packs** — every language ships inside the app | ✅ Lessons/reviews/TTS offline; voice input named as online-only |
+| **Referral + family** — shareable code, up to 6 seats | ✅ Share sheet; billing completes it at launch |
 
 Languages live: Spanish, Arabic, Mandarin, French, Hindi, Japanese, German,
 Portuguese, Russian, Swahili.

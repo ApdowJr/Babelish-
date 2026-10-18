@@ -2,25 +2,35 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   EMPTY_ANALYTICS,
+  activeToday,
   pushEvent,
   skillForExerciseType,
   type AnalyticsState,
   type SkillTally,
 } from '@/lib/analytics';
+import { EMPTY_XP, XP_RULES, addXp, type XpReason, type XpState } from '@/lib/xp';
 
 /**
- * Holds the learner's skill tallies + activity events on-device and persists
- * every write. Aggregation logic lives in `@/lib/analytics` (pure, tested).
+ * Holds the learner's skill tallies + activity events + XP on-device and
+ * persists every write. Aggregation logic lives in `@/lib/analytics` and
+ * `@/lib/xp` (pure, tested).
  */
 type AnalyticsValue = {
   state: AnalyticsState;
+  /** Lifetime + current-week XP (week rolls over in `@/lib/xp.addXp`). */
+  xp: XpState;
   /** Lesson answers → skill tallies + an activity event. Fire-and-forget. */
   logSkillResult: (type: string, correct: boolean) => void;
-  /** Pronunciation practice score (0–100) → speaking tally + event. */
+  /** Pronunciation practice score (0–100) → speaking tally + event + XP. */
   logSpeakingScore: (percent: number) => void;
-  /** Coarse activity event for streaks and insights. */
+  /** Lesson finished → event + awarded XP (0 for same-day replays) + daily bonus. */
+  logLessonCompleted: (xp: number) => void;
+  /** Coarse activity event for streaks and insights (XP only for mapped names). */
   logEvent: (name: string) => void;
 };
+
+/** Activity events that also earn XP (rules stay published in `@/lib/xp`). */
+const EVENT_XP: Partial<Record<string, XpReason>> = { review_completed: 'review' };
 
 const STORAGE_KEY = 'nativa:analytics';
 
@@ -45,6 +55,14 @@ function sanitize(raw: string | null): AnalyticsState {
         parsed.speak && typeof parsed.speak.scoreSum === 'number'
           ? { scoreSum: Number(parsed.speak.scoreSum), count: Number(parsed.speak.count) || 0 }
           : { scoreSum: 0, count: 0 },
+      xp:
+        parsed.xp && typeof parsed.xp.lifetime === 'number'
+          ? {
+              lifetime: Math.max(0, Number(parsed.xp.lifetime) || 0),
+              week: typeof parsed.xp.week === 'string' ? parsed.xp.week : EMPTY_XP.week,
+              weekly: Math.max(0, Number(parsed.xp.weekly) || 0),
+            }
+          : { ...EMPTY_XP },
       events: Array.isArray(parsed.events)
         ? parsed.events.filter((e) => e && typeof e.name === 'string' && typeof e.at === 'string')
         : [],
@@ -82,6 +100,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
 
   const value: AnalyticsValue = {
     state,
+    xp: state.xp,
     logSkillResult: (type, correct) => {
       const skill = skillForExerciseType(type);
       if (!skill || skill === 'speak') return;
@@ -92,17 +111,40 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
       }));
     },
     logSpeakingScore: (percent) => {
-      commit((prev) => ({
-        ...prev,
-        speak: { scoreSum: prev.speak.scoreSum + percent, count: prev.speak.count + 1 },
-        events: pushEvent(prev.events, { name: 'speaking_practice', at: new Date().toISOString() }),
-      }));
+      commit((prev) => {
+        const now = new Date();
+        const daily = activeToday(prev.events, now) ? 0 : XP_RULES.dailyBonus;
+        return {
+          ...prev,
+          speak: { scoreSum: prev.speak.scoreSum + percent, count: prev.speak.count + 1 },
+          events: pushEvent(prev.events, { name: 'speaking_practice', at: now.toISOString() }),
+          xp: addXp(prev.xp, XP_RULES.pronunciation + daily, now),
+        };
+      });
+    },
+    logLessonCompleted: (xp) => {
+      commit((prev) => {
+        const now = new Date();
+        const daily = activeToday(prev.events, now) ? 0 : XP_RULES.dailyBonus;
+        const total = Math.max(0, xp) + daily;
+        return {
+          ...prev,
+          events: pushEvent(prev.events, { name: 'lesson_completed', at: now.toISOString() }),
+          ...(total > 0 ? { xp: addXp(prev.xp, total, now) } : {}),
+        };
+      });
     },
     logEvent: (name) => {
-      commit((prev) => ({
-        ...prev,
-        events: pushEvent(prev.events, { name, at: new Date().toISOString() }),
-      }));
+      commit((prev) => {
+        const now = new Date();
+        const reason = EVENT_XP[name];
+        const total = reason ? XP_RULES[reason] + (activeToday(prev.events, now) ? 0 : XP_RULES.dailyBonus) : 0;
+        return {
+          ...prev,
+          events: pushEvent(prev.events, { name, at: now.toISOString() }),
+          ...(total > 0 ? { xp: addXp(prev.xp, total, now) } : {}),
+        };
+      });
     },
   };
 

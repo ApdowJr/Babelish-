@@ -6,6 +6,7 @@ import { PreferencesProvider } from '@/state/preferences';
 import { LearningProvider } from '@/state/learning';
 import { ProfileProvider } from '@/state/profile';
 import { AnalyticsProvider } from '@/state/analytics';
+import { SubscriptionProvider } from '@/state/subscription';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
 
@@ -16,8 +17,10 @@ export default function RootLayout() {
         <LearningProvider>
           <ProfileProvider>
             <AnalyticsProvider>
-              <StatusBar style="light" />
-              <RootNavigator />
+              <SubscriptionProvider>
+                <StatusBar style="light" />
+                <RootNavigator />
+              </SubscriptionProvider>
             </AnalyticsProvider>
           </ProfileProvider>
         </LearningProvider>

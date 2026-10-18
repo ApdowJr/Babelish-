@@ -7,11 +7,15 @@ type Preferences = {
   targetLanguageId: string;
   /** Language the learner speaks natively (used for explanations later). */
   nativeLanguageId: string;
+  /** Chosen daily-reminder time as a slot key ("18:00"), null = off. */
+  reminderKey: string | null;
 };
 
 type PreferencesValue = Preferences & {
   setTargetLanguage: (id: string) => void;
   setNativeLanguage: (id: string) => void;
+  /** null clears the reminder preference (OS scheduling is handled by the UI). */
+  setReminderKey: (key: string | null) => void;
 };
 
 const STORAGE_KEY = 'nativa:preferences';
@@ -19,6 +23,7 @@ const STORAGE_KEY = 'nativa:preferences';
 const DEFAULTS: Preferences = {
   targetLanguageId: DEFAULT_LANGUAGE_ID,
   nativeLanguageId: 'en',
+  reminderKey: null,
 };
 
 const PreferencesContext = createContext<PreferencesValue | undefined>(undefined);
@@ -34,6 +39,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setPrefs((prev) => ({
           targetLanguageId: parsed.targetLanguageId ?? prev.targetLanguageId,
           nativeLanguageId: parsed.nativeLanguageId ?? prev.nativeLanguageId,
+          reminderKey:
+            typeof parsed.reminderKey === 'string' || parsed.reminderKey === null
+              ? (parsed.reminderKey as string | null)
+              : prev.reminderKey,
         }));
       })
       .catch(() => {
@@ -55,6 +64,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         ...prefs,
         setTargetLanguage: (id) => update({ targetLanguageId: id }),
         setNativeLanguage: (id) => update({ nativeLanguageId: id }),
+        setReminderKey: (key) => update({ reminderKey: key }),
       }}
     >
       {children}

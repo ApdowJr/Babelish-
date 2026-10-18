@@ -91,10 +91,10 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [ ] Deploy `api` Function changes (`/admin` + `/api/reports` + `ADMIN_PASSWORD`) — requires a Neon API key (batch with the final git push); the local dashboard + queued reports cover the gap until then
 
 ### 🗓 Phase 5 — Retention & scale
-- [ ] Streaks, XP, leagues (ethical gamification — no dark patterns)
-- [ ] Offline lessons (download packs per language)
-- [ ] Notifications: smart reminders based on the learner's own schedule
-- [ ] Referral + family plans; free tier = 1 scenario/day, premium = unlimited
+- [x] Streaks, XP, leagues (ethical gamification — no dark patterns)
+- [x] Offline lessons (download packs per language)
+- [x] Notifications: smart reminders based on the learner's own schedule
+- [x] Referral + family plans; free tier = 1 scenario/day, premium = unlimited
 
 ### 🗓 Phase 6 — Launch
 - [ ] App Store / Play Store compliance (kids' privacy, speech data handling)

@@ -20,6 +20,7 @@ import {
   validateReport,
   type QueryFn,
 } from './admin';
+import * as league from './league';
 
 /**
  * Nativa API — the mobile app's backend, running on the same branch as the
@@ -55,6 +56,18 @@ function ensureContentSchema(): Promise<void> {
     });
   }
   return schemaReady;
+}
+
+/** Same guard pattern for the leaderboard table. */
+let leagueReady: Promise<void> | null = null;
+function ensureLeagueSchema(): Promise<void> {
+  if (!leagueReady) {
+    leagueReady = league.ensureSchema(q).catch((err) => {
+      leagueReady = null;
+      throw err;
+    });
+  }
+  return leagueReady;
 }
 
 /** Constant-time string compare for the admin credential. */
@@ -189,6 +202,32 @@ app.post('/api/reports', async (c) => {
   await ensureContentSchema();
   const { id } = await insertReport(q, { userId: c.get('userId'), ...parsed.value });
   return c.json({ id, status: 'open' }, 201);
+});
+
+/**
+ * Weekly leaderboard — privacy-first: the caller gets their own rank and the
+ * field size, never another learner's identity. `week` is 'YYYY-Www'.
+ */
+app.get('/api/league', async (c) => {
+  const week = c.req.query('week') ?? '';
+  if (!league.WEEK_PATTERN.test(week)) return c.json({ error: 'Invalid week key' }, 400);
+  await ensureLeagueSchema();
+  const data = await league.fetchLeaderboard(q, week, c.get('userId'));
+  return c.json({ week, ...data });
+});
+
+/** Reports the learner's absolute weekly XP (idempotent via greatest()). */
+app.post('/api/league/xp', async (c) => {
+  const body = await c.req.json<{ week?: string; xp?: number }>().catch(() => null);
+  const week = body?.week ?? '';
+  const xp = body?.xp;
+  if (!league.WEEK_PATTERN.test(week)) return c.json({ error: 'Invalid week key' }, 400);
+  if (typeof xp !== 'number' || !Number.isFinite(xp) || xp < 0 || xp > 100000) {
+    return c.json({ error: 'Invalid xp' }, 400);
+  }
+  await ensureLeagueSchema();
+  const result = await league.claimWeeklyXp(q, c.get('userId'), week, Math.floor(xp));
+  return c.json({ week, xp: result.xp });
 });
 
 /** Presigned upload URL for a private object under the caller's own prefix. */

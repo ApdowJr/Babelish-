@@ -3,6 +3,7 @@
  * State storage lives in `@/state/analytics`; everything here is
  * dependency-free so it can be tested directly under node.
  */
+import { EMPTY_XP, type XpState } from '@/lib/xp';
 
 export type Skill = 'read' | 'listen' | 'write' | 'speak';
 
@@ -19,6 +20,8 @@ export type AnalyticsState = {
   speak: SpeakTally;
   /** Ring buffer of coarse activity events (newest last) — streaks, insights. */
   events: AnalyticsEvent[];
+  /** Lifetime + current-week XP (rules live in `@/lib/xp`). */
+  xp: XpState;
 };
 
 export const EMPTY_ANALYTICS: AnalyticsState = {
@@ -27,6 +30,7 @@ export const EMPTY_ANALYTICS: AnalyticsState = {
   write: { correct: 0, total: 0 },
   speak: { scoreSum: 0, count: 0 },
   events: [],
+  xp: { ...EMPTY_XP },
 };
 
 /** Quiz skills need a few answers before we call anything "weak". */

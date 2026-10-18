@@ -17,6 +17,7 @@ import {
 import { LEITNER_DAYS, type VocabItem, type VocabSeed } from '@/lib/curriculum/types';
 import { isNeonConfigured } from '@/lib/neon';
 import { fetchNeonState, saveNeonState } from '@/lib/neonApi';
+import { lessonXp } from '@/lib/xp';
 
 type ProgressMap = Record<string, { score: number; completedAt: string }>;
 
@@ -28,9 +29,7 @@ type LearningValue = {
   dueCount: number;
   /** ISO timestamp of the last successful cloud sync (null = local only). */
   lastSyncedAt: string | null;
-  /** Total XP: 10 per correct answer + 50 first-time lesson completion. */
-  xp: number;
-  level: number;
+  /** Lifetime XP + level now live in the analytics ledger (@/lib/xp). */
   lessonsCompleted: number;
   wordsMastered: number;
   recordLesson: (params: {
@@ -40,6 +39,8 @@ type LearningValue = {
     playable: number;
     missed: VocabSeed[];
     firstCompletion: boolean;
+    /** The lesson was already finished earlier today (replays earn no XP). */
+    completedToday: boolean;
   }) => Promise<{ score: number; xpEarned: number }>;
   reviewWord: (itemKey: string, correct: boolean) => Promise<void>;
 };
@@ -174,9 +175,14 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   }, [user, getAccessToken]);
 
   const recordLesson = useCallback<LearningValue['recordLesson']>(
-    async ({ lessonId, languageId, correct, playable, missed, firstCompletion }) => {
+    async ({ lessonId, languageId, correct, playable, missed, firstCompletion, completedToday }) => {
       const score = playable > 0 ? Math.round((correct / playable) * 100) : 100;
-      const xpEarned = correct * 10 + (firstCompletion ? 50 : 0);
+      // Published rules from @/lib/xp — same number the ledger will store.
+      const xpEarned = lessonXp({
+        firstCompletion,
+        completedToday,
+        perfect: playable > 0 && correct === playable,
+      });
 
       const nextProgress = await saveProgress(lessonId, score);
       setProgress(nextProgress);
@@ -230,17 +236,12 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LearningValue>(() => {
     const vocabList = Object.values(vocab);
     const lessonsCompleted = Object.values(progress).filter((p) => p.score >= 70).length;
-    // XP is derived from stored state: base on completed lessons + a light
-    // estimate for replayed progress keeps it stable without a ledger.
-    const xp = lessonsCompleted * 150;
     return {
       ready,
       progress,
       vocab,
       dueCount,
       lastSyncedAt,
-      xp,
-      level: Math.floor(xp / 500) + 1,
       lessonsCompleted,
       wordsMastered: vocabList.filter((item) => item.box >= 4).length,
       recordLesson,

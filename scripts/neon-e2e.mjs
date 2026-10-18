@@ -330,5 +330,47 @@ console.log('\n── 6. Content pipeline: drafts → human approval → version
   }
 }
 
+console.log('\n── 7. Weekly leaderboard (XP claim → rank → idempotency) ──');
+{
+  const lb = await import('../functions/api/league.ts');
+  const pool = new Pool({ connectionString: env.DATABASE_URL_UNPOOLED, max: 1 });
+  const q = async (text, params) => pool.query(text, params);
+  const WEEK = '2099-W01'; // far-future fixture week — never collides with real data
+
+  try {
+    await lb.ensureSchema(q);
+    ok('leaderboard schema ensured (idempotent DDL)', true);
+
+    const claim1 = await lb.claimWeeklyXp(q, 'e2e-user-a', WEEK, 100);
+    ok('claim 100 XP → stored', claim1.xp === 100, `xp=${claim1.xp}`);
+    const claim2 = await lb.claimWeeklyXp(q, 'e2e-user-a', WEEK, 60);
+    ok('re-claim lower XP → idempotent (greatest)', claim2.xp === 100, `xp=${claim2.xp}`);
+    const claim3 = await lb.claimWeeklyXp(q, 'e2e-user-a', WEEK, 180);
+    ok('claim higher XP → advances', claim3.xp === 180, `xp=${claim3.xp}`);
+    await lb.claimWeeklyXp(q, 'e2e-user-b', WEEK, 400);
+
+    const boardA = await lb.fetchLeaderboard(q, WEEK, 'e2e-user-a');
+    const boardB = await lb.fetchLeaderboard(q, WEEK, 'e2e-user-b');
+    const boardC = await lb.fetchLeaderboard(q, WEEK, 'e2e-user-c');
+    ok('rank: leader is #1 of 2', boardB.rank === 1 && boardB.total === 2, `rank=${boardB.rank} total=${boardB.total}`);
+    ok('rank: second is #2', boardA.rank === 2, `rank=${boardA.rank}`);
+    ok('own XP surfaced', boardA.xp === 180 && boardB.xp === 400);
+    ok('non-participant: no fake rank', boardC.rank === null && boardC.xp === 0, `rank=${boardC.rank}`);
+
+    ok(
+      'week key format enforced by schema/validator',
+      lb.WEEK_PATTERN.test(WEEK) && !lb.WEEK_PATTERN.test('nope') && !lb.WEEK_PATTERN.test('2026-W999')
+    );
+
+    await q('delete from public.weekly_xp where week = $1', [WEEK]);
+    const cleaned = await lb.fetchLeaderboard(q, WEEK, 'e2e-user-a');
+    ok('fixtures cleaned up', cleaned.total === 0 && cleaned.rank === null, `total=${cleaned.total}`);
+  } catch (err) {
+    ok('leaderboard suite', false, err instanceof Error ? err.message : String(err));
+  } finally {
+    await pool.end();
+  }
+}
+
 console.log(`\n── Result: ${pass} passed, ${fail} failed ──────────────`);
 process.exit(fail > 0 ? 1 : 0);

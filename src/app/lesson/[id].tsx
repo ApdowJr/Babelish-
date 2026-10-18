@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,8 +18,11 @@ import { findLesson, loadCurriculum } from '@/lib/curriculum/store';
 import type { Exercise, Lesson, VocabSeed } from '@/lib/curriculum/types';
 import { getLanguage } from '@/data/languages';
 import { speakNative, stopSpeaking } from '@/lib/ai';
+import { dayKey } from '@/lib/analytics';
+import { lessonXp } from '@/lib/xp';
 import { useLearning } from '@/state/learning';
 import { useAnalytics } from '@/state/analytics';
+import { useSubscription } from '@/state/subscription';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 /** Lenient matching: accents, case, punctuation, and spacing don't block you. */
@@ -41,7 +45,8 @@ export default function LessonScreen() {
   const language = getLanguage(languageId);
 
   const { progress, recordLesson } = useLearning();
-  const { logSkillResult, logEvent } = useAnalytics();
+  const { logSkillResult, logLessonCompleted } = useAnalytics();
+  const { canStart, consume, redeem } = useSubscription();
 
   const [data, setData] = useState<{
     key: string;
@@ -95,6 +100,8 @@ export default function LessonScreen() {
 
   const exercise: Exercise | undefined = lesson?.exercises[step];
   const isLast = lesson ? step >= lesson.exercises.length - 1 : false;
+  /** Free tier: 1 new scenario/day — replays of today's lesson stay open. */
+  const gate = canStart(lessonId);
 
   // Native voice reads listen-exercises aloud, automatically.
   useEffect(() => {
@@ -153,6 +160,13 @@ export default function LessonScreen() {
     const missed = finalResults
       .filter((r) => !r.correct && r.vocab)
       .map((r) => r.vocab as VocabSeed);
+    const prior = progress[lesson.id];
+    const firstCompletion = prior === undefined;
+    const completedToday = prior
+      ? dayKey(new Date(prior.completedAt)) === dayKey(new Date())
+      : false;
+    // The scenario is used the moment the run finishes (sync outcome aside).
+    consume(lesson.id);
     try {
       const result = await recordLesson({
         lessonId: lesson.id,
@@ -160,12 +174,19 @@ export default function LessonScreen() {
         correct,
         playable,
         missed,
-        firstCompletion: progress[lesson.id] === undefined,
+        firstCompletion,
+        completedToday,
       });
       setSummary(result);
-      logEvent('lesson_completed');
+      logLessonCompleted(result.xpEarned);
     } catch {
-      setSummary({ score: playable ? Math.round((correct / playable) * 100) : 100, xpEarned: correct * 10 });
+      const xpEarned = lessonXp({
+        firstCompletion,
+        completedToday,
+        perfect: playable > 0 && correct === playable,
+      });
+      setSummary({ score: playable ? Math.round((correct / playable) * 100) : 100, xpEarned });
+      logLessonCompleted(xpEarned);
     } finally {
       setFinishing(false);
     }
@@ -189,6 +210,36 @@ export default function LessonScreen() {
         <View style={styles.center}>
           <Text style={styles.missingText}>Lesson not found.</Text>
           <Button label="Go back" variant="secondary" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* ── Free-tier gate (before completion so today's runs stay visible) ── */
+
+  if (!gate.allowed) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Ionicons name="lock-closed-outline" size={36} color={colors.accent} />
+          <Text style={styles.missingText}>One scenario a day on Free</Text>
+          <Text style={styles.gateBody}>
+            You&apos;ve used today&apos;s free scenario — your allowance resets at midnight.
+            Premium opens unlimited scenarios, and replays of scenarios you started
+            today stay free either way.
+          </Text>
+          <Button
+            label="Start premium (beta)"
+            onPress={() => {
+              const label = redeem('NATIVA-BETA');
+              if (label) {
+                Alert.alert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
+              } else {
+                Alert.alert('Code not accepted', 'Ask support for a valid beta code.');
+              }
+            }}
+          />
+          <Button label="Not now" variant="secondary" style={{ marginTop: spacing.xs }} onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
@@ -456,6 +507,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.xl },
   missingText: { ...typography.body, color: colors.textMuted },
+  gateBody: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    marginTop: -spacing.sm,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

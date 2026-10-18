@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
+import { useAnalytics } from '@/state/analytics';
 import { useLearning } from '@/state/learning';
 import { getLanguage } from '@/data/languages';
 import { speakNative } from '@/lib/ai';
@@ -23,6 +24,7 @@ function normalize(text: string): string {
 
 export default function ReviewScreen() {
   const { vocab, ready, reviewWord, wordsMastered } = useLearning();
+  const { logEvent } = useAnalytics();
 
   // Snapshot the due queue ONCE when the store is ready — recomputing it as
   // words leave the due set would shift the index mid-review. The snapshot is
@@ -64,6 +66,8 @@ export default function ReviewScreen() {
   function next() {
     if (!queue || index >= queue.length - 1) {
       setDone(true);
+      // Finishing a session counts as activity (streaks) and earns review XP.
+      logEvent('review_completed');
       return;
     }
     setIndex((i) => i + 1);

@@ -75,6 +75,31 @@ export async function postReport(jwt: string, report: ReportPayload): Promise<{ 
   return call<{ id: string }>('/api/reports', jwt, { method: 'POST', body: report });
 }
 
+export type LeagueInfo = {
+  week: string;
+  total: number;
+  /** null = the learner hasn't logged XP this week (never a fake rank). */
+  rank: number | null;
+  xp: number;
+};
+
+/** Weekly XP claim — an absolute value; the server keeps the greatest. */
+export async function postWeeklyXp(
+  jwt: string,
+  week: string,
+  xp: number
+): Promise<{ week: string; xp: number }> {
+  return call<{ week: string; xp: number }>('/api/league/xp', jwt, {
+    method: 'POST',
+    body: { week, xp },
+  });
+}
+
+/** Own weekly rank — privacy-first: field size + your position, no identities. */
+export async function fetchLeague(jwt: string, week: string): Promise<LeagueInfo> {
+  return call<LeagueInfo>(`/api/league?week=${encodeURIComponent(week)}`, jwt);
+}
+
 /** Uploads bytes to a presigned URL (S3-compatible; content type is signed). */
 export async function uploadWithPresignedUrl(
   uploadUrl: string,
