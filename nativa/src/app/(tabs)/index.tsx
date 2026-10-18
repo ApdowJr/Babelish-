@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -5,13 +6,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences } from '@/state/preferences';
+import { useLearning } from '@/state/learning';
 import { getLanguage } from '@/data/languages';
+import { findContinueLesson } from '@/lib/curriculum/store';
+import type { Lesson } from '@/lib/curriculum/types';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const { user, isDemo } = useAuth();
   const { targetLanguageId } = usePreferences();
   const language = getLanguage(targetLanguageId);
+  const { progress, dueCount } = useLearning();
+
+  const [next, setNext] = useState<{ lesson: Lesson; chapterTitle: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    findContinueLesson(targetLanguageId, progress)
+      .then((entry) => !cancelled && setNext(entry))
+      .catch(() => !cancelled && setNext(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [targetLanguageId, progress]);
+
+  const nextScore = next ? progress[next.lesson.id]?.score : undefined;
 
   const hour = new Date().getHours();
   const greeting =
@@ -40,7 +59,19 @@ export default function HomeScreen() {
       ) : null}
 
       <Text style={styles.sectionLabel}>CONTINUE LEARNING</Text>
-      <Pressable onPress={() => router.push(`/language/${language.id}`)} accessibilityRole="button">
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          if (next) {
+            router.push({
+              pathname: '/lesson/[id]',
+              params: { id: next.lesson.id, lang: language.id },
+            });
+          } else {
+            router.push(`/language/${language.id}`);
+          }
+        }}
+      >
         {({ pressed }) => (
           <LinearGradient
             colors={[colors.gradientFrom, colors.gradientTo]}
@@ -60,11 +91,43 @@ export default function HomeScreen() {
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroBottom}>
-              <Text style={styles.heroChapter}>Chapter 1 · First words</Text>
-              <Text style={styles.heroProgress}>Not started</Text>
+              <View style={styles.flex}>
+                <Text style={styles.heroChapter} numberOfLines={1}>
+                  {next ? next.chapterTitle : `${language.name} · CEFR A1`}
+                </Text>
+                <Text style={styles.heroLesson} numberOfLines={1}>
+                  {next ? next.lesson.title : 'Loading your next lesson…'}
+                </Text>
+              </View>
+              <Text style={styles.heroProgress}>
+                {next ? (nextScore !== undefined ? `Best ${nextScore}%` : 'Not started') : ''}
+              </Text>
             </View>
           </LinearGradient>
         )}
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.reviewCard, pressed && styles.pressed]}
+        onPress={() => router.push('/review')}
+        accessibilityRole="button"
+      >
+        <View style={styles.reviewIcon}>
+          <Text style={styles.reviewEmoji}>🔁</Text>
+        </View>
+        <View style={styles.flex}>
+          <Text style={styles.reviewTitle}>
+            {dueCount > 0
+              ? `Review ${dueCount} word${dueCount === 1 ? '' : 's'} due`
+              : 'Daily review · all caught up'}
+          </Text>
+          <Text style={styles.reviewSubtitle}>
+            {dueCount > 0
+              ? 'Spaced repetition keeps words from fading'
+              : 'Words you miss in lessons show up here'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
 
       <Text style={styles.sectionLabel}>PRACTICE</Text>
@@ -159,9 +222,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     marginVertical: spacing.lg,
   },
-  heroBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroChapter: { ...typography.bodyStrong, color: colors.white },
-  heroProgress: { ...typography.caption, color: 'rgba(255,255,255,0.8)' },
+  heroBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  heroChapter: { ...typography.micro, color: 'rgba(255,255,255,0.75)' },
+  heroLesson: { ...typography.bodyStrong, color: colors.white, marginTop: 2 },
+  heroProgress: { ...typography.caption, color: 'rgba(255,255,255,0.85)' },
+  reviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  reviewIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewEmoji: { fontSize: 20 },
+  reviewTitle: { ...typography.bodyStrong, color: colors.text },
+  reviewSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   actionsRow: { flexDirection: 'row', gap: spacing.md },
   actionCard: {
     flex: 1,

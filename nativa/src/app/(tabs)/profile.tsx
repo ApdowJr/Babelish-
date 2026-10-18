@@ -5,6 +5,7 @@ import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences, languageName } from '@/state/preferences';
+import { useLearning } from '@/state/learning';
 import { getLanguage } from '@/data/languages';
 import { isAIConfigured } from '@/lib/ai';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -17,6 +18,7 @@ function StatusDot({ ok }: { ok: boolean }) {
 export default function ProfileScreen() {
   const { user, signOut, isDemo } = useAuth();
   const { targetLanguageId, nativeLanguageId } = usePreferences();
+  const { xp, level, lessonsCompleted, wordsMastered, dueCount } = useLearning();
   const target = getLanguage(targetLanguageId);
 
   const initials = (user?.displayName ?? 'L')
@@ -63,6 +65,28 @@ export default function ProfileScreen() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Native language</Text>
           <Text style={styles.rowValue}>{languageName(nativeLanguageId)}</Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Level</Text>
+          <Text style={styles.rowValue}>
+            {level} · {xp} XP
+          </Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Lessons completed (70%+)</Text>
+          <Text style={styles.rowValue}>{lessonsCompleted}</Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Words mastered</Text>
+          <Text style={styles.rowValue}>{wordsMastered}</Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Words due for review</Text>
+          <Text style={[styles.rowValue, dueCount > 0 && { color: colors.warning }]}>{dueCount}</Text>
         </View>
         <View style={styles.rowDivider} />
         <View style={styles.row}>

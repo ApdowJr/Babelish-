@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PreferencesProvider } from '@/state/preferences';
+import { LearningProvider } from '@/state/learning';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
 
@@ -10,8 +11,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PreferencesProvider>
-        <StatusBar style="light" />
-        <RootNavigator />
+        <LearningProvider>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </LearningProvider>
       </PreferencesProvider>
     </AuthProvider>
   );
@@ -49,6 +52,17 @@ function RootNavigator() {
           options={{
             headerShown: true,
             title: '',
+            headerStyle: { backgroundColor: colors.bg },
+            headerTintColor: colors.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="review"
+          options={{
+            headerShown: true,
+            title: 'Daily review',
             headerStyle: { backgroundColor: colors.bg },
             headerTintColor: colors.text,
             headerShadowVisible: false,

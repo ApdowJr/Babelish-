@@ -47,12 +47,13 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] AI service layer (chat + TTS adapters) with native-speaker system prompts
 - [x] Seed language data (real dialects, native names, speaker counts)
 
-### 🗓 Phase 1 — Learning content engine
-- [ ] Chapter model: units → lessons → exercises (multiple choice, typing, listening, speaking)
-- [ ] CEFR-aligned curriculum generator (AI-drafted → human-approved flag in DB)
-- [ ] Language detail screen: chapter list with progress
-- [ ] Lesson player with 4 exercise types
-- [ ] Spaced-repetition review (leitner boxes) for vocabulary
+### ✅ Phase 1 — Learning content engine (shipped 2026-10-18)
+- [x] Chapter model: units → lessons → exercises (multiple choice, typing, listening; speaking placeholder locked for Phase 2)
+- [x] CEFR-aligned curriculum: Spanish A1 hand-authored (5 chapters × 4 lessons), 9 language samplers; AI draft generator (`scripts/generate-curriculum.mjs`, drafts-only + human approval flag in DB — never auto-publishes)
+- [x] Language detail screen: chapter list with progress bars, 70%+ unlock chain, lesson scores
+- [x] Lesson player: choose · type · listen with native TTS, accent-lenient grading, culture/grammar notes, XP + completion screen
+- [x] Spaced-repetition review (Leitner boxes 1/2/4/8/15 days): missed words → daily review screen + Home card + Profile stats
+- [x] Storage: Supabase tables + RLS (`supabase/schema.sql`) with bundled-JSON fallback for demo mode
 
 ### 🗓 Phase 2 — Speaking & pronunciation
 - [ ] Scenario role-play screen (AI stays in character, in-language only)
