@@ -36,9 +36,15 @@ npx expo start          # scan the QR with Expo Go (SDK 58)
 
 ## Connect real services (recommended)
 
-1. **Accounts** — create a free [Supabase](https://supabase.com) project, then put its
-   URL and anon key in `.env`. Email/password auth works immediately.
-2. **AI tutor** — put any OpenAI-compatible endpoint in `.env`
+1. **Backend (Neon)** — the app is wired to a Neon branch: **Managed Better Auth**
+   (real accounts + password reset), the **`api` Function** (JWT-verified progress
+   sync + presigned Object Storage), **Lakebase Postgres** (`neon/schema.sql`) and
+   the **`assets`** bucket. `neon deploy` provisions everything and pulls the branch
+   endpoints into `.env.local`; `npm run neon:e2e` proves each service end to end.
+   (Neon's AI Gateway needs a paid plan — until then use any OpenAI-compatible key below.)
+2. **Accounts (Supabase, legacy)** — create a free [Supabase](https://supabase.com)
+   project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
+3. **AI tutor** — put any OpenAI-compatible endpoint in `.env`
    (OpenAI, OpenRouter, Groq, or a local server). The tutor gets a native-speaker system
    prompt per language and can't break into English.
 
@@ -56,15 +62,21 @@ src/
     lesson/[id].tsx     # lesson player (choose · type · listen + native TTS)
     review.tsx          # daily Leitner review of missed words
   components/           # Button · TextField · Chip · Logo · Screen
-  context/              # AuthContext (Supabase + demo mode)
-  lib/                  # supabase client · ai tutor engine · curriculum service & SRS
-  state/                # preferences · learning (progress, vocab, XP)
+  context/              # AuthContext (Neon Auth · Supabase · demo mode)
+  lib/                  # neon auth & api clients · supabase · ai tutor engine · curriculum service & SRS
+  state/                # preferences · learning (progress, vocab, XP · cloud sync)
   data/
     languages.ts        # language seed data (real dialects & scenarios)
     curriculum/         # bundled CEFR content (Spanish A1 full + 9 samplers)
   theme/                # design tokens (colors · spacing · typography)
-supabase/schema.sql     # tables + RLS — run once in the Supabase SQL editor
+functions/
+  api/index.ts          # Neon Function: JWT-verified state sync + presigned storage
+neon/schema.sql         # Lakebase Postgres schema (app_state) — applied via the Neon CLI
+neon.ts                 # Neon infrastructure-as-code (auth · functions · buckets)
+hello.ts                # canary function (health check)
+supabase/schema.sql     # legacy tables + RLS — run once in the Supabase SQL editor
 scripts/generate-curriculum.mjs   # AI draft generator (drafts only, never publishes)
+scripts/neon-e2e.mjs    # end-to-end proof of every Neon service (npm run neon:e2e)
 ```
 
 ## Curriculum pipeline

@@ -55,6 +55,16 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] Spaced-repetition review (Leitner boxes 1/2/4/8/15 days): missed words → daily review screen + Home card + Profile stats
 - [x] Storage: Supabase tables + RLS (`supabase/schema.sql`) with bundled-JSON fallback for demo mode
 
+### ✅ Backend on Neon (shipped 2026-10-18)
+- [x] Infra as code: `neon.ts` → `neon deploy` provisions Managed Better Auth, Functions, Object Storage (`assets`) on branch `production`
+- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://nativa.app`
+- [x] **`api` Function** (`functions/api/index.ts`, Hono): health, `GET/PUT /api/state` (JWT-verified against branch JWKS, user id from `sub`), presigned storage URLs — cross-user access denied by construction
+- [x] **Lakebase Postgres**: `neon/schema.sql` (`public.app_state`) applied to the branch
+- [x] **Object Storage**: private `assets` bucket, presigned PUT/GET under `users/{id}/` prefixes
+- [x] **Two-way progress sync** in `LearningProvider`: device ∪ server merge (best score / Leitner box wins), fire-and-forget on every lesson/review; Profile shows sync status
+- [x] Proofs: `npm run neon:e2e` (15/15 checks) · `npm run build` · `npx expo lint` · `tsc` (app + functions) · `expo-doctor` 20/20
+- [ ] Neon **AI Gateway** — paid-plan feature; app keeps OpenAI-compatible `EXPO_PUBLIC_AI_*` path (re-add `aiGateway: true` to `neon.ts` after upgrade)
+
 ### 🗓 Phase 2 — Speaking & pronunciation
 - [ ] Scenario role-play screen (AI stays in character, in-language only)
 - [ ] Voice I/O: record → STT → AI reply → TTS playback

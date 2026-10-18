@@ -4,6 +4,8 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@neon/config": "^1.9.2",
+    "@neon/env": "^1.6.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.118.0",
     "eslint": "^9.39.5",
@@ -24,7 +26,14 @@
     "react-native-url-polyfill": "^4.0.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@neon/functions": "^0.11.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "~19.3.0",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12",
+    "pg": "^8.23.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -32,7 +41,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build": "expo export --platform android --platform ios",
+    "check:functions": "tsc -p functions/tsconfig.json --noEmit",
+    "neon:e2e": "node scripts/neon-e2e.mjs"
   },
   "private": true
 }

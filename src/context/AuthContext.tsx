@@ -8,6 +8,15 @@ import {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isNeonConfigured } from '@/lib/neon';
+import {
+  neonGetJwt,
+  neonGetSession,
+  neonRequestPasswordReset,
+  neonSignIn,
+  neonSignOut,
+  neonSignUp,
+} from '@/lib/neonAuth';
 
 export type AppUser = {
   id: string;
@@ -21,6 +30,10 @@ type AuthContextValue = {
   loading: boolean;
   /** True when Supabase isn't configured — accounts are local to the device. */
   isDemo: boolean;
+  /** True when the Neon backend (Managed Auth) is configured and takes over. */
+  isNeon: boolean;
+  /** Mints a short-lived JWT for the Neon API; null outside Neon mode. */
+  getAccessToken: () => Promise<string | null>;
   signUp: (params: { name: string; email: string; password: string }) => Promise<{ message?: string }>;
   signIn: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -56,6 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     async function bootstrap() {
+      if (isNeonConfigured) {
+        // Neon mode: restore the stored Managed Auth session, validating it
+        // against the auth server (clears it when expired/revoked).
+        const restored = await neonGetSession();
+        if (!mounted) return;
+        setUser(restored ? { id: restored.id, email: restored.email, displayName: restored.name } : null);
+        setLoading(false);
+        return;
+      }
       if (!supabase) {
         // Demo mode: restore a local session if one exists.
         try {
@@ -104,8 +126,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {
       user,
       loading,
-      isDemo: !isSupabaseConfigured,
+      isDemo: !isSupabaseConfigured && !isNeonConfigured,
+      isNeon: isNeonConfigured,
+      async getAccessToken() {
+        return isNeonConfigured ? neonGetJwt() : null;
+      },
       async signUp({ name, email, password }) {
+        if (isNeonConfigured) {
+          const created = await neonSignUp({ name, email, password });
+          setUser({ id: created.id, email: created.email, displayName: created.name });
+          return {};
+        }
         if (!supabase) {
           await persistDemoUser({ id: `demo-${Date.now()}`, email, displayName: name });
           return { message: 'Created a demo account on this device.' };
@@ -122,6 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return {};
       },
       async signIn(email, password) {
+        if (isNeonConfigured) {
+          const signed = await neonSignIn(email, password);
+          setUser({ id: signed.id, email: signed.email, displayName: signed.name });
+          return;
+        }
         if (!supabase) {
           const stored = await AsyncStorage.getItem(DEMO_SESSION_KEY);
           const parsed = stored ? (JSON.parse(stored) as AppUser) : null;
@@ -138,11 +174,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw new Error(friendlyAuthError(error.message));
       },
       async resetPassword(email) {
+        if (isNeonConfigured) {
+          await neonRequestPasswordReset(email);
+          return;
+        }
         if (!supabase) return;
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw new Error(friendlyAuthError(error.message));
       },
       async signOut() {
+        if (isNeonConfigured) {
+          await neonSignOut();
+          setUser(null);
+          return;
+        }
         if (!supabase) {
           await persistDemoUser(null);
           return;

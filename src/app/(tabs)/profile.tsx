@@ -9,6 +9,7 @@ import { useLearning } from '@/state/learning';
 import { getLanguage } from '@/data/languages';
 import { isAIConfigured } from '@/lib/ai';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { isNeonConfigured } from '@/lib/neon';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 function StatusDot({ ok }: { ok: boolean }) {
@@ -16,9 +17,9 @@ function StatusDot({ ok }: { ok: boolean }) {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut, isDemo } = useAuth();
+  const { user, signOut, isDemo, isNeon } = useAuth();
   const { targetLanguageId, nativeLanguageId } = usePreferences();
-  const { xp, level, lessonsCompleted, wordsMastered, dueCount } = useLearning();
+  const { xp, level, lessonsCompleted, wordsMastered, dueCount, lastSyncedAt } = useLearning();
   const target = getLanguage(targetLanguageId);
 
   const initials = (user?.displayName ?? 'L')
@@ -47,7 +48,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
           <View style={[styles.badge, isDemo ? styles.badgeWarning : styles.badgeSuccess]}>
             <Text style={[styles.badgeText, { color: isDemo ? colors.warning : colors.success }]}>
-              {isDemo ? 'Demo account' : 'Verified account'}
+              {isDemo ? 'Demo account' : isNeon ? 'Neon account' : 'Verified account'}
             </Text>
           </View>
         </View>
@@ -107,16 +108,39 @@ export default function ProfileScreen() {
         <View style={styles.rowDivider} />
         <View style={styles.row}>
           <View style={styles.rowLabelWrap}>
-            <StatusDot ok={isSupabaseConfigured} />
+            <StatusDot ok={isSupabaseConfigured || isNeonConfigured} />
             <Text style={styles.rowLabel}>Accounts</Text>
           </View>
-          <Text style={styles.rowValue}>{isSupabaseConfigured ? 'Supabase' : 'On-device'}</Text>
+          <Text style={styles.rowValue}>
+            {isNeon ? 'Neon Auth' : isSupabaseConfigured ? 'Supabase' : 'On-device'}
+          </Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <View style={styles.rowLabelWrap}>
+            <StatusDot ok={Boolean(lastSyncedAt)} />
+            <Text style={styles.rowLabel}>Progress sync</Text>
+          </View>
+          <Text style={styles.rowValue}>
+            {isNeon
+              ? lastSyncedAt
+                ? `Synced ${new Date(lastSyncedAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}`
+                : 'Syncing…'
+              : 'On-device only'}
+          </Text>
         </View>
       </View>
       <Text style={styles.statusNote}>
-        {isDemo || !isAIConfigured
-          ? 'Connect real services by copying .env.example to .env and adding your Supabase + AI keys, then restart the dev server.'
-          : 'Everything is connected. Go say hi to your tutor in the Speak tab.'}
+        {isNeon
+          ? isAIConfigured
+            ? 'Everything is connected. Go say hi to your tutor in the Speak tab.'
+            : 'Neon backend connected: real accounts + cloud progress sync. The AI tutor stays in demo mode until an AI key is added to .env.'
+          : isDemo || !isAIConfigured
+            ? 'Connect real services by copying .env.example to .env and adding your Supabase + AI keys, then restart the dev server.'
+            : 'Everything is connected. Go say hi to your tutor in the Speak tab.'}
       </Text>
 
       <Button
