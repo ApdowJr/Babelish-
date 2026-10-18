@@ -1,5 +1,6 @@
-import { Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PreferencesProvider } from '@/state/preferences';
@@ -35,6 +36,7 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const segments = useSegments();
 
   if (loading) {
     return (
@@ -46,6 +48,20 @@ function RootNavigator() {
   }
 
   const signedIn = Boolean(user);
+  const inAuthGroup = segments[0] === '(auth)';
+
+  // Explicit auth redirects. Stack.Protected removes guarded screens from the
+  // navigator, but on web (SPA export) the implicit guard fallback can leave a
+  // logged-out first-time visitor on "/" with nothing to render ("Unmatched
+  // Route"). Send both directions to a real route explicitly.
+  useEffect(() => {
+    if (loading) return;
+    if (!signedIn && !inAuthGroup) {
+      router.replace('/login');
+    } else if (signedIn && inAuthGroup) {
+      router.replace('/');
+    }
+  }, [loading, signedIn, inAuthGroup]);
 
   return (
     <Stack
