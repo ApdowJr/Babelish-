@@ -34,6 +34,10 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Daily reminders** — one local notification at a learner-chosen time | ✅ expo-notifications, local-only, no push servers |
 | **Offline packs** — every language ships inside the app | ✅ Lessons/reviews/TTS offline; voice input named as online-only |
 | **Referral + family** — shareable code, up to 6 seats | ✅ Share sheet; billing completes it at launch |
+| **Data rights** — export & delete (GDPR / Play policy) | ✅ JSON export + in-app delete → `DELETE /api/me` erases server rows |
+| **Store compliance** — kids' privacy, speech data, permissions | ✅ `docs/STORE_COMPLIANCE.md` + `docs/PRIVACY.md` |
+| **Beta languages** — ES · AR · JA · FR · HI · ZH get weekly updates | ✅ BETA badges; others marked preview |
+| **Feedback loop** — learner reports → drafts → humans → OTA | ✅ weekly runbook in `docs/FEEDBACK_LOOP.md` |
 
 Languages live: Spanish, Arabic, Mandarin, French, Hindi, Japanese, German,
 Portuguese, Russian, Swahili.

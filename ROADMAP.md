@@ -97,10 +97,10 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] Referral + family plans; free tier = 1 scenario/day, premium = unlimited
 
 ### 🗓 Phase 6 — Launch
-- [ ] App Store / Play Store compliance (kids' privacy, speech data handling)
-- [ ] Analytics events (privacy-first, no third-party ad SDKs)
-- [ ] Beta per language (start: Spanish, Arabic, Japanese, French, Hindi, Mandarin)
-- [ ] Feedback loop → weekly curriculum updates
+- [x] App Store / Play Store compliance (kids' privacy, speech data handling)
+- [x] Analytics events (privacy-first, no third-party ad SDKs)
+- [x] Beta per language (start: Spanish, Arabic, Japanese, French, Hindi, Mandarin)
+- [x] Feedback loop → weekly curriculum updates
 
 ---
 

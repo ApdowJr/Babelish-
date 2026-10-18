@@ -59,9 +59,9 @@ no "may be used for…" legalese.
   JSON document (`src/lib/privacy.ts` `buildDataExport`), including explicit
   `includesAudio: false` / `includesAdIdentifiers: false` flags.
 
-## Launch-checklist items (require credentials we don't hold in CI)
+## Launch-checklist items
 
-- [ ] Set `ADMIN_PASSWORD` env on the `api` Function (dashboard auth).
+- [x] Set `ADMIN_PASSWORD` env on the `api` Function (dashboard auth) — done 2026-10-18.
 - [ ] Complete Neon-Auth admin-side account deletion (delete the auth user
       after `DELETE /api/me` succeeds) — needs a service-role call at deploy.
 - [ ] Fill the store privacy forms using the table above.

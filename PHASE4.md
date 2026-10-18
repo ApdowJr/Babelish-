@@ -12,7 +12,7 @@ _shipped 2026-10-18 · trust & accuracy_
 | XSS-safe dashboard (AI/user strings are untrusted) | ✅ every string through `escapeHtml` |
 | 46/46 standalone tests · neon:e2e 35/35 (live DB) | ✅ validators, escaping, rendering, full draft→approve→version flow |
 | tsc (app + functions) · lint · doctor 20/20 · build | ✅ all green |
-| Deploy Function changes (`/admin`, `/api/reports`) | ⏳ needs a Neon API key — batch with the final git push |
+| Deploy Function changes (`/admin`, `/api/reports`) | ✅ deployed 2026-10-18 (live smoke-tested) |
 
 **Try it:** `npm run review:dashboard` → http://127.0.0.1:8788/admin
 (admin / `nativa` locally). Paste chapter JSON in "+ Submit a draft", open the
