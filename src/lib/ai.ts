@@ -1,5 +1,6 @@
 import * as Speech from 'expo-speech';
 import { getLanguage, type Language } from '@/data/languages';
+import { formatProfileContext, type ProfileContext } from '@/lib/profilePrompt';
 
 /**
  * AI tutor engine.
@@ -34,6 +35,8 @@ export type TutorOptions = {
   learnerName?: string;
   scenarioTitle?: string;
   level?: string;
+  /** Learner profile — injected as example-flavored context in the prompt. */
+  profile?: ProfileContext;
 };
 
 /** Builds the native-speaker persona that governs every AI response. */
@@ -42,8 +45,9 @@ export function buildSystemPrompt(opts: {
   level: string;
   scenarioTitle?: string;
   learnerName?: string;
+  profile?: ProfileContext;
 }): string {
-  const { language, level, scenarioTitle, learnerName } = opts;
+  const { language, level, scenarioTitle, learnerName, profile } = opts;
   return [
     `You are a real native ${language.name} speaker (${language.nativeName}) from the heart of the culture, acting as a warm, expert one-on-one language tutor.`,
     `You ALWAYS reply in ${language.name}. Never use English or any other language in your reply text.`,
@@ -54,6 +58,7 @@ export function buildSystemPrompt(opts: {
     learnerName
       ? `The learner's name is ${learnerName}. Personalize examples around their life when it fits naturally.`
       : '',
+    ...formatProfileContext(profile),
     `If the learner makes a mistake, first recast it naturally in ${language.name} (a gentle native-style correction), then continue the conversation with a follow-up question so they always have something to answer.`,
     `Sound like a person, not a textbook: natural contractions, real rhythm, small cultural touches. Never lecture.`,
     `Respond with STRICT JSON only, no markdown fences: {"reply":"<your message in ${language.name}>","translation":"<natural English translation>","tip":"<optional one-line grammar or culture tip>"}`,
@@ -72,6 +77,7 @@ export async function tutorReply(opts: TutorOptions): Promise<TutorReply> {
     level: opts.level ?? 'A2',
     scenarioTitle: opts.scenarioTitle,
     learnerName: opts.learnerName,
+    profile: opts.profile,
   });
 
   const controller = new AbortController();

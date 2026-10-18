@@ -7,8 +7,12 @@ import { Screen } from '@/components/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
+import { useProfile } from '@/state/profile';
+import { useAnalytics } from '@/state/analytics';
 import { getLanguage } from '@/data/languages';
 import { findContinueLesson } from '@/lib/curriculum/store';
+import { activeToday, computeStreak, weakestSkill } from '@/lib/analytics';
+import { buildDailyPlan, planTotalMinutes } from '@/lib/dailyPlan';
 import type { Lesson } from '@/lib/curriculum/types';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
@@ -17,6 +21,8 @@ export default function HomeScreen() {
   const { targetLanguageId } = usePreferences();
   const language = getLanguage(targetLanguageId);
   const { progress, dueCount } = useLearning();
+  const { profile } = useProfile();
+  const { state: analytics } = useAnalytics();
 
   const [next, setNext] = useState<{ lesson: Lesson; chapterTitle: string } | null>(null);
 
@@ -32,6 +38,23 @@ export default function HomeScreen() {
 
   const nextScore = next ? progress[next.lesson.id]?.score : undefined;
 
+  // Real streak + adaptive daily plan, derived from on-device activity.
+  const streak = computeStreak(analytics.events);
+  const streakAtRisk = streak > 0 && !activeToday(analytics.events);
+  const speakAverage =
+    analytics.speak.count > 0 ? analytics.speak.scoreSum / analytics.speak.count : null;
+  const plan = buildDailyPlan({
+    dueCount,
+    weakSkill: weakestSkill(analytics),
+    speakAverage,
+    retakeLesson: next
+      ? { id: next.lesson.id, title: next.lesson.title, languageId: targetLanguageId }
+      : null,
+    streakAtRisk,
+    streak,
+    goal: profile.goals[0],
+  });
+
   const hour = new Date().getHours();
   const greeting =
     hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -45,7 +68,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.streakChip}>
           <Text style={styles.streakEmoji}>🔥</Text>
-          <Text style={styles.streakText}>Day 1</Text>
+          <Text style={styles.streakText}>{streak > 0 ? `Day ${streak}` : 'Start today'}</Text>
         </View>
       </View>
 
@@ -129,6 +152,30 @@ export default function HomeScreen() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
+
+      <Text style={styles.sectionLabel}>TODAY&apos;S PLAN · ~{planTotalMinutes(plan)} MIN</Text>
+      <View style={styles.planCard}>
+        {plan.map((item, index) => (
+          <Pressable
+            key={item.id}
+            onPress={() => router.push(item.route)}
+            style={({ pressed }) => [
+              styles.planRow,
+              index < plan.length - 1 && styles.planRowDivider,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.title}. ${item.subtitle}`}
+          >
+            <Text style={styles.planIcon}>{item.icon}</Text>
+            <View style={styles.flex}>
+              <Text style={styles.planTitle}>{item.title}</Text>
+              <Text style={styles.planSubtitle}>{item.subtitle}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+        ))}
+      </View>
 
       <Text style={styles.sectionLabel}>PRACTICE</Text>
       <View style={styles.actionsRow}>
@@ -248,6 +295,23 @@ const styles = StyleSheet.create({
   reviewEmoji: { fontSize: 20 },
   reviewTitle: { ...typography.bodyStrong, color: colors.text },
   reviewSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  planCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  planRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  planIcon: { fontSize: 20, width: 28, textAlign: 'center' },
+  planTitle: { ...typography.bodyStrong, color: colors.text },
+  planSubtitle: { ...typography.micro, color: colors.textMuted, marginTop: 2 },
   actionsRow: { flexDirection: 'row', gap: spacing.md },
   actionCard: {
     flex: 1,

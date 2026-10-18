@@ -16,9 +16,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Chip } from '@/components/Chip';
 import { useAuth } from '@/context/AuthContext';
-import { usePreferences } from '@/state/preferences';
+import { usePreferences, languageName } from '@/state/preferences';
+import { useLearning } from '@/state/learning';
+import { useProfile } from '@/state/profile';
+import { useAnalytics } from '@/state/analytics';
 import { getLanguage } from '@/data/languages';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
+import { suggestLevel } from '@/lib/adaptive';
 import {
   isAIConfigured,
   speakNative,
@@ -56,7 +60,10 @@ const SLOW_RATE = 0.55;
 
 export default function SpeakScreen() {
   const { user } = useAuth();
-  const { targetLanguageId } = usePreferences();
+  const { targetLanguageId, nativeLanguageId } = usePreferences();
+  const { lessonsCompleted } = useLearning();
+  const { profile } = useProfile();
+  const { logSpeakingScore } = useAnalytics();
   const language = getLanguage(targetLanguageId);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -74,6 +81,16 @@ export default function SpeakScreen() {
   const recorder = useVoiceRecorder();
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
   const phrases = scenario ? getPracticePhrases(language.id, scenario.id) : [];
+
+  // Personalization: the tutor sees who the learner is + an adaptive CEFR level.
+  const learnerName = profile.displayName || user?.displayName;
+  const tutorProfile = {
+    job: profile.job || undefined,
+    interests: profile.interests,
+    goals: profile.goals,
+    nativeLanguageName: languageName(nativeLanguageId),
+  };
+  const level = suggestLevel(lessonsCompleted);
 
   // Reset the conversation when the language or scenario changes — done
   // during render (React's recommended pattern), not inside the effect.
@@ -105,8 +122,10 @@ export default function SpeakScreen() {
     tutorReply({
       language,
       history: [],
-      learnerName: user?.displayName,
+      learnerName,
       scenarioTitle: scenario?.title,
+      profile: tutorProfile,
+      level,
     })
       .then((reply) => {
         if (!cancelled) {
@@ -139,8 +158,10 @@ export default function SpeakScreen() {
       const reply = await tutorReply({
         language,
         history,
-        learnerName: user?.displayName,
+        learnerName,
         scenarioTitle: scenario?.title,
+        profile: tutorProfile,
+        level,
       });
       setMessages((prev) => [
         ...prev,
@@ -210,6 +231,7 @@ export default function SpeakScreen() {
       charBased: CHAR_BASED_LANGUAGES.has(language.id),
     });
     setPractice({ phraseId: phrase.id, phase: 'done', transcript, score });
+    logSpeakingScore(score.percent);
     void recordPhraseAttempt(stats, phrase.id, score.percent).then(setStats);
   }
 

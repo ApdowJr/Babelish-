@@ -75,10 +75,12 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [ ] On-device pass in Expo Go (mic record → STT round-trip needs a real phone + AI key)
 
 ### 🗓 Phase 3 — Personalization
-- [ ] Learner profile (name, job, interests, native language, goals)
-- [ ] Context injection: AI generates examples using the learner's real life
-- [ ] Adaptive difficulty from per-skill analytics (listening/speaking/reading/writing)
-- [ ] Daily plan: 10-minute path tuned to weak spots
+- [x] Learner profile (name, job, interests, native language, goals) — Profile tab editor, stored on device (`src/state/profile.tsx`)
+- [x] Context injection: profile + adaptive CEFR level spliced into every tutor prompt (`src/lib/profilePrompt.ts`, `src/lib/adaptive.ts`)
+- [x] Adaptive difficulty from per-skill analytics (listening/speaking/reading/writing) — lesson answers + pronunciation scores tallied per skill (`src/lib/analytics.ts`, `src/state/analytics.tsx`); weakest skill drives the plan, `suggestLevel` (A1→B2) drives tutor difficulty
+- [x] Daily plan: ~10-minute path tuned to weak spots — due reviews → weakest-skill drill → keep-the-streak, with "why this card" subtitles (`src/lib/dailyPlan.ts`), Home "TODAY'S PLAN" section
+- [x] Real streak counter on Home (replaces hardcoded "Day 1"), computed from activity events
+- [x] Proofs: 57/57 node tests (analytics · daily plan · adaptive · profile prompt, compiled + run standalone) · `npx tsc --noEmit` · `npx expo lint` · `npx expo-doctor` 20/20 · `npm run build` (Hermes bundles, bytecode-verified) · `npm run neon:e2e` 15/15 regression
 
 ### 🗓 Phase 4 — Trust & accuracy (the moat)
 - [ ] Human review dashboard: every AI-drafted chapter must be approved before publish

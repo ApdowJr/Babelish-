@@ -4,6 +4,8 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PreferencesProvider } from '@/state/preferences';
 import { LearningProvider } from '@/state/learning';
+import { ProfileProvider } from '@/state/profile';
+import { AnalyticsProvider } from '@/state/analytics';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
 
@@ -12,8 +14,12 @@ export default function RootLayout() {
     <AuthProvider>
       <PreferencesProvider>
         <LearningProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
+          <ProfileProvider>
+            <AnalyticsProvider>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </AnalyticsProvider>
+          </ProfileProvider>
         </LearningProvider>
       </PreferencesProvider>
     </AuthProvider>

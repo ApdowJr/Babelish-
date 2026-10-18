@@ -18,6 +18,7 @@ import type { Exercise, Lesson, VocabSeed } from '@/lib/curriculum/types';
 import { getLanguage } from '@/data/languages';
 import { speakNative, stopSpeaking } from '@/lib/ai';
 import { useLearning } from '@/state/learning';
+import { useAnalytics } from '@/state/analytics';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 /** Lenient matching: accents, case, punctuation, and spacing don't block you. */
@@ -40,6 +41,7 @@ export default function LessonScreen() {
   const language = getLanguage(languageId);
 
   const { progress, recordLesson } = useLearning();
+  const { logSkillResult, logEvent } = useAnalytics();
 
   const [data, setData] = useState<{
     key: string;
@@ -128,6 +130,7 @@ export default function LessonScreen() {
 
     const nextResults = entry ? [...results, entry] : results;
     setResults(nextResults);
+    if (entry) logSkillResult(exercise.type, entry.correct);
 
     setSelected(null);
     setTyped('');
@@ -160,6 +163,7 @@ export default function LessonScreen() {
         firstCompletion: progress[lesson.id] === undefined,
       });
       setSummary(result);
+      logEvent('lesson_completed');
     } catch {
       setSummary({ score: playable ? Math.round((correct / playable) * 100) : 100, xpEarned: correct * 10 });
     } finally {

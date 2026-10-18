@@ -23,6 +23,9 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Language library** — real dialects, native names, speaker counts | ✅ 10 languages |
 | **Voice input** — speak your replies (record → Whisper STT → AI reply) | ✅ Any OpenAI-compatible endpoint |
 | **Pronunciation scoring** — per-word green/amber/red chips + reference audio | ✅ Accent-blind, works typed in demo mode |
+| **Learner profile** — name, job, interests, goals, native language | ✅ Feeds every AI prompt with their real life |
+| **Adaptive difficulty** — per-skill analytics pick the weakest skill | ✅ Tutor level auto-rises A1 → B2 |
+| **Daily plan** — "~10 min" card tuned to due reviews + weak spots | ✅ Includes a real streak counter |
 
 Languages live: Spanish, Arabic, Mandarin, French, Hindi, Japanese, German,
 Portuguese, Russian, Swahili.
