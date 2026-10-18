@@ -199,6 +199,19 @@ export const LANGUAGES: Language[] = [
 
 export const DEFAULT_LANGUAGE_ID = 'es';
 
+/**
+ * Phase 6 launch betas (ROADMAP): the first six languages get the weekly
+ * curriculum updates and human-reviewed content first; the rest are previews
+ * (sampler chapters) until their own beta starts.
+ */
+export const BETA_LANGUAGE_IDS = ['es', 'ar', 'ja', 'fr', 'hi', 'zh'] as const;
+
+export type LanguageStatus = 'beta' | 'preview';
+
+export function languageStatus(id: string): LanguageStatus {
+  return (BETA_LANGUAGE_IDS as readonly string[]).includes(id) ? 'beta' : 'preview';
+}
+
 export function getLanguage(id: string): Language {
   return LANGUAGES.find((l) => l.id === id) ?? LANGUAGES[0];
 }

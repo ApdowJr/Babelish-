@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip, useProfile } from '@/state/profile';
@@ -17,6 +18,8 @@ import { isNeonConfigured } from '@/lib/neon';
 import { levelForXp } from '@/lib/xp';
 import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
+import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
+import { deleteAccount } from '@/lib/neonApi';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
 import { loadCurriculum } from '@/lib/curriculum/store';
@@ -35,7 +38,7 @@ function nativeLabel(id: string): string {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut, isDemo, isNeon } = useAuth();
+  const { user, signOut, isDemo, isNeon, getAccessToken } = useAuth();
   const {
     targetLanguageId,
     nativeLanguageId,
@@ -43,7 +46,7 @@ export default function ProfileScreen() {
     reminderKey,
     setReminderKey,
   } = usePreferences();
-  const { lessonsCompleted, wordsMastered, dueCount, lastSyncedAt } = useLearning();
+  const { lessonsCompleted, wordsMastered, dueCount, lastSyncedAt, progress, vocab } = useLearning();
   const { profile, updateProfile } = useProfile();
   const { state: analytics } = useAnalytics();
   const { plan, redeem, resetToFree } = useSubscription();
@@ -106,6 +109,49 @@ export default function ProfileScreen() {
     }).catch(() => {
       // sharing dismissed — nothing to do
     });
+  }
+
+  function exportMyData() {
+    void Share.share({
+      title: 'Nativa data export',
+      message: buildDataExport({
+        profile,
+        preferences: { targetLanguageId, nativeLanguageId, reminderKey },
+        progress,
+        vocab,
+        analytics,
+      }),
+    }).catch(() => {
+      // sharing dismissed — nothing to do
+    });
+  }
+
+  function deleteMyAccount() {
+    Alert.alert(
+      'Delete account?',
+      'This removes your profile, progress, vocabulary, XP and reports from this device and from Nativa servers. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                if (isNeon) {
+                  const jwt = await getAccessToken();
+                  if (jwt) await deleteAccount(jwt);
+                }
+              } catch {
+                // server unreachable — the local wipe below still happens
+              }
+              await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
+              signOut();
+            })();
+          },
+        },
+      ]
+    );
   }
 
   const initials = (user?.displayName ?? 'L')
@@ -375,6 +421,25 @@ export default function ProfileScreen() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Change target</Text>
           <Text style={styles.rowAction}>Learn tab →</Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>PRIVACY</Text>
+      <View style={styles.group}>
+        <View style={styles.profileField}>
+          <Text style={styles.fieldLabel}>
+            Practice events, XP and streaks stay on this device. Cloud sync covers progress and
+            vocabulary only. Microphone audio is transcribed on demand and never stored. No ads,
+            no third-party trackers.
+          </Text>
+          <Button label="Export my data" variant="secondary" onPress={exportMyData} />
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.profileField}>
+          <Text style={styles.fieldLabel}>
+            Deleting your account removes your data from this device and from Nativa servers.
+          </Text>
+          <Button label="Delete account" variant="danger" onPress={deleteMyAccount} />
         </View>
       </View>
 

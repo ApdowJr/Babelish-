@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
-import { LANGUAGES } from '@/data/languages';
+import { LANGUAGES, languageStatus } from '@/data/languages';
 import { usePreferences } from '@/state/preferences';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
@@ -60,6 +60,11 @@ export default function LearnScreen() {
             <View style={styles.cardBody}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>{language.name}</Text>
+                {languageStatus(language.id) === 'beta' ? (
+                  <View style={styles.betaBadge}>
+                    <Text style={styles.betaBadgeText}>BETA</Text>
+                  </View>
+                ) : null}
                 {isLearning ? (
                   <View style={styles.learningBadge}>
                     <Text style={styles.learningBadgeText}>Learning</Text>
@@ -131,6 +136,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   learningBadgeText: { ...typography.micro, color: colors.success },
+  betaBadge: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  betaBadgeText: { ...typography.micro, color: colors.accent, fontWeight: '700' as const },
   empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.md },
   emptyEmoji: { fontSize: 36 },
   emptyText: {

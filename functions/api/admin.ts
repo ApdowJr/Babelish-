@@ -10,7 +10,7 @@
  * function; every string that reaches HTML goes through escapeHtml.
  */
 
-export type QueryResult = { rows: Record<string, unknown>[] };
+export type QueryResult = { rows: Record<string, unknown>[]; rowCount?: number | null };
 export type QueryFn = (text: string, params?: unknown[]) => Promise<QueryResult>;
 
 export const REPORT_KINDS = ['message', 'phrase', 'lesson', 'translation', 'other'] as const;
@@ -94,6 +94,10 @@ export const SQL = {
     insert into public.learner_reports (user_id, language_id, kind, quote, reason)
     values ($1, $2, $3, $4, $5)
     returning id`,
+  /** Account deletion (Play "delete account" + GDPR erasure), per user id. */
+  deleteAppState: `delete from public.app_state where user_id = $1`,
+  deleteWeeklyXp: `delete from public.weekly_xp where user_id = $1`,
+  deleteReports: `delete from public.learner_reports where user_id = $1`,
   insertDraft: `
     insert into public.content_drafts (language_id, title, cefr, source, payload)
     values ($1, $2, $3, $4, $5::jsonb)
@@ -218,6 +222,21 @@ export async function insertDraft(
     JSON.stringify(draft.payload),
   ]);
   return { id: String(rows[0]?.id ?? '') };
+}
+
+/** Play/GDPR data-deletion: every row keyed to this user id, across tables. */
+export async function deleteUserData(
+  q: QueryFn,
+  userId: string
+): Promise<{ state: number; league: number; reports: number }> {
+  const state = await q(SQL.deleteAppState, [userId]);
+  const league = await q(SQL.deleteWeeklyXp, [userId]);
+  const reports = await q(SQL.deleteReports, [userId]);
+  return {
+    state: state.rowCount ?? 0,
+    league: league.rowCount ?? 0,
+    reports: reports.rowCount ?? 0,
+  };
 }
 
 /* ── validation (mirrors scripts/generate-curriculum.mjs) ───────────── */

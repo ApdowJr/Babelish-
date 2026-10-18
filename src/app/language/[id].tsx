@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
-import { getLanguage } from '@/data/languages';
+import { getLanguage, languageStatus } from '@/data/languages';
 import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { isChapterUnlocked, loadCurriculum } from '@/lib/curriculum/store';
@@ -55,6 +55,13 @@ export default function LanguageDetailScreen() {
         <Text style={styles.flag}>{language.flag}</Text>
         <Text style={styles.name}>{language.name}</Text>
         <Text style={styles.native}>{language.nativeName}</Text>
+        <View style={styles.statusChip}>
+          <Text style={styles.statusChipText}>
+            {languageStatus(language.id) === 'beta'
+              ? 'BETA — weekly reviewed updates'
+              : 'PREVIEW — sampler chapter'}
+          </Text>
+        </View>
         <View style={styles.metaRow}>
           <View style={styles.metaPill}>
             <Ionicons name="people-outline" size={13} color={colors.textMuted} />
@@ -219,6 +226,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   hero: { alignItems: 'center', marginTop: spacing.lg },
   flag: { fontSize: 64 },
+  statusChip: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  statusChipText: { ...typography.micro, color: colors.accent, fontWeight: '600' as const },
   name: { ...typography.display, color: colors.text, marginTop: spacing.md },
   native: { ...typography.heading, color: colors.textMuted, marginTop: spacing.xs },
   metaRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },

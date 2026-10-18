@@ -100,6 +100,15 @@ export async function fetchLeague(jwt: string, week: string): Promise<LeagueInfo
   return call<LeagueInfo>(`/api/league?week=${encodeURIComponent(week)}`, jwt);
 }
 
+/** GDPR/Play data-deletion: server wipes every row keyed to this account. */
+export async function deleteAccount(
+  jwt: string
+): Promise<{ deleted: { state: number; league: number; reports: number } }> {
+  return call<{ deleted: { state: number; league: number; reports: number } }>('/api/me', jwt, {
+    method: 'DELETE',
+  });
+}
+
 /** Uploads bytes to a presigned URL (S3-compatible; content type is signed). */
 export async function uploadWithPresignedUrl(
   uploadUrl: string,

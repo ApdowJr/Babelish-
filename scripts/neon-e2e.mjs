@@ -372,5 +372,56 @@ console.log('\n── 7. Weekly leaderboard (XP claim → rank → idempotency) 
   }
 }
 
+console.log('\n── 8. Account data deletion (Play/GDPR erasure) ──');
+{
+  const admin = await import('../functions/api/admin.ts');
+  const lb = await import('../functions/api/league.ts');
+  const pool = new Pool({ connectionString: env.DATABASE_URL_UNPOOLED, max: 1 });
+  const q = async (text, params) => pool.query(text, params);
+  const U = 'e2e-delete-user';
+
+  try {
+    await admin.ensureSchema(q);
+    await lb.ensureSchema(q);
+    ok('schemas ensured for deletion targets', true);
+
+    await q(
+      `insert into public.app_state (user_id, progress, vocab)
+       values ($1, '{"es-1-1":{"score":80,"completedAt":"2026-10-18T00:00:00Z"}}'::jsonb, '{}'::jsonb)
+       on conflict (user_id) do update set progress = excluded.progress`,
+      [U]
+    );
+    const report = await admin.insertReport(q, { userId: U, languageId: 'es', kind: 'message', quote: 'x', reason: 'e2e' });
+    ok('fixture: learner report queued', Boolean(report.id));
+    await lb.claimWeeklyXp(q, U, '2099-W02', 75);
+
+    const removed = await admin.deleteUserData(q, U);
+    ok(
+      'deletion removes rows from all three tables',
+      removed.state >= 1 && removed.league >= 1 && removed.reports === 1,
+      JSON.stringify(removed)
+    );
+
+    const check = await lb.fetchLeaderboard(q, '2099-W02', U);
+    const rep = await q('select count(*)::int as n from public.learner_reports where user_id = $1', [U]);
+    const st = await q('select count(*)::int as n from public.app_state where user_id = $1', [U]);
+    ok(
+      'nothing left for the user',
+      check.rank === null && check.xp === 0 && rep.rows[0].n === 0 && st.rows[0].n === 0
+    );
+
+    const again = await admin.deleteUserData(q, U);
+    ok(
+      'idempotent — second delete is a no-op',
+      again.state === 0 && again.league === 0 && again.reports === 0,
+      JSON.stringify(again)
+    );
+  } catch (err) {
+    ok('account deletion suite', false, err instanceof Error ? err.message : String(err));
+  } finally {
+    await pool.end();
+  }
+}
+
 console.log(`\n── Result: ${pass} passed, ${fail} failed ──────────────`);
 process.exit(fail > 0 ? 1 : 0);

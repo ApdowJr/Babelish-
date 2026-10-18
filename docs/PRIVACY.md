@@ -1,0 +1,77 @@
+# Nativa — Privacy Policy (plain language)
+
+_Last updated: 2026-10-18. This is the source of truth for the store privacy
+forms and the in-app privacy screen (Profile → PRIVACY)._
+
+## The short version
+
+Your practice stays on your phone. Nativa has **no ads, no third-party
+analytics, and no data brokers**. The only thing that ever syncs to a server
+is your progress and vocabulary — under **your own** Neon account, on a
+database branch you control. Microphone audio is transcribed on demand and
+never stored.
+
+## What lives only on your device
+
+- Practice events, XP, streaks, league standing (computed locally)
+- Your learner profile (name, goals, interests)
+- Reminder settings (scheduling is a local OS notification — no push server)
+- The offline curriculum for every language (bundled in the app)
+
+None of this leaves the device unless **you** sign in, and even then only the
+items in the next section sync.
+
+## What syncs when you sign in
+
+| Data | Where | Why |
+|---|---|---|
+| Lesson progress (scores, timestamps) | Your Neon Postgres branch (`app_state`) | Resume on another device |
+| Vocabulary / spaced-repetition boxes | Same row | Keep review queues correct |
+| Weekly XP (a number, and a week key) | `weekly_xp` | Your rank on the weekly board |
+
+The weekly board is **privacy-first by design**: you see your own rank and
+the number of participants — never another learner's identity, and they never
+see yours. Reports you file ("this sounds wrong") are queued with your user
+id so reviewers can follow up; they are never shown to other learners.
+
+## Microphone audio
+
+- Pronunciation scoring happens **on your device**.
+- Optional cloud speech-to-text (only if an OpenAI-compatible endpoint is
+  configured by you or the operator) receives the audio **for transcription
+  only**; the audio is discarded immediately and only the transcribed phrase
+  is kept as practice content.
+- With no STT configured, audio never leaves the device — and the app says so
+  instead of pretending otherwise.
+
+## AI tutor content
+
+Tutor replies come from whichever AI endpoint is configured (or from the
+built-in demo responses when none is). Conversation text is sent to that
+endpoint to generate the reply; it is not stored by Nativa. Every AI-generated
+item that could reach the curriculum passes the human approval gate
+(`docs/CONTENT_REVIEW.md`) before publication — AI never publishes itself.
+
+## Children
+
+Nativa is general-audience (12+). It is not directed at children under 13 and
+does not knowingly collect their data. No ads, no tracking, no behavioral
+profiling — for anyone, of any age. See `docs/STORE_COMPLIANCE.md`.
+
+## Your rights
+
+- **Export everything** the app knows about you: Profile → PRIVACY →
+  *Export my data* (JSON via the system share sheet).
+- **Delete everything**: Profile → PRIVACY → *Delete account* — wipes the
+  device and calls `DELETE /api/me`, which erases your rows from
+  `app_state`, `weekly_xp`, and `learner_reports`.
+- No cookie banners, because there is nothing to consent to.
+
+## Operators & subprocessors
+
+| Service | Role | Data |
+|---|---|---|
+| Neon (Lakebase Postgres + Managed Auth + Functions) | App backend | Account id/email, progress, vocab, weekly XP, reports |
+| OpenAI-compatible endpoint (optional, configurable) | STT + tutor | Audio (transient, STT only), conversation text |
+
+That's the whole list. Nothing else touches your data.

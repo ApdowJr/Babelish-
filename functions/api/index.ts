@@ -8,6 +8,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   approveDraft,
+  deleteUserData,
   ensureSchema,
   fetchDashboard,
   insertDraft,
@@ -228,6 +229,17 @@ app.post('/api/league/xp', async (c) => {
   await ensureLeagueSchema();
   const result = await league.claimWeeklyXp(q, c.get('userId'), week, Math.floor(xp));
   return c.json({ week, xp: result.xp });
+});
+
+/**
+ * Data deletion (Play "Delete account" policy + GDPR erasure): every row
+ * keyed to the JWT's user id, across state, leaderboard and reports.
+ * Returns the per-table removal counts so the client can confirm.
+ */
+app.delete('/api/me', async (c) => {
+  await Promise.all([ensureContentSchema(), ensureLeagueSchema()]);
+  const removed = await deleteUserData(q, c.get('userId'));
+  return c.json({ deleted: removed });
 });
 
 /** Presigned upload URL for a private object under the caller's own prefix. */
