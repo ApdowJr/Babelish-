@@ -3,7 +3,7 @@
 **Speak like a native.** An AI language tutor that talks to you *only* in your target
 language — with real dialects, real scenarios, and native pronunciation.
 
-> 📱 2027 vision · Phase 1 build (see [ROADMAP.md](../ROADMAP.md) for the full plan)
+> 📱 2027 vision · Phase 1 build (see [ROADMAP.md](ROADMAP.md) for the full plan)
 
 ## What works today
 

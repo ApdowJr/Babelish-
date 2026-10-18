@@ -150,7 +150,6 @@ Learner report ──────────────► Review queue ◄─
 ## How to run what's built so far
 
 ```bash
-cd nativa
 cp .env.example .env      # paste Supabase + AI keys (or leave blank → demo mode)
 npm install
 npx expo start            # scan QR with Expo Go, or press i / a
