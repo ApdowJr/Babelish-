@@ -20,9 +20,10 @@ _shipped 2026-10-18 · launch readiness_
 *Delete account* (destructive confirm). Learn tab → BETA chips on the six
 launch languages; language page says BETA vs PREVIEW.
 
-**Launch checklist (remaining):** complete auth-user deletion at deploy
-(Neon Auth admin API — service-role call), fill store privacy forms from
+**Launch checklist (remaining):** fill store privacy forms from
 `docs/STORE_COMPLIANCE.md`, verify mic permission in EAS binaries.
-_ADMIN_PASSWORD is set on the deployed Function (deployment 2, 2026-10-18)._
+_Done since: auth-user deletion at deploy (Neon Auth admin API, deployment 5
+— `DELETE /api/me` removes the auth user too, verified live);
+`ADMIN_PASSWORD` set on the deployed Function (deployment 2, 2026-10-18)._
 
 All six phases are now checked in [ROADMAP.md](ROADMAP.md).

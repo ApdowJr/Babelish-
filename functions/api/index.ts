@@ -232,14 +232,107 @@ app.post('/api/league/xp', async (c) => {
 });
 
 /**
+ * Account deletion, part 2 — erase the auth user itself through the Neon Auth
+ * (Better Auth) admin API: sign in a dedicated ops admin, then
+ * POST /admin/remove-user. Auth is the admin's session COOKIE (the sign-in
+ * body token is a different value and is not accepted on /admin routes).
+ * Env-gated by NEON_AUTH_ADMIN_EMAIL / NEON_AUTH_ADMIN_PASSWORD; when unset
+ * (demo mode) the step is skipped and reported honestly as "not-configured".
+ * Admin sessions are cached in memory for just under the JWT lifetime and
+ * refreshed once on a 401.
+ */
+const SESSION_COOKIE = '__Secure-neon-auth.session_token';
+let adminSession: { cookie: string; expiresAt: number } | null = null;
+
+function authAdminConfigured(): boolean {
+  return Boolean(
+    process.env.NEON_AUTH_BASE_URL &&
+      process.env.NEON_AUTH_ADMIN_EMAIL &&
+      process.env.NEON_AUTH_ADMIN_PASSWORD
+  );
+}
+
+async function signInAdmin(): Promise<string | null> {
+  const base = process.env.NEON_AUTH_BASE_URL;
+  const email = process.env.NEON_AUTH_ADMIN_EMAIL;
+  const password = process.env.NEON_AUTH_ADMIN_PASSWORD;
+  if (!base || !email || !password) return null;
+  const res = await fetch(new URL(`${base}/sign-in/email`), {
+    method: 'POST',
+    // Better Auth requires an Origin header when callbackURL is absent.
+    headers: { 'content-type': 'application/json', origin: base },
+    body: JSON.stringify({ email, password, rememberMe: true }),
+  });
+  if (!res.ok) return null;
+  const setCookies =
+    typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+  const raw = setCookies.find((c) => c.includes('session_token=')) ?? '';
+  const match = raw.match(/session_token=([^;]+)/);
+  if (!match) return null;
+  adminSession = { cookie: `${SESSION_COOKIE}=${match[1]}`, expiresAt: Date.now() + 13 * 60_000 };
+  return adminSession.cookie;
+}
+
+async function adminSessionCookie(): Promise<string | null> {
+  if (adminSession && adminSession.expiresAt > Date.now()) return adminSession.cookie;
+  return signInAdmin();
+}
+
+export type AuthRemoval = 'removed' | 'already-gone' | 'not-configured' | 'failed';
+
+/** Why the auth-user step failed — surfaced so operators can diagnose. */
+let lastAuthRemovalDetail: string | null = null;
+
+async function removeAuthUser(userId: string): Promise<AuthRemoval> {
+  const base = process.env.NEON_AUTH_BASE_URL;
+  if (!base || !authAdminConfigured()) return 'not-configured';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const cookie = await adminSessionCookie();
+    if (!cookie) {
+      lastAuthRemovalDetail = 'admin sign-in failed (credentials, origin header, or cookie parse)';
+      return 'failed';
+    }
+    const res = await fetch(new URL(`${base}/admin/remove-user`), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        // remove-user is a state-changing route: it rejects requests without
+        // an Origin header (MISSING_OR_NULL_ORIGIN), cookie auth or not.
+        origin: base,
+        cookie,
+      },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.status === 401 && attempt === 0) {
+      adminSession = null; // stale cached session — sign in once more
+      continue;
+    }
+    if (res.ok) {
+      lastAuthRemovalDetail = null;
+      return 'removed';
+    }
+    if (res.status === 404) {
+      lastAuthRemovalDetail = null;
+      return 'already-gone'; // idempotent: user is gone
+    }
+    lastAuthRemovalDetail = `remove-user responded ${res.status}: ${(await res.text()).slice(0, 200)}`;
+    return 'failed';
+  }
+  return 'failed';
+}
+
+/**
  * Data deletion (Play "Delete account" policy + GDPR erasure): every row
- * keyed to the JWT's user id, across state, leaderboard and reports.
- * Returns the per-table removal counts so the client can confirm.
+ * keyed to the JWT's user id, across state, leaderboard and reports —
+ * then the auth user itself (so the account can no longer sign in).
+ * Returns the per-table removal counts and the auth-user outcome.
  */
 app.delete('/api/me', async (c) => {
   await Promise.all([ensureContentSchema(), ensureLeagueSchema()]);
-  const removed = await deleteUserData(q, c.get('userId'));
-  return c.json({ deleted: removed });
+  const userId = c.get('userId');
+  const removed = await deleteUserData(q, userId);
+  const authUser = await removeAuthUser(userId);
+  return c.json({ deleted: removed, authUser, authUserDetail: lastAuthRemovalDetail });
 });
 
 /** Presigned upload URL for a private object under the caller's own prefix. */

@@ -100,11 +100,22 @@ export async function fetchLeague(jwt: string, week: string): Promise<LeagueInfo
   return call<LeagueInfo>(`/api/league?week=${encodeURIComponent(week)}`, jwt);
 }
 
-/** GDPR/Play data-deletion: server wipes every row keyed to this account. */
+/** GDPR/Play data-deletion: server wipes every row keyed to this account,
+ *  then erases the auth user itself. `authUser` reports that last step. */
+export type AuthRemoval = 'removed' | 'already-gone' | 'not-configured' | 'failed';
+
 export async function deleteAccount(
   jwt: string
-): Promise<{ deleted: { state: number; league: number; reports: number } }> {
-  return call<{ deleted: { state: number; league: number; reports: number } }>('/api/me', jwt, {
+): Promise<{
+  deleted: { state: number; league: number; reports: number };
+  authUser: AuthRemoval;
+  authUserDetail?: string | null;
+}> {
+  return call<{
+    deleted: { state: number; league: number; reports: number };
+    authUser: AuthRemoval;
+    authUserDetail?: string | null;
+  }>('/api/me', jwt, {
     method: 'DELETE',
   });
 }

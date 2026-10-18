@@ -53,8 +53,11 @@ no "may be used for…" legalese.
 
 - **Delete**: Profile → PRIVACY → Delete account. Wipes `LOCAL_DATA_KEYS`
   on-device and calls `DELETE /api/me`, which deletes every row keyed to the
-  account (`app_state`, `weekly_xp`, `learner_reports`). Auth-user deletion
-  (Neon Auth admin API) is the final launch-checklist step — see below.
+  account (`app_state`, `weekly_xp`, `learner_reports`) **and then erases the
+  auth user itself** via the Neon Auth admin API (`POST /admin/remove-user`),
+  so the account can no longer sign in. The response reports the outcome
+  honestly (`removed` / `already-gone` / `not-configured` / `failed`) and the
+  app surfaces a warning if server-side account removal failed.
 - **Export**: Profile → PRIVACY → Export my data → native share sheet with a
   JSON document (`src/lib/privacy.ts` `buildDataExport`), including explicit
   `includesAudio: false` / `includesAdIdentifiers: false` flags.
@@ -62,8 +65,12 @@ no "may be used for…" legalese.
 ## Launch-checklist items
 
 - [x] Set `ADMIN_PASSWORD` env on the `api` Function (dashboard auth) — done 2026-10-18.
-- [ ] Complete Neon-Auth admin-side account deletion (delete the auth user
-      after `DELETE /api/me` succeeds) — needs a service-role call at deploy.
+- [x] Neon-Auth admin-side account deletion — done 2026-10-18 (deployment 5).
+      `DELETE /api/me` now signs in a dedicated ops admin
+      (`NEON_AUTH_ADMIN_EMAIL` / `NEON_AUTH_ADMIN_PASSWORD` Function env) and
+      calls `POST /admin/remove-user`; verified live (removed → 404 on
+      `get-user`, sign-in → 401). The ops admin is a `neon_auth."user"` row
+      with `role='admin'`; rotate its password like any credential.
 - [ ] Fill the store privacy forms using the table above.
 - [ ] Attach a privacy policy URL (content: `docs/PRIVACY.md`).
 - [ ] Verify the EAS-built binaries include the mic permission string

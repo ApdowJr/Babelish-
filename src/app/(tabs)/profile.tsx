@@ -137,16 +137,28 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () => {
             void (async () => {
+              let serverIssue = false;
               try {
                 if (isNeon) {
                   const jwt = await getAccessToken();
-                  if (jwt) await deleteAccount(jwt);
+                  if (jwt) {
+                    const result = await deleteAccount(jwt);
+                    serverIssue = result.authUser === 'failed';
+                  }
                 }
               } catch {
                 // server unreachable — the local wipe below still happens
               }
               await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
               signOut();
+              if (serverIssue) {
+                // Honest label: rows were erased, but the auth account itself
+                // could not be removed — the learner must know it may still exist.
+                Alert.alert(
+                  'Account removal incomplete',
+                  'Your learning data was erased, but the account itself could not be removed from the server. Please try again later or contact support.'
+                );
+              }
             })();
           },
         },
