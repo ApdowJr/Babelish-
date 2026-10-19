@@ -1,4 +1,4 @@
-# Zelvoca — Auth & API Security Audit (Master Audit, Phase F)
+# Babelish — Auth & API Security Audit (Master Audit, Phase F)
 
 _Last updated: 2026-10-19. Determined **from the code**, not assumed._
 
@@ -123,7 +123,7 @@ production step for link-based recovery — see `docs/DEPLOYMENT.md`.
   secret. The AI provider key exists **only** as a server-side Function env var
   (`AI_API_KEY`); the app talks to the proxy first and only falls back to a
   development endpoint when explicitly configured.
-- **CORS** reflects only Zelvoca's own origins (custom domain, `*.vercel.app`,
+- **CORS** reflects only Babelish's own origins (custom domain, `*.vercel.app`,
   localhost / private-network dev) and allows `DELETE`; unknown origins get no
   `Access-Control-Allow-Origin` header (verified in the local smoke).
 

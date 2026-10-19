@@ -3,12 +3,12 @@
  * Pure and dependency-free (node-testable); the AsyncStorage wipe and the
  * Share sheet live in the screens that offer them.
  *
- * Zelvoca's privacy stance (docs/PRIVACY.md):
+ * Babelish's privacy stance (docs/PRIVACY.md):
  *  - practice events, XP, streaks and profile live ON THIS DEVICE;
  *  - cloud sync covers progress + vocabulary only, under the learner's own
  *    Neon account — never ads, never third-party trackers;
  *  - microphone audio is transcribed (when cloud STT is configured) and then
- *    discarded — it is never stored by Zelvoca.
+ *    discarded — it is never stored by Babelish.
  */
 
 export const ZELVOCA_EXPORT_VERSION = 1;
@@ -41,7 +41,7 @@ export type DataExportInput = {
 export function buildDataExport(input: DataExportInput, now = new Date()): string {
   return JSON.stringify(
     {
-      app: 'Zelvoca',
+      app: 'Babelish',
       format: ZELVOCA_EXPORT_VERSION,
       exportedAt: now.toISOString(),
       includesAudio: false,

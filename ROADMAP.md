@@ -1,9 +1,9 @@
-# Zelvoca — Roadmap to the 2027 Language Learning App
+# Babelish — Roadmap to the 2027 Language Learning App
 
 > **Vision:** An AI language tutor that speaks *every* language like a native speaker —
 > accurate curriculum, real pronunciation, real scenarios, personalized to each learner.
 
-Working name: **Zelvoca** (rename freely; it's one constant in `app.json`).
+App name: **Babelish**. Keep public domain and authentication origins aligned with the deployed configuration.
 
 ---
 

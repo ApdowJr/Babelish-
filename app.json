@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Zelvoca",
-    "slug": "zelvoca",
+    "name": "Babelish",
+    "slug": "babelish",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "zelvoca",
+    "scheme": ["babelish", "zelvoca"],
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -27,7 +27,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Zelvoca uses your microphone so you can practice speaking with your AI tutor."
+          "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor."
         }
       ]
     ],

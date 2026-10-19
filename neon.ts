@@ -11,7 +11,7 @@ export default defineConfig({
     hello: { name: "Hello World", source: "./hello.ts" },
     // The app's backend: health, per-user state sync, storage presigning.
     // The mobile client calls it directly with a Managed Auth JWT (Bearer).
-    api: { name: "Zelvoca API", source: "./functions/api/index.ts" },
+    api: { name: "Babelish API", source: "./functions/api/index.ts" },
   },
   buckets: {
     // "private" is the default; use "public_read" for anonymous reads

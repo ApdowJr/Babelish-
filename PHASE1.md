@@ -1,4 +1,4 @@
-# Zelvoca — Phase 1 delivery checklist
+# Babelish — Phase 1 delivery checklist
 
 _shipped 2026-10-18 · commits `8561f41` (engine) + `f64ad1a` (repo restructure)_
 

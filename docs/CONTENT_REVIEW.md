@@ -1,4 +1,4 @@
-# Zelvoca — content review & contributor program
+# Babelish — content review & contributor program
 
 _Phase 4 (Trust & accuracy). Every AI-drafted chapter passes a human before it
 reaches a single learner. AI never approves its own output._
