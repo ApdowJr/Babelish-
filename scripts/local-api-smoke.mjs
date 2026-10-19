@@ -664,7 +664,7 @@ async function runPhase(phase) {
   process.exit(fail === 0 ? 0 : 1);
 }
 
-/* ── parent: sign a throwaway local JWT, run the three phases ────────────── */
+/* ── parent: sign a throwaway local JWT, run all four phases ────────────── */
 
 async function parent() {
   const env = loadEnvLocal();
