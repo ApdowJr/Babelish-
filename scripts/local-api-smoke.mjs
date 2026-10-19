@@ -222,6 +222,21 @@ async function phaseNoAi(app, jwt) {
     stt503.status === 503 && stt503Body?.error === 'ai-not-configured'
   );
 
+  /* Current Vercel branch alias for this PR must be allowed too. */
+  const branchAliasPreflight = await fetch(`${base}/api/health`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://babelish-git-upgrade-zelvoca-production-hardening-ururka-lp.vercel.app',
+      'Access-Control-Request-Method': 'GET',
+      'Access-Control-Request-Headers': 'authorization,content-type',
+    },
+  });
+  ok(
+    'cors: current Babelish PR branch alias is trusted',
+    branchAliasPreflight.headers.get('access-control-allow-origin') ===
+      'https://babelish-git-upgrade-zelvoca-production-hardening-ururka-lp.vercel.app',
+  );
+
   /* CORS: origin allowlist + the DELETE preflight that once broke. */
   const preflight = await app.request('/api/me', {
     method: 'OPTIONS',
