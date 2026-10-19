@@ -206,7 +206,7 @@ export async function neonSignOut(): Promise<void> {
  * Where a password-reset link should send the user back to.
  *
  * On web that is the origin they are actually using (the Vercel preview and
- * `babelish.app` are different sites); native has no real origin, so it uses the
+ * `zelvoca.app` are different sites); native has no real origin, so it uses the
  * branch's trusted domain.
  */
 function resetCallbackOrigin(): string {
