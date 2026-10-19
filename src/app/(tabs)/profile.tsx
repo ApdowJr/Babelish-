@@ -126,7 +126,7 @@ export default function ProfileScreen() {
 
   function shareReferral() {
     void Share.share({
-      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://babelish.app`,
+      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://zelvoca.app`,
     }).catch(() => {
       // sharing dismissed — nothing to do
     });
