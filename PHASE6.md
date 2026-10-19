@@ -1,4 +1,4 @@
-# Zelvoca — Phase 6 delivery checklist
+# Babelish — Phase 6 delivery checklist
 
 _shipped 2026-10-18 · launch readiness_
 
