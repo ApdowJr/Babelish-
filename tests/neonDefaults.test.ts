@@ -38,7 +38,7 @@ test('production endpoints are compiled-in defaults — configured with zero env
   assert.match(neon.NEON_API_URL, /^https:\/\/.+\.neon\.tech$/, 'public Function URL');
   assert.match(neon.NEON_AUTH_URL, /^https:\/\/.+/, 'public Auth URL');
   assert.match(neon.NEON_AUTH_URL, /\/neondb\/auth$/, 'Managed Auth base path');
-  assert.equal(neon.NEON_TRUSTED_ORIGIN, 'https://nativa.app');
+  assert.equal(neon.NEON_TRUSTED_ORIGIN, 'https://babelish.app');
 });
 
 test('env still overrides the defaults (staging branches, forks)', () => {

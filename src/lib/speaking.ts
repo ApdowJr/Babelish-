@@ -8,7 +8,7 @@ export type PhraseStat = { best: number; attempts: number };
 
 export type SpeakingStats = Record<string, PhraseStat>;
 
-const KEY = 'nativa:speaking-stats';
+const KEY = 'babelish:speaking-stats';
 
 export async function loadSpeakingStats(): Promise<SpeakingStats> {
   try {

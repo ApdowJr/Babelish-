@@ -95,7 +95,7 @@ export default function LoginScreen() {
       ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>New to Nativa? </Text>
+        <Text style={styles.footerText}>New to Babelish? </Text>
         <Pressable onPress={() => router.push('/signup')} hitSlop={8} accessibilityRole="link">
           <Text style={styles.footerLink}>Create an account</Text>
         </Pressable>

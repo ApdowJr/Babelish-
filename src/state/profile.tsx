@@ -22,7 +22,7 @@ type ProfileValue = {
   updateProfile: (patch: Partial<LearnerProfile>) => void;
 };
 
-const STORAGE_KEY = 'nativa:profile';
+const STORAGE_KEY = 'babelish:profile';
 
 export const DEFAULT_PROFILE: LearnerProfile = {
   displayName: '',

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Unit-test runner for Nativa — zero extra dependencies.
+ * Unit-test runner for Babelish — zero extra dependencies.
  *
  * Flow:
  *   1. Compile `tests/*.test.ts` (plus the pure source modules they import)
@@ -32,7 +32,7 @@ if (testFiles.length === 0) {
 const entryPoints = testFiles.map((f) => path.join(testsDir, f));
 
 mkdirSync(scratch, { recursive: true });
-const outDir = mkdtempSync(path.join(scratch, 'nativa-tests-'));
+const outDir = mkdtempSync(path.join(scratch, 'babelish-tests-'));
 
 console.log(`Compiling ${testFiles.length} test file(s)…`);
 const tsc = path.join(root, 'node_modules', 'typescript', 'bin', 'tsc');

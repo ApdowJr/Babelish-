@@ -9,10 +9,20 @@ export type Plan = 'free' | 'premium';
 
 export const FREE_DAILY_SCENARIOS = 1;
 
-/** Codes accepted by the beta stand-in for real billing (documented in PHASE5). */
+/**
+ * Codes accepted by the beta stand-in for real billing (documented in PHASE5).
+ *
+ * The pre-rename `NATIVA-*` codes stay valid on purpose: they were published in
+ * PHASE5.md and handed to beta testers, so a rebrand must not turn someone's
+ * working upgrade into "Code not accepted". They are accepted but never shown
+ * in new copy — the buttons redeem the `BABELISH-*` equivalents.
+ */
 export const PREMIUM_CODES: Record<string, string> = {
-  'NATIVA-BETA': 'Nativa beta programme',
-  'NATIVA-PREMIUM': 'Nativa premium',
+  'BABELISH-BETA': 'Babelish beta programme',
+  'BABELISH-PREMIUM': 'Babelish premium',
+  // Legacy aliases (pre-rename) — still redeemed, no longer advertised.
+  'NATIVA-BETA': 'Babelish beta programme',
+  'NATIVA-PREMIUM': 'Babelish premium',
 };
 
 /** On-device plan usage; day-rolls lazily so midnight needs no timer. */
@@ -111,7 +121,7 @@ export function referralCode(userId: string): string {
     hash ^= userId.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return `NV${hash.toString(36).toUpperCase().padStart(6, '0').slice(-6)}`;
+  return `BB${hash.toString(36).toUpperCase().padStart(6, '0').slice(-6)}`;
 }
 
 /** Seats included with a family plan. */

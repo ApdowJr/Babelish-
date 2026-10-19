@@ -11,10 +11,10 @@ export function Logo({ size = 28 }: { size?: number }) {
         end={{ x: 1, y: 1 }}
         style={[styles.mark, { width: size, height: size, borderRadius: size * 0.32 }]}
       >
-        <Text style={[styles.markText, { fontSize: size * 0.5 }]}>N</Text>
+        <Text style={[styles.markText, { fontSize: size * 0.5 }]}>B</Text>
       </LinearGradient>
       <Text style={[styles.wordmark, { fontSize: size * 0.78 }]}>
-        Nativa<Text style={{ color: colors.accent }}>.</Text>
+        Babelish<Text style={{ color: colors.accent }}>.</Text>
       </Text>
     </View>
   );

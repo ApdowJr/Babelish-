@@ -1,5 +1,5 @@
 {
-  "name": "nativa",
+  "name": "babelish",
   "version": "1.1.0",
   "main": "expo-router/entry",
   "dependencies": {

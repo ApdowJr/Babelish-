@@ -1,4 +1,4 @@
-# Nativa — Weekly feedback → curriculum loop
+# Babelish — Weekly feedback → curriculum loop
 
 The Phase 6 loop that keeps beta languages improving without shipping app
 updates. Everything here already exists as tooling; this doc is the runbook.

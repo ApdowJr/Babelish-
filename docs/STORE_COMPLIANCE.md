@@ -1,4 +1,4 @@
-# Nativa — App Store & Google Play compliance
+# Babelish — App Store & Google Play compliance
 
 Prepared for the launch builds (Phase 6). Every line here is either already
 configured in the repo or a named checklist item for the EAS submission.
@@ -16,7 +16,7 @@ no "may be used for…" legalese.
 
 ## Age rating & kids' privacy (COPPA / Play Families)
 
-- Nativa is a **general-audience** education app. Target rating: **12+** (iOS),
+- Babelish is a **general-audience** education app. Target rating: **12+** (iOS),
   **Everyone** with mild user interaction (Play).
 - It is **not directed at children under 13** and doesn't collect data from
   them knowingly. There are no ads, no third-party analytics, no behavioral
@@ -34,9 +34,9 @@ no "may be used for…" legalese.
   1. **On-device pronunciation scoring** (Phase 2): the audio features never
      leave the device.
   2. **Cloud transcription** (optional, only when the operator has configured a
-     provider): the audio is sent — through Nativa's own backend Function
+     provider): the audio is sent — through Babelish's own backend Function
      (`POST /api/ai/stt`) — to the provider for transcription and **discarded**.
-     Nativa never stores audio, and stores only the resulting text as a practice
+     Babelish never stores audio, and stores only the resulting text as a practice
      phrase. The provider API key lives only in the Function's server-side
      environment, never in the app binary (`EXPO_PUBLIC_*` is not used for
      privileged secrets).

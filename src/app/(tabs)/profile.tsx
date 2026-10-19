@@ -20,7 +20,7 @@ import { isNeonConfigured, NEON_API_URL } from '@/lib/neon';
 import { levelForXp } from '@/lib/xp';
 import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
-import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
+import { ALL_LOCAL_DATA_KEYS, buildDataExport } from '@/lib/privacy';
 import { deleteAccount } from '@/lib/neonApi';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
@@ -63,7 +63,7 @@ export default function ProfileScreen() {
 
   const lifetimeXp = analytics.xp.lifetime;
   const level = levelForXp(lifetimeXp);
-  const myReferralCode = referralCode(user?.id ?? 'nativa-demo');
+  const myReferralCode = referralCode(user?.id ?? 'babelish-demo');
 
   // Honest AI status: probe the backend proxy (its key lives server-side)
   // and combine with any direct EXPO_PUBLIC_AI_* config — the status rows
@@ -125,7 +125,7 @@ export default function ProfileScreen() {
     } else if (result === 'denied') {
       showAlert(
         'Notifications blocked',
-        'Allow notifications for Nativa in your system settings, then pick a time again.'
+        'Allow notifications for Babelish in your system settings, then pick a time again.'
       );
     } else {
       showAlert('Reminder unavailable', 'This device could not schedule the reminder.');
@@ -134,7 +134,7 @@ export default function ProfileScreen() {
 
   function shareReferral() {
     void Share.share({
-      message: `I'm learning ${target.name} with Natativa 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://nativa.app`,
+      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://babelish.app`,
     }).catch(() => {
       // sharing dismissed — nothing to do
     });
@@ -142,7 +142,7 @@ export default function ProfileScreen() {
 
   function exportMyData() {
     void Share.share({
-      title: 'Nativa data export',
+      title: 'Babelish data export',
       message: buildDataExport({
         profile,
         preferences: { targetLanguageId, nativeLanguageId, reminderKey },
@@ -158,7 +158,7 @@ export default function ProfileScreen() {
   function deleteMyAccount() {
     showAlert(
       'Delete account?',
-      'This removes your profile, progress, vocabulary, XP and reports from this device and from Nativa servers. This cannot be undone.',
+      'This removes your profile, progress, vocabulary, XP and reports from this device and from Babelish servers. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -178,7 +178,9 @@ export default function ProfileScreen() {
               } catch {
                 // server unreachable — the local wipe below still happens
               }
-              await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
+              // Wipes the current `babelish:*` keys AND any pre-rename
+              // `nativa:*` copy the one-time migration may not have cleared.
+              await AsyncStorage.multiRemove([...ALL_LOCAL_DATA_KEYS]);
               signOut();
               if (serverIssue) {
                 // Honest label: rows were erased, but the auth account itself
@@ -335,7 +337,7 @@ export default function ProfileScreen() {
               <Button
                 label="Start premium (beta)"
                 onPress={() => {
-                  const label = redeem('NATIVA-BETA');
+                  const label = redeem('BABELISH-BETA');
                   if (label) {
                     showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
                   } else {
@@ -478,7 +480,7 @@ export default function ProfileScreen() {
         <View style={styles.rowDivider} />
         <View style={styles.profileField}>
           <Text style={styles.fieldLabel}>
-            Deleting your account removes your data from this device and from Nativa servers.
+            Deleting your account removes your data from this device and from Babelish servers.
           </Text>
           <Button label="Delete account" variant="danger" onPress={deleteMyAccount} />
         </View>
@@ -558,7 +560,7 @@ export default function ProfileScreen() {
 
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
-        <Text style={styles.footerText}>Nativa v{APP_VERSION} · 2027 preview</Text>
+        <Text style={styles.footerText}>Babelish v{APP_VERSION} · 2027 preview</Text>
       </View>
     </Screen>
   );

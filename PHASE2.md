@@ -1,4 +1,4 @@
-# Nativa — Phase 2 delivery checklist
+# Babelish — Phase 2 delivery checklist
 
 _shipped 2026-10-18 · speaking & pronunciation_
 

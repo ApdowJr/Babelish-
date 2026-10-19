@@ -11,7 +11,7 @@ import {
 
 /**
  * Free tier = 1 new scenario per day, premium = unlimited — enforced
- * on-device like every other Nativa state (billing integration ships at
+ * on-device like every other Babelish state (billing integration ships at
  * launch; the beta code stands in until then). The day rolls lazily, so
  * midnight needs no timer and no network.
  */
@@ -28,7 +28,7 @@ type SubscriptionValue = {
   resetToFree: () => void;
 };
 
-const STORAGE_KEY = 'nativa:subscription';
+const STORAGE_KEY = 'babelish:subscription';
 
 const SubscriptionContext = createContext<SubscriptionValue | undefined>(undefined);
 

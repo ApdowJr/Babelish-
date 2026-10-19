@@ -1,4 +1,4 @@
-# Nativa — Device Test Plan (Master Audit, Phase J)
+# Babelish — Device Test Plan (Master Audit, Phase J)
 
 _Last updated: 2026-10-19._
 

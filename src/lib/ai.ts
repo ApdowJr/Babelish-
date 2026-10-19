@@ -334,7 +334,7 @@ export async function speakNative(text: string, ttsLocale: string, rate = 0.92):
       const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
       if (!synthesis) {
         throw new Error(
-          'Speech playback is blocked in this view — open Nativa in a normal browser tab to hear audio.'
+          'Speech playback is blocked in this view — open Babelish in a normal browser tab to hear audio.'
         );
       }
 

@@ -32,7 +32,7 @@ type AnalyticsValue = {
 /** Activity events that also earn XP (rules stay published in `@/lib/xp`). */
 const EVENT_XP: Partial<Record<string, XpReason>> = { review_completed: 'review' };
 
-const STORAGE_KEY = 'nativa:analytics';
+const STORAGE_KEY = 'babelish:analytics';
 
 const AnalyticsContext = createContext<AnalyticsValue | undefined>(undefined);
 

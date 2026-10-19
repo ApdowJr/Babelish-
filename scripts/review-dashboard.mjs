@@ -5,7 +5,7 @@
  * exposes at /admin (functions/api/admin.ts) straight against DATABASE_URL.
  *
  * Run:   npm run review:dashboard       → http://127.0.0.1:8788/admin
- * Auth:  HTTP Basic — admin / $ADMIN_PASSWORD (default "nativa", localhost only)
+ * Auth:  HTTP Basic — admin / $ADMIN_PASSWORD (default "babelish", localhost only)
  *
  * Reads .env.local (written by `neon deploy`). Never prints secrets.
  */
@@ -49,7 +49,7 @@ if (!DATABASE) {
 }
 
 const USER = env.ADMIN_USERNAME ?? 'admin';
-const PASS = env.ADMIN_PASSWORD ?? 'nativa';
+const PASS = env.ADMIN_PASSWORD ?? 'babelish';
 // Not PORT — this environment may export one for other services.
 const PORT = Number(env.DASHBOARD_PORT ?? 8788);
 
@@ -96,7 +96,7 @@ const server = createServer(async (req, res) => {
     const auth = req.headers.authorization ?? '';
     if (!auth.startsWith('Basic ')) {
       html(res, 401, renderMessage('Auth required', 'Send HTTP Basic credentials to continue.'), {
-        'WWW-Authenticate': 'Basic realm="nativa-admin", charset="UTF-8"',
+        'WWW-Authenticate': 'Basic realm="babelish-admin", charset="UTF-8"',
       });
       return;
     }
@@ -104,7 +104,7 @@ const server = createServer(async (req, res) => {
     const split = decoded.indexOf(':');
     if (!safeEqual(decoded.slice(0, split), USER) || !safeEqual(decoded.slice(split + 1), PASS)) {
       html(res, 401, renderMessage('Invalid credentials', 'Wrong username or password.'), {
-        'WWW-Authenticate': 'Basic realm="nativa-admin", charset="UTF-8"',
+        'WWW-Authenticate': 'Basic realm="babelish-admin", charset="UTF-8"',
       });
       return;
     }
@@ -191,7 +191,7 @@ const server = createServer(async (req, res) => {
 
 await ensureSchema(q);
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n🔎 Nativa review dashboard → http://127.0.0.1:${PORT}/admin`);
-  console.log(`   Basic auth: ${USER} / ${env.ADMIN_PASSWORD ? '$ADMIN_PASSWORD' : 'nativa (default, localhost only)'}`);
+  console.log(`\n🔎 Babelish review dashboard → http://127.0.0.1:${PORT}/admin`);
+  console.log(`   Basic auth: ${USER} / ${env.ADMIN_PASSWORD ? '$ADMIN_PASSWORD' : 'babelish (default, localhost only)'}`);
   console.log('   Ctrl+C to stop\n');
 });

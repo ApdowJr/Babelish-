@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Nativa curriculum draft generator (Phase 1).
+ * Babelish curriculum draft generator (Phase 1).
  *
  * Drafts a new A1 chapter with the connected AI API and saves it as a
  * REVIEWABLE DRAFT file — it never writes to Supabase and never publishes.
@@ -44,11 +44,11 @@ const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY;
 const model = process.env.EXPO_PUBLIC_AI_MODEL ?? 'gpt-4o-mini';
 
 if (!apiKey) {
-  console.error('Missing EXPO_PUBLIC_AI_API_KEY — set it in nativa/.env or export it first.');
+  console.error('Missing EXPO_PUBLIC_AI_API_KEY — set it in the project .env or export it first.');
   process.exit(1);
 }
 
-const SYSTEM_PROMPT = `You write CEFR language-learning content for the app Nativa.
+const SYSTEM_PROMPT = `You write CEFR language-learning content for the app Babelish.
 Return ONLY raw JSON (no markdown fences, no commentary) with this exact shape:
 
 {

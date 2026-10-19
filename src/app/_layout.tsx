@@ -1,6 +1,6 @@
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PreferencesProvider } from '@/state/preferences';
@@ -12,13 +12,32 @@ import { AlertProvider } from '@/components/AlertProvider';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
 import { validateConfigurationAtStartup } from '@/lib/config';
+import { migrateLegacyStorage } from '@/lib/storageMigration';
 
 export default function RootLayout() {
-  // One-shot, secret-free config validation: warns in the console exactly
-  // which service will fall back (demo tutor, demo accounts) and how to fix it.
+  // Gates the provider tree below: none of them may mount until the pre-rename
+  // `nativa:*` storage has been carried over to `babelish:*`. Each provider
+  // reads its key in a post-mount effect, so mounting them first would show a
+  // returning learner an empty profile and zero progress — and sign them out.
+  const [storageReady, setStorageReady] = useState(false);
+
   useEffect(() => {
+    // One-shot, secret-free config validation: warns in the console exactly
+    // which service will fall back (demo tutor, demo accounts) and how to fix it.
     validateConfigurationAtStartup();
+    // Never rejects — a storage failure still has to boot the app, so the
+    // providers fall back to their own empty-state defaults.
+    void migrateLegacyStorage().finally(() => setStorageReady(true));
   }, []);
+
+  if (!storageReady) {
+    return (
+      <View style={styles.splash}>
+        <Logo size={36} />
+        <ActivityIndicator color={colors.primarySoft} style={{ marginTop: 24 }} />
+      </View>
+    );
+  }
 
   return (
     <AuthProvider>

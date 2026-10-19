@@ -11,8 +11,8 @@ import type { Chapter, Exercise, Lesson } from '@/lib/curriculum/types';
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const PROGRESS_KEY = 'nativa:progress:v1';
-const VOCAB_KEY = 'nativa:vocab:v1';
+const PROGRESS_KEY = 'babelish:progress:v1';
+const VOCAB_KEY = 'babelish:vocab:v1';
 
 const curriculumCache = new Map<string, Chapter[]>();
 

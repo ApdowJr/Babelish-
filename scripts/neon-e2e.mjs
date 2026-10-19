@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Neon end-to-end smoke test for Nativa.
+ * Neon end-to-end smoke test for Babelish.
  *
  * Exercises every wired service the same way the app does:
  *   Functions → hello + api health, Postgres (direct query + via the API),
@@ -39,7 +39,7 @@ if (!AUTH || !API || !HELLO) {
   console.error('Missing Neon env vars in .env.local — run `neon deploy` first.');
   process.exit(2);
 }
-const ORIGIN = 'https://nativa.app';
+const ORIGIN = 'https://babelish.app';
 const COOKIE_NAME = '__Secure-neon-auth.session_token';
 
 let pass = 0;
@@ -66,7 +66,7 @@ async function signUpOrSignIn(email, password) {
   const su = await fetch(`${AUTH}/sign-up/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
-    body: JSON.stringify({ email, password, name: 'Nativa E2E' }),
+    body: JSON.stringify({ email, password, name: 'Babelish E2E' }),
   });
   if (su.ok) {
     const body = await su.json();
@@ -108,8 +108,8 @@ console.log('\n── 2. Postgres (direct, via DATABASE_URL_UNPOOLED) ───'
 
 console.log('\n── 3. Neon Auth (Managed Better Auth) ───────────────');
 const stamp = Date.now();
-const accountA = { email: `e2e-a-${stamp}@nativa.test`, password: 'NativaE2e!2026' };
-const accountB = { email: `e2e-b-${stamp}@nativa.test`, password: 'NativaE2e!2026' };
+const accountA = { email: `e2e-a-${stamp}@babelish.test`, password: 'BabelishE2e!2026' };
+const accountB = { email: `e2e-b-${stamp}@babelish.test`, password: 'BabelishE2e!2026' };
 const A = await signUpOrSignIn(accountA.email, accountA.password);
 const B = await signUpOrSignIn(accountB.email, accountB.password);
 ok('user A session established', Boolean(A.user?.id && A.cookie), `via ${A.via ?? A.error}`);
@@ -192,7 +192,7 @@ if (jwtA) {
   const signBody = sign?.status === 200 ? await sign.json() : {};
   ok('presigned upload URL issued', Boolean(signBody.uploadUrl), `key=${signBody.key ?? '?'}`);
 
-  const bytes = new TextEncoder().encode(`nativa e2e ${stamp}`);
+  const bytes = new TextEncoder().encode(`babelish e2e ${stamp}`);
   const putObj = signBody.uploadUrl
     ? await fetch(signBody.uploadUrl, {
         method: 'PUT',
@@ -208,7 +208,7 @@ if (jwtA) {
   const getUrlBody = getUrl?.status === 200 ? await getUrl.json() : {};
   const downloaded = getUrlBody.url ? await fetch(getUrlBody.url).catch(() => null) : null;
   const text = downloaded?.ok ? await downloaded.text() : '';
-  ok('object downloaded via presigned GET', text === `nativa e2e ${stamp}`, `bytes=${text.length}`);
+  ok('object downloaded via presigned GET', text === `babelish e2e ${stamp}`, `bytes=${text.length}`);
 
   const othersKey = await fetch(`${API}/api/storage/url?key=${encodeURIComponent(`users/${B.user?.id ?? 'x'}/e2e-note.txt`)}`, {
     headers: { Authorization: `Bearer ${jwtA}` },

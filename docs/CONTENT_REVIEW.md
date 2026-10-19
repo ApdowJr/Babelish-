@@ -1,4 +1,4 @@
-# Nativa — content review & contributor program
+# Babelish — content review & contributor program
 
 _Phase 4 (Trust & accuracy). Every AI-drafted chapter passes a human before it
 reaches a single learner. AI never approves its own output._
@@ -38,7 +38,7 @@ scripts/generate-curriculum.mjs        paste JSON on the dashboard
 npm run review:dashboard     # → http://127.0.0.1:8788/admin
 ```
 
-HTTP Basic: `admin` / `$ADMIN_PASSWORD` (default `nativa`, localhost only).
+HTTP Basic: `admin` / `$ADMIN_PASSWORD` (default `babelish`, localhost only).
 
 **Deployed (same UI, same shared code):** the `api` Function serves `/admin`.
 Set `ADMIN_PASSWORD` (and optionally `ADMIN_USERNAME`) in the Function

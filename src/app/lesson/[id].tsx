@@ -231,7 +231,7 @@ export default function LessonScreen() {
           <Button
             label="Start premium (beta)"
             onPress={() => {
-              const label = redeem('NATIVA-BETA');
+              const label = redeem('BABELISH-BETA');
               if (label) {
                 showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
               } else {

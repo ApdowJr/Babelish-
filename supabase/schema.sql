@@ -1,4 +1,4 @@
--- Nativa — Phase 1 schema
+-- Babelish — Phase 1 schema
 -- Run once in your Supabase project: SQL Editor → New query → paste → Run.
 -- Content tables: readable by signed-in users (approved content only),
 -- writable only by the service role (the app's clients can never publish).

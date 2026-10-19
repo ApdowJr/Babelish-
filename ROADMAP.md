@@ -1,9 +1,18 @@
-# Nativa — Roadmap to the 2027 Language Learning App
+# Babelish — Roadmap to the 2027 Language Learning App
 
 > **Vision:** An AI language tutor that speaks *every* language like a native speaker —
 > accurate curriculum, real pronunciation, real scenarios, personalized to each learner.
 
-Working name: **Nativa** (rename freely; it's one constant in `app.json`).
+Working name: **Babelish** (renamed from Nativa).
+
+> ⚠️ Renaming is *not* one constant in `app.json`. The 1.1.0 rename touched
+> ~300 occurrences across ~60 files, and four of them were identifiers already
+> in users' hands rather than cosmetic strings: the `nativa:*` AsyncStorage
+> keys (a naive rename wipes every install's progress and signs everyone out —
+> hence the one-time migration in `src/lib/storageMigration.ts`), the
+> `NATIVA-BETA` / `NATIVA-PREMIUM` premium codes (still accepted), the
+> `nativa.app` trusted origin registered on the Neon branch, and the API's CORS
+> allowlist. See `docs/DEPLOYMENT.md` before renaming anything again.
 
 ---
 
@@ -63,7 +72,7 @@ backend env (see `docs/DEPLOYMENT.md`).
 
 ### ✅ Backend on Neon (shipped 2026-10-18)
 - [x] Infra as code: `neon.ts` → `neon deploy` provisions Managed Better Auth, Functions, Object Storage (`assets`) on branch `production`
-- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://nativa.app`
+- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://babelish.app`
 - [x] **`api` Function** (`functions/api/index.ts`, Hono): health, `GET/PUT /api/state` (JWT-verified against branch JWKS, user id from `sub`), presigned storage URLs — cross-user access denied by construction
 - [x] **Lakebase Postgres**: `neon/schema.sql` (`public.app_state`) applied to the branch
 - [x] **Object Storage**: private `assets` bucket, presigned PUT/GET under `users/{id}/` prefixes

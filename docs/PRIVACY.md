@@ -1,11 +1,11 @@
-# Nativa — Privacy Policy (plain language)
+# Babelish — Privacy Policy (plain language)
 
 _Last updated: 2026-10-19. This is the source of truth for the store privacy
 forms and the in-app privacy screen (Profile → PRIVACY)._
 
 ## The short version
 
-Your practice stays on your phone. Nativa has **no ads, no third-party
+Your practice stays on your phone. Babelish has **no ads, no third-party
 analytics, and no data brokers**. The only thing that ever syncs to a server
 is your progress and vocabulary — under **your own** Neon account, on a
 database branch you control. Microphone audio is transcribed on demand and
@@ -38,7 +38,7 @@ id so reviewers can follow up; they are never shown to other learners.
 
 - Pronunciation scoring happens **on your device**.
 - Optional cloud speech-to-text runs only when the operator has configured a
-  provider. In production the audio is sent to **Nativa's own backend** (a
+  provider. In production the audio is sent to **Babelish's own backend** (a
   Neon Function, `POST /api/ai/stt`), which forwards it to the AI provider
   **for transcription only**; the audio is discarded immediately and only the
   transcribed phrase is kept as practice content. The provider's API key lives
@@ -51,7 +51,7 @@ id so reviewers can follow up; they are never shown to other learners.
 Tutor replies come from the app's AI backend when the operator has configured a
 provider (server-side key), or from a development endpoint in local builds, or
 from the clearly-labeled built-in demo lines when neither exists. Conversation
-text is sent to that endpoint to generate the reply; it is not stored by Nativa.
+text is sent to that endpoint to generate the reply; it is not stored by Babelish.
 A failed live request surfaces an error — the app never disguises an outage as
 an "AI" answer. Every AI-generated item that could reach the curriculum passes
 the human approval gate (`docs/CONTENT_REVIEW.md`) before publication — AI never
@@ -59,7 +59,7 @@ publishes itself.
 
 ## Children
 
-Nativa is general-audience (12+). It is not directed at children under 13 and
+Babelish is general-audience (12+). It is not directed at children under 13 and
 does not knowingly collect their data. No ads, no tracking, no behavioral
 profiling — for anyone, of any age. See `docs/STORE_COMPLIANCE.md`.
 

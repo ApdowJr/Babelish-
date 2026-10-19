@@ -2,7 +2,7 @@
  * Release-version tests.
  *
  * Root cause these guard: the app version lived in THREE places —
- * package.json, app.json and a hardcoded "Nativa v1.0.0" string in the
+ * package.json, app.json and a hardcoded "Babelish v1.0.0" string in the
  * Profile footer. A release bump that touches only one of them ships a
  * binary whose store version disagrees with what the learner sees on
  * screen, and support tickets become impossible to triage ("which version
@@ -22,8 +22,8 @@ import path from 'node:path';
 
 const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 
-/** A baked-in version string in UI copy, e.g. `Nativa v1.0.0`. */
-const HARDCODED_VERSION = /Nativa v\d+\.\d+\.\d+/;
+/** A baked-in version string in UI copy, e.g. `Babelish v1.0.0`. */
+const HARDCODED_VERSION = /Babelish v\d+\.\d+\.\d+/;
 
 function readJson(file: string): Record<string, any> {
   return JSON.parse(readFileSync(path.join(process.cwd(), file), 'utf8')) as Record<string, any>;

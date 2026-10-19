@@ -1,4 +1,4 @@
-# Nativa — Phase 4 delivery checklist
+# Babelish — Phase 4 delivery checklist
 
 _shipped 2026-10-18 · trust & accuracy_
 
@@ -15,7 +15,7 @@ _shipped 2026-10-18 · trust & accuracy_
 | Deploy Function changes (`/admin`, `/api/reports`) | ✅ deployed 2026-10-18 (live smoke-tested) |
 
 **Try it:** `npm run review:dashboard` → http://127.0.0.1:8788/admin
-(admin / `nativa` locally). Paste chapter JSON in "+ Submit a draft", open the
+(admin / `babelish` locally). Paste chapter JSON in "+ Submit a draft", open the
 payload, Approve → watch **Version history** gain `v1`. In the app: Speak tab →
 any tutor bubble → 🚩 → pick a reason.
 
