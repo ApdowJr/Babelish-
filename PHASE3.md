@@ -1,4 +1,4 @@
-# Zelvoca — Phase 3 delivery checklist
+# Babelish — Phase 3 delivery checklist
 
 _shipped 2026-10-18 · personalization_
 
