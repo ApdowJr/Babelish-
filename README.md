@@ -46,7 +46,7 @@ Portuguese, Russian, Swahili.
 
 ```bash
 npm install
-cp .env.example .env    # optional — app runs in demo mode without it
+cp .env.example .env    # optional — public Neon endpoints are baked in as defaults
 npx expo start          # scan the QR with Expo Go (SDK 58)
 ```
 
@@ -60,14 +60,18 @@ npx expo start          # scan the QR with Expo Go (SDK 58)
    (Neon's AI Gateway needs a paid plan — until then use any OpenAI-compatible key below.)
 2. **Accounts (Supabase, legacy)** — create a free [Supabase](https://supabase.com)
    project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
-3. **AI tutor** — put any OpenAI-compatible endpoint in `.env`
-   (OpenAI, OpenRouter, Groq, or a local server). The tutor gets a native-speaker system
-   prompt per language and can't break into English. The same endpoint powers **voice
-   input** (`/audio/transcriptions`, `whisper-1` by default — override with
-   `EXPO_PUBLIC_AI_STT_MODEL`); without a key, speaking practice still works by typing.
+3. **AI tutor** — the app calls its **own backend proxy** first
+   (`POST /api/ai/chat`, `/api/ai/stt` on the `api` Function), where the provider
+   key lives server-side (`AI_API_KEY`). For local development you can instead
+   point `EXPO_PUBLIC_AI_*` at any OpenAI-compatible endpoint — but anything in
+   `EXPO_PUBLIC_*` ships in the app, so never put a privileged key there in
+   production. The tutor gets a native-speaker system prompt per language and
+   can't break into English.
 
-Without keys, the app stays fully usable in **demo mode** — scripted native lines,
-on-device accounts — and the Profile tab shows exactly what's connected.
+With no AI key anywhere, the tutor degrades to **clearly-labeled demo lines** and
+voice practice still works by typing. Accounts, progress sync and storage stay
+live against Neon regardless — "demo mode" applies only to the AI — and the
+Profile tab shows exactly what's connected.
 
 ## Project structure
 
@@ -81,7 +85,7 @@ src/
     review.tsx          # daily Leitner review of missed words
   components/           # Button · TextField · Chip · Logo · Screen
   context/              # AuthContext (Neon Auth · Supabase · demo mode)
-  lib/                  # neon auth & api clients · supabase · ai tutor engine · voice recorder · pronunciation scoring · curriculum service & SRS
+  lib/                  # neon auth & api clients · supabase · shared AI core (app + Function) · voice/STT upload · pronunciation scoring · cross-platform alerts · config validation
   state/                # preferences · learning (progress, vocab, XP · cloud sync)
   data/
     languages.ts        # language seed data (real dialects & scenarios)
@@ -89,19 +93,25 @@ src/
     curriculum/         # bundled CEFR content (Spanish A1 full + 9 samplers)
   theme/                # design tokens (colors · spacing · typography)
 functions/
-  api/index.ts          # Neon Function: JWT-verified state sync + presigned storage
+  api/index.ts          # Neon Function: JWT-verified state sync · AI proxy · presigned storage · review dashboard
 neon/schema.sql         # Lakebase Postgres schema (app_state) — applied via the Neon CLI
 neon.ts                 # Neon infrastructure-as-code (auth · functions · buckets)
 hello.ts                # canary function (health check)
 supabase/schema.sql     # legacy tables + RLS — run once in the Supabase SQL editor
 scripts/generate-curriculum.mjs   # AI draft generator (drafts only, never publishes)
 scripts/neon-e2e.mjs    # end-to-end proof of every Neon service (npm run neon:e2e)
+scripts/test.mjs        # zero-dependency unit-test runner (npm test)
+scripts/local-api-smoke.mjs  # runs the real api Function from source (npm run smoke:local)
+docs/DEPLOYMENT.md      # how to deploy the backend, web and mobile builds
+docs/AUTH_AUDIT.md      # auth & API security audit (provider determined from code)
+docs/DEVICE_TEST_PLAN.md # on-device checklist (mic · TTS · permissions · live AI)
 ```
 
 ## Curriculum pipeline
 
-Content ships **bundled** (works offline & in demo mode). When Supabase is
-configured, **approved** chapters from the database override the bundle.
+Content ships **bundled** (works offline & in demo mode). When the legacy
+Supabase backend is configured, **approved** chapters from that database
+override the bundle.
 `node scripts/generate-curriculum.mjs es "En el restaurante"` drafts new
 chapters with your AI key into `src/data/curriculum/drafts/` — review them,
 insert with `status='draft'`, and flip to `approved` yourself. Publishing is
@@ -110,7 +120,12 @@ never automatic.
 ## Quality gates
 
 ```bash
-npx tsc --noEmit   # ✅ typecheck
-npx expo lint      # ✅ lint
-npx expo-doctor    # ✅ project health
+npm test                 # ✅ 26 unit tests (zero-dependency runner)
+npm run smoke:local      # ✅ 37 checks: the real Function from source
+                         #    (auth · CORS · rate limits · AI proxy · admin)
+npm run neon:e2e         # ✅ 50 checks against the live deployed backend
+npx tsc --noEmit         # ✅ typecheck (app)
+npm run check:functions  # ✅ typecheck (functions)
+npx expo lint            # ✅ lint
+npx expo-doctor          # ✅ project health
 ```

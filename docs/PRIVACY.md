@@ -1,6 +1,6 @@
 # Nativa — Privacy Policy (plain language)
 
-_Last updated: 2026-10-18. This is the source of truth for the store privacy
+_Last updated: 2026-10-19. This is the source of truth for the store privacy
 forms and the in-app privacy screen (Profile → PRIVACY)._
 
 ## The short version
@@ -37,20 +37,25 @@ id so reviewers can follow up; they are never shown to other learners.
 ## Microphone audio
 
 - Pronunciation scoring happens **on your device**.
-- Optional cloud speech-to-text (only if an OpenAI-compatible endpoint is
-  configured by you or the operator) receives the audio **for transcription
-  only**; the audio is discarded immediately and only the transcribed phrase
-  is kept as practice content.
+- Optional cloud speech-to-text runs only when the operator has configured a
+  provider. In production the audio is sent to **Nativa's own backend** (a
+  Neon Function, `POST /api/ai/stt`), which forwards it to the AI provider
+  **for transcription only**; the audio is discarded immediately and only the
+  transcribed phrase is kept as practice content. The provider's API key lives
+  in the backend's configuration — never inside the app.
 - With no STT configured, audio never leaves the device — and the app says so
   instead of pretending otherwise.
 
 ## AI tutor content
 
-Tutor replies come from whichever AI endpoint is configured (or from the
-built-in demo responses when none is). Conversation text is sent to that
-endpoint to generate the reply; it is not stored by Nativa. Every AI-generated
-item that could reach the curriculum passes the human approval gate
-(`docs/CONTENT_REVIEW.md`) before publication — AI never publishes itself.
+Tutor replies come from the app's AI backend when the operator has configured a
+provider (server-side key), or from a development endpoint in local builds, or
+from the clearly-labeled built-in demo lines when neither exists. Conversation
+text is sent to that endpoint to generate the reply; it is not stored by Nativa.
+A failed live request surfaces an error — the app never disguises an outage as
+an "AI" answer. Every AI-generated item that could reach the curriculum passes
+the human approval gate (`docs/CONTENT_REVIEW.md`) before publication — AI never
+publishes itself.
 
 ## Children
 
@@ -74,4 +79,6 @@ profiling — for anyone, of any age. See `docs/STORE_COMPLIANCE.md`.
 | Neon (Lakebase Postgres + Managed Auth + Functions) | App backend | Account id/email, progress, vocab, weekly XP, reports |
 | OpenAI-compatible endpoint (optional, configurable) | STT + tutor | Audio (transient, STT only), conversation text |
 
-That's the whole list. Nothing else touches your data.
+That's the whole list. Nothing else touches your data. AI provider keys are
+held only in backend configuration (a Neon Function env var) — `EXPO_PUBLIC_*`
+values shipped in the app are never used for privileged secrets.

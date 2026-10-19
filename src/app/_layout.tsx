@@ -8,10 +8,18 @@ import { LearningProvider } from '@/state/learning';
 import { ProfileProvider } from '@/state/profile';
 import { AnalyticsProvider } from '@/state/analytics';
 import { SubscriptionProvider } from '@/state/subscription';
+import { AlertProvider } from '@/components/AlertProvider';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
+import { validateConfigurationAtStartup } from '@/lib/config';
 
 export default function RootLayout() {
+  // One-shot, secret-free config validation: warns in the console exactly
+  // which service will fall back (demo tutor, demo accounts) and how to fix it.
+  useEffect(() => {
+    validateConfigurationAtStartup();
+  }, []);
+
   return (
     <AuthProvider>
       <PreferencesProvider>
@@ -19,8 +27,10 @@ export default function RootLayout() {
           <ProfileProvider>
             <AnalyticsProvider>
               <SubscriptionProvider>
-                <StatusBar style="light" />
-                <RootNavigator />
+                <AlertProvider>
+                  <StatusBar style="light" />
+                  <RootNavigator />
+                </AlertProvider>
               </SubscriptionProvider>
             </AnalyticsProvider>
           </ProfileProvider>
@@ -38,22 +48,14 @@ function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
 
-  if (loading) {
-    return (
-      <View style={styles.splash}>
-        <Logo size={36} />
-        <ActivityIndicator color={colors.primarySoft} style={{ marginTop: 24 }} />
-      </View>
-    );
-  }
-
   const signedIn = Boolean(user);
   const inAuthGroup = segments[0] === '(auth)';
 
   // Explicit auth redirects. Stack.Protected removes guarded screens from the
   // navigator, but on web (SPA export) the implicit guard fallback can leave a
   // logged-out first-time visitor on "/" with nothing to render ("Unmatched
-  // Route"). Send both directions to a real route explicitly.
+  // Route"). Send both directions to a real route explicitly. Declared before
+  // any early return so the hook order is identical on every render.
   useEffect(() => {
     if (loading) return;
     if (!signedIn && !inAuthGroup) {
@@ -62,6 +64,15 @@ function RootNavigator() {
       router.replace('/');
     }
   }, [loading, signedIn, inAuthGroup]);
+
+  if (loading) {
+    return (
+      <View style={styles.splash}>
+        <Logo size={36} />
+        <ActivityIndicator color={colors.primarySoft} style={{ marginTop: 24 }} />
+      </View>
+    );
+  }
 
   return (
     <Stack

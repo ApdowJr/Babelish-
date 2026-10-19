@@ -51,8 +51,8 @@ export default function PrivacyRoute() {
       </View>
       <Text style={styles.p}>
         The weekly board is privacy-first by design: you see your own rank and the number of
-        participants — never another learner's identity, and they never see yours. Reports you file
-        ("this sounds wrong") are queued with your user id so reviewers can follow up; they are
+        participants — never another learner’s identity, and they never see yours. Reports you file
+        (“this sounds wrong”) are queued with your user id so reviewers can follow up; they are
         never shown to other learners.
       </Text>
 
@@ -117,7 +117,7 @@ export default function PrivacyRoute() {
           <Text style={styles.td}>Audio (transient, STT only), conversation text</Text>
         </View>
       </View>
-      <Text style={styles.p}>That's the whole list. Nothing else touches your data.</Text>
+      <Text style={styles.p}>That’s the whole list. Nothing else touches your data.</Text>
     </ScrollView>
   );
 }

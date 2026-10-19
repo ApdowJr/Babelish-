@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
@@ -25,13 +24,18 @@ import { getLanguage } from '@/data/languages';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
+  fetchAiStatus,
   isAIConfigured,
+  setSpeechErrorListener,
   speakNative,
   transcribeSpeech,
   tutorReply,
+  type AiStatus,
   type TutorMessage,
 } from '@/lib/ai';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
+import { showAlert } from '@/lib/alert';
+import { NEON_API_URL } from '@/lib/neon';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
 import { flushReportQueue, sendReport } from '@/lib/reports';
@@ -78,6 +82,9 @@ export default function SpeakScreen() {
   const [practice, setPractice] = useState<PracticeState | null>(null);
   const [chatRecording, setChatRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // Server-reported AI capability (backend proxy probe) — null until the
+  // first probe resolves. See tutorLive/voiceLive below.
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const recorder = useVoiceRecorder();
@@ -94,6 +101,19 @@ export default function SpeakScreen() {
   };
   const level = suggestLevel(lessonsCompleted);
 
+  // Honest capability gates: "live" only when either transport can actually
+  // serve it — the backend proxy (key lives server-side) or a direct
+  // EXPO_PUBLIC_AI_* config. A null aiStatus means the probe hasn't resolved:
+  // fall back to build-time knowledge, never claim live from wishful thinking.
+  const tutorLive = isAIConfigured || aiStatus?.chat === true;
+  const voiceLive = isAIConfigured || aiStatus?.stt === true;
+
+  /** Transport for AI calls: JWT for the backend proxy when available. */
+  async function aiIo() {
+    const jwt = await getAccessToken().catch(() => null);
+    return jwt ? { apiBase: NEON_API_URL, jwt } : null;
+  }
+
   // Reset the conversation when the language or scenario changes — done
   // during render (React's recommended pattern), not inside the effect.
   const conversationKey = `${language.id}:${scenarioId ?? 'free'}`;
@@ -106,6 +126,26 @@ export default function SpeakScreen() {
     setVoiceError(null);
     setBusy(true);
   }
+
+  // Probe the backend proxy once per mount for real AI capability, and wire
+  // TTS failures into this screen's error banner (a silent dead tap is
+  // exactly the "no audio" failure this audit is fixing).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const jwt = await getAccessToken().catch(() => null);
+      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
+      if (!cancelled) setAiStatus(status);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken]);
+
+  useEffect(() => {
+    setSpeechErrorListener(setVoiceError);
+    return () => setSpeechErrorListener(null);
+  }, []);
 
   // Speaking stats (best score per phrase) persist locally.
   useEffect(() => {
@@ -157,25 +197,33 @@ export default function SpeakScreen() {
   async function respond(history: ChatMessage[]) {
     setBusy(true);
     try {
-      const reply = await tutorReply({
-        language,
-        history,
-        learnerName,
-        scenarioTitle: scenario?.title,
-        profile: tutorProfile,
-        level,
-      });
+      const reply = await tutorReply(
+        {
+          language,
+          history,
+          learnerName,
+          scenarioTitle: scenario?.title,
+          profile: tutorProfile,
+          level,
+        },
+        await aiIo()
+      );
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', text: reply.text, translation: reply.translation },
       ]);
-    } catch {
+    } catch (error) {
+      // Real-mode failures surface as themselves (rate limits, timeouts,
+      // wrong-script, missing key) — never replaced by scripted content.
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           text: '…',
-          translation: 'Could not reach the tutor. Check your AI key in .env.',
+          translation:
+            error instanceof Error && error.message
+              ? error.message
+              : 'Could not reach the tutor — try again.',
         },
       ]);
     } finally {
@@ -198,13 +246,18 @@ export default function SpeakScreen() {
     if (busy || recorder.isBusy || practice?.phase === 'recording' || practice?.phase === 'scoring') {
       return;
     }
+    // Known-unavailable voice input: don't record a clip we can't transcribe.
+    if (aiStatus && !voiceLive) {
+      setVoiceError('Voice input is not configured on this deployment yet — type your reply instead.');
+      return;
+    }
     if (chatRecording) {
       setChatRecording(false);
       const uri = await recorder.stop();
       if (!uri) return;
       setBusy(true);
       try {
-        const text = await transcribeSpeech(uri, language.id);
+        const text = await transcribeSpeech(uri, language.id, await aiIo());
         const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
         setMessages(history);
         setBusy(false);
@@ -247,7 +300,7 @@ export default function SpeakScreen() {
         return;
       }
       try {
-        const transcript = await transcribeSpeech(uri, language.id);
+        const transcript = await transcribeSpeech(uri, language.id, await aiIo());
         finishPractice(phrase, transcript);
       } catch (error) {
         setPractice(null);
@@ -282,7 +335,7 @@ export default function SpeakScreen() {
   }, [getAccessToken]);
 
   function reportMessage(item: ChatMessage) {
-    Alert.alert('Report this message', 'What is wrong with it?', [
+    showAlert('Report this message', 'What is wrong with it?', [
       { text: 'Sounds wrong', onPress: () => void submitReport('Sounds wrong', item.text) },
       {
         text: 'Wrong translation',
@@ -299,7 +352,7 @@ export default function SpeakScreen() {
       quote,
       reason,
     });
-    Alert.alert(
+    showAlert(
       'Thanks for the flag 🚩',
       outcome === 'sent'
         ? 'Sent to the content review queue.'
@@ -344,7 +397,7 @@ export default function SpeakScreen() {
           >
             <Text style={styles.phraseActionLabel}>🐢 Slow</Text>
           </Pressable>
-          {isAIConfigured ? (
+          {voiceLive ? (
             <Pressable
               onPress={() => togglePracticeMic(phrase)}
               style={[
@@ -467,7 +520,7 @@ export default function SpeakScreen() {
             ) : null}
             <Text style={styles.scoreHeard}>I heard: “{active.transcript}”</Text>
             <View style={styles.scoreActions}>
-              {isAIConfigured ? (
+              {voiceLive ? (
                 <Pressable
                   onPress={() => togglePracticeMic(phrase)}
                   style={styles.scoreAction}
@@ -579,7 +632,7 @@ export default function SpeakScreen() {
                   <Text style={styles.practiceTitle}>Say it out loud</Text>
                 </View>
                 <Text style={styles.practiceSubtitle}>
-                  {isAIConfigured
+                  {voiceLive
                     ? 'Practice key phrases — scored word by word'
                     : 'Practice key phrases — type to get scored word by word'}
                 </Text>
@@ -679,7 +732,7 @@ export default function SpeakScreen() {
             <Ionicons
               name={chatRecording ? 'stop' : 'mic-outline'}
               size={20}
-              color={chatRecording ? colors.white : isAIConfigured ? colors.accent : colors.textFaint}
+              color={chatRecording ? colors.white : voiceLive ? colors.accent : colors.textFaint}
             />
           </Pressable>
           <TextInput
@@ -713,9 +766,10 @@ export default function SpeakScreen() {
             </LinearGradient>
           </Pressable>
         </View>
-        {!isAIConfigured ? (
+        {!tutorLive ? (
           <Text style={styles.demoNote}>
-            Demo tutor — add an AI key in .env for live conversations &amp; voice input
+            Demo tutor — live AI is off on this deployment. Set AI_API_KEY on the api Function, or
+            EXPO_PUBLIC_AI_API_URL + EXPO_PUBLIC_AI_API_KEY in .env for development.
           </Text>
         ) : null}
       </KeyboardAvoidingView>

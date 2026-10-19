@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
@@ -12,9 +13,9 @@ import { GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip, useProfile } from '@/state/
 import { useAnalytics } from '@/state/analytics';
 import { useSubscription } from '@/state/subscription';
 import { getLanguage } from '@/data/languages';
-import { isAIConfigured } from '@/lib/ai';
+import { fetchAiStatus, isAIConfigured, type AiStatus } from '@/lib/ai';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { isNeonConfigured } from '@/lib/neon';
+import { isNeonConfigured, NEON_API_URL } from '@/lib/neon';
 import { levelForXp } from '@/lib/xp';
 import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
@@ -56,6 +57,26 @@ export default function ProfileScreen() {
   const level = levelForXp(lifetimeXp);
   const myReferralCode = referralCode(user?.id ?? 'nativa-demo');
 
+  // Honest AI status: probe the backend proxy (its key lives server-side)
+  // and combine with any direct EXPO_PUBLIC_AI_* config — the status rows
+  // reflect what actually answers, not what a bundle merely contains.
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const jwt = await getAccessToken().catch(() => null);
+      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
+      if (!cancelled) setAiStatus(status);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken]);
+
+  const tutorLive = isAIConfigured || aiStatus?.chat === true;
+  const voiceLive = isAIConfigured || aiStatus?.stt === true;
+  const aiSource = aiStatus?.source ?? (isAIConfigured ? 'direct' : 'none');
+
   // Target-language pack stats — content is bundled, so this is instant
   // and purely local (no download, no network, ever).
   const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
@@ -94,12 +115,12 @@ export default function ProfileScreen() {
     if (result === 'scheduled') {
       setReminderKey(slotKey(hour, minute));
     } else if (result === 'denied') {
-      Alert.alert(
+      showAlert(
         'Notifications blocked',
         'Allow notifications for Nativa in your system settings, then pick a time again.'
       );
     } else {
-      Alert.alert('Reminder unavailable', 'This device could not schedule the reminder.');
+      showAlert('Reminder unavailable', 'This device could not schedule the reminder.');
     }
   }
 
@@ -127,7 +148,7 @@ export default function ProfileScreen() {
   }
 
   function deleteMyAccount() {
-    Alert.alert(
+    showAlert(
       'Delete account?',
       'This removes your profile, progress, vocabulary, XP and reports from this device and from Nativa servers. This cannot be undone.',
       [
@@ -154,7 +175,7 @@ export default function ProfileScreen() {
               if (serverIssue) {
                 // Honest label: rows were erased, but the auth account itself
                 // could not be removed — the learner must know it may still exist.
-                Alert.alert(
+                showAlert(
                   'Account removal incomplete',
                   'Your learning data was erased, but the account itself could not be removed from the server. Please try again later or contact support.'
                 );
@@ -308,9 +329,9 @@ export default function ProfileScreen() {
                 onPress={() => {
                   const label = redeem('NATIVA-BETA');
                   if (label) {
-                    Alert.alert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
+                    showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
                   } else {
-                    Alert.alert('Code not accepted', 'Ask support for a valid beta code.');
+                    showAlert('Code not accepted', 'Ask support for a valid beta code.');
                   }
                 }}
               />
@@ -459,10 +480,26 @@ export default function ProfileScreen() {
       <View style={styles.group}>
         <View style={styles.row}>
           <View style={styles.rowLabelWrap}>
-            <StatusDot ok={isAIConfigured} />
+            <StatusDot ok={tutorLive} />
             <Text style={styles.rowLabel}>AI tutor</Text>
           </View>
-          <Text style={styles.rowValue}>{isAIConfigured ? 'Connected' : 'Demo mode'}</Text>
+          <Text style={styles.rowValue}>
+            {tutorLive ? (aiSource === 'proxy' ? 'Live (app backend)' : 'Connected') : 'Demo mode'}
+          </Text>
+        </View>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <View style={styles.rowLabelWrap}>
+            <StatusDot ok={voiceLive} />
+            <Text style={styles.rowLabel}>Voice input</Text>
+          </View>
+          <Text style={styles.rowValue}>
+            {voiceLive
+              ? aiSource === 'proxy'
+                ? 'Live (app backend)'
+                : 'Connected'
+              : 'Not configured'}
+          </Text>
         </View>
         <View style={styles.rowDivider} />
         <View style={styles.row}>
@@ -494,11 +531,11 @@ export default function ProfileScreen() {
       </View>
       <Text style={styles.statusNote}>
         {isNeon
-          ? isAIConfigured
+          ? tutorLive
             ? 'Everything is connected. Go say hi to your tutor in the Speak tab.'
-            : 'Neon backend connected: real accounts + cloud progress sync. The AI tutor stays in demo mode until an AI key is added to .env.'
-          : isDemo || !isAIConfigured
-            ? 'Connect real services by copying .env.example to .env and adding your Supabase + AI keys, then restart the dev server.'
+            : 'Neon backend connected: real accounts + cloud progress sync. The AI tutor runs in labeled demo mode until AI_API_KEY is set on the api Function (production) or an EXPO_PUBLIC_AI_* key is added for development.'
+          : isDemo
+            ? 'This build runs without a backend (EXPO_PUBLIC_NEON_DISABLED=1): accounts and progress stay on this device, and the AI tutor needs an EXPO_PUBLIC_AI_* key.'
             : 'Everything is connected. Go say hi to your tutor in the Speak tab.'}
       </Text>
 

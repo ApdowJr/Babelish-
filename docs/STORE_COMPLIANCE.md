@@ -33,12 +33,16 @@ no "may be used for…" legalese.
 - Microphone audio is used for two things only:
   1. **On-device pronunciation scoring** (Phase 2): the audio features never
      leave the device.
-  2. **Cloud transcription** (optional, only when the learner or operator has
-     configured an OpenAI-compatible STT endpoint): the audio is sent to that
-     endpoint for transcription and **discarded** — Nativa never stores audio,
-     and stores only the resulting text as a practice phrase.
-- If no STT endpoint is configured, audio never leaves the device at all, and
-  the app says so (Profile → APP STATUS, and the Speak tab degrades honestly).
+  2. **Cloud transcription** (optional, only when the operator has configured a
+     provider): the audio is sent — through Nativa's own backend Function
+     (`POST /api/ai/stt`) — to the provider for transcription and **discarded**.
+     Nativa never stores audio, and stores only the resulting text as a practice
+     phrase. The provider API key lives only in the Function's server-side
+     environment, never in the app binary (`EXPO_PUBLIC_*` is not used for
+     privileged secrets).
+- If no STT provider is configured the backend answers `503 ai-not-configured`
+  and the app says so (Profile → APP STATUS, and the Speak tab degrades
+  honestly) — it never sends audio anywhere or fakes a transcript.
 
 ## Data-safety form answers (Play) / Privacy Nutrition Labels (App Store)
 
@@ -75,3 +79,8 @@ no "may be used for…" legalese.
 - [ ] Attach a privacy policy URL (content: `docs/PRIVACY.md`).
 - [ ] Verify the EAS-built binaries include the mic permission string
       (`eas build` → inspect Info.plist / AndroidManifest).
+- [ ] Deploy the updated `api` Function (AI proxy + CORS allowlist + rate
+      limiting) — pending a Neon API key. Command: `docs/DEPLOYMENT.md`.
+- [ ] Set `AI_API_KEY` (and optionally `AI_MODEL` / `AI_STT_MODEL` /
+      `AI_API_URL`) on the `api` Function to enable live tutor + voice. Until
+      then the app is honest: `503 ai-not-configured` and labeled demo lines.

@@ -1,15 +1,35 @@
 import * as Speech from 'expo-speech';
+import { Platform } from 'react-native';
 import { getLanguage, type Language } from '@/data/languages';
-import { formatProfileContext, type ProfileContext } from '@/lib/profilePrompt';
+import {
+  buildSystemPrompt,
+  extractTutorReply,
+  parseTutorPayload,
+  scriptMatches,
+  type AiChatRequest,
+  type TutorMessage,
+} from '@/lib/aiCore';import type { ProfileContext } from '@/lib/profilePrompt';
+import { appendTranscriptionFields, prepareAudioPart } from '@/lib/sttUpload';
+import { showAlert } from '@/lib/alert';
+
+export type { TutorMessage } from '@/lib/aiCore';
 
 /**
  * AI tutor engine.
  *
- * Talks to any OpenAI-compatible chat API (OpenAI, OpenRouter, Groq, a local
- * server…) through env config. Every call carries a native-speaker system
- * prompt so the AI stays in the target language, at the right register and
- * CEFR level. Without keys, it falls back to scripted native lines so the
- * experience is always demonstrable (see ROADMAP.md).
+ * Two transports, tried in order:
+ *   1. **Backend proxy** (`POST /api/ai/chat`, `POST /api/ai/stt` on the app's
+ *      Neon Function, authenticated with the learner's JWT): the provider key
+ *      lives in the Function environment and never enters the client bundle —
+ *      the production-safe path (see docs/DEPLOYMENT.md).
+ *   2. **Direct** OpenAI-compatible endpoint via `EXPO_PUBLIC_AI_*` env — a
+ *      development convenience. Because EXPO_PUBLIC_* values ship inside the
+ *      bundle, they must only ever hold a restricted, non-privileged key.
+ *
+ * With neither configured, tutor replies are scripted demo lines — always
+ * labeled "Demo tutor" in the UI, never passed off as a live model. Real-mode
+ * failures surface as visible errors; they are never answered with scripted
+ * text.
  */
 
 const API_URL = process.env.EXPO_PUBLIC_AI_API_URL?.replace(/\/+$/, '');
@@ -21,7 +41,12 @@ export const isAIConfigured = Boolean(
   API_URL && API_KEY && !API_KEY.includes('your-key') && !API_KEY.includes('sk-...')
 );
 
-export type TutorMessage = { role: 'user' | 'assistant'; text: string; translation?: string };
+/** How a call reaches AI: through the app backend (proxy) or directly. */
+export type AiTransport = { apiBase: string; jwt?: string | null };
+
+function usable(io?: AiTransport | null): io is AiTransport {
+  return Boolean(io?.apiBase && io.jwt);
+}
 
 export type TutorReply = {
   text: string;
@@ -39,46 +64,195 @@ export type TutorOptions = {
   profile?: ProfileContext;
 };
 
-/** Builds the native-speaker persona that governs every AI response. */
-export function buildSystemPrompt(opts: {
-  language: Language;
-  level: string;
-  scenarioTitle?: string;
-  learnerName?: string;
-  profile?: ProfileContext;
-}): string {
-  const { language, level, scenarioTitle, learnerName, profile } = opts;
-  return [
-    `You are a real native ${language.name} speaker (${language.nativeName}) from the heart of the culture, acting as a warm, expert one-on-one language tutor.`,
-    `You ALWAYS reply in ${language.name}. Never use English or any other language in your reply text.`,
-    `The learner's CEFR level is ${level}; match vocabulary, idiom density and sentence length to that level.`,
-    scenarioTitle
-      ? `Stay naturally in character for this real-life scenario: "${scenarioTitle}".`
-      : `Keep the conversation natural and everyday, like two friends talking.`,
-    learnerName
-      ? `The learner's name is ${learnerName}. Personalize examples around their life when it fits naturally.`
-      : '',
-    ...formatProfileContext(profile),
-    `If the learner makes a mistake, first recast it naturally in ${language.name} (a gentle native-style correction), then continue the conversation with a follow-up question so they always have something to answer.`,
-    `Sound like a person, not a textbook: natural contractions, real rhythm, small cultural touches. Never lecture.`,
-    `Respond with STRICT JSON only, no markdown fences: {"reply":"<your message in ${language.name}>","translation":"<natural English translation>","tip":"<optional one-line grammar or culture tip>"}`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+/** Which AI transports actually work right now (for honest UI status rows). */
+export type AiStatus = {
+  chat: boolean;
+  stt: boolean;
+  source: 'proxy' | 'direct' | 'none';
+};
+
+/**
+ * Asks the backend proxy which AI capabilities are configured server-side,
+ * then combines that with the direct (EXPO_PUBLIC_AI_*) config. Returns null
+ * when nothing can be determined (e.g. offline) so callers keep their
+ * build-time knowledge instead of guessing.
+ */
+export async function fetchAiStatus(io?: AiTransport | null): Promise<AiStatus | null> {
+  let proxy: { chat: boolean; stt: boolean } | null = null;
+  if (usable(io)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8_000);
+    try {
+      const res = await fetch(`${io.apiBase}/api/ai/status`, {
+        headers: { Authorization: `Bearer ${io.jwt}` },
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        const json = (await res.json().catch(() => null)) as {
+          chat?: unknown;
+          stt?: unknown;
+        } | null;
+        if (json) proxy = { chat: json.chat === true, stt: json.stt === true };
+      }
+    } catch {
+      // offline / expired session — leave proxy unknown
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  const chat = (proxy?.chat ?? false) || isAIConfigured;
+  const stt = (proxy?.stt ?? false) || isAIConfigured;
+  const source: AiStatus['source'] =
+    proxy && (proxy.chat || proxy.stt) ? 'proxy' : isAIConfigured ? 'direct' : 'none';
+  if (!chat && !stt && !proxy && !isAIConfigured && !io) {
+    // No transport was even attempted (no io, no direct config): this is a
+    // definitive "nothing configured", not a failed probe.
+    return { chat: false, stt: false, source: 'none' };
+  }
+  return { chat, stt, source };
 }
 
-export async function tutorReply(opts: TutorOptions): Promise<TutorReply> {
-  if (!isAIConfigured) {
-    return demoReply(opts.language, opts.history.filter((m) => m.role === 'user').length);
+/** Builds the native-speaker persona that governs every AI response. */
+export { buildSystemPrompt };
+
+/**
+ * Tutor reply pipeline. Transports are tried in order:
+ *   1. Backend proxy (JWT) — key lives server-side; a 503 "not configured"
+ *      falls through, every other failure is surfaced to the learner.
+ *   2. Direct EXPO_PUBLIC_AI_* config (development).
+ *   3. Scripted demo lines — only when nothing is configured, and the UI
+ *      labels them "Demo tutor".
+ * Real-mode failures THROW. They are never answered with scripted text.
+ */
+export async function tutorReply(
+  opts: TutorOptions,
+  io?: AiTransport | null
+): Promise<TutorReply> {
+  if (usable(io)) {
+    const proxied = await proxyChat(io, opts);
+    if (proxied) return proxied;
   }
 
-  const sys = buildSystemPrompt({
-    language: opts.language,
-    level: opts.level ?? 'A2',
+  if (isAIConfigured) {
+    const sys = buildSystemPrompt({
+      language: opts.language,
+      level: opts.level ?? 'A2',
+      scenarioTitle: opts.scenarioTitle,
+      learnerName: opts.learnerName,
+      profile: opts.profile,
+    });
+    return directChat(sys, opts);
+  }
+
+  return demoReply(opts.language, opts.history.filter((m) => m.role === 'user').length);
+}
+
+/** Maps a proxy/direct HTTP failure to a learner-facing, recoverable message. */
+function chatHttpError(status: number, json: { error?: string; message?: string } | null): string {
+  if (status === 401) return 'Your session expired — sign in again to keep chatting.';
+  if (status === 403) return 'This account cannot use the tutor — contact support.';
+  if (status === 429) return 'The tutor is busy — wait a minute and try again.';
+  if (status >= 500) return 'The tutor service hit a problem — try again in a moment.';
+  return (
+    json?.message || json?.error || `Tutor request failed (HTTP ${status}) — try again.`
+  );
+}
+
+/** Returns the proxy reply, or null when the proxy has no AI configured. */
+async function proxyChat(io: AiTransport, opts: TutorOptions): Promise<TutorReply | null> {
+  const body: AiChatRequest = {
+    languageId: opts.language.id,
+    level: opts.level,
     scenarioTitle: opts.scenarioTitle,
     learnerName: opts.learnerName,
     profile: opts.profile,
-  });
+    history: opts.history.map((m) => ({ role: m.role, text: m.text })),
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  try {
+    const res = await fetch(`${io.apiBase}/api/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${io.jwt}` },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const json = (await res.json().catch(() => null)) as {
+      reply?: string;
+      translation?: string;
+      tip?: string;
+      error?: string;
+      message?: string;
+    } | null;
+
+    if (res.ok && json && typeof json.reply === 'string' && json.reply.trim()) {
+      // Re-validate locally (including the non-Latin-script guard) so a stale
+      // or misbehaving backend can never push out-of-language text into the
+      // conversation as if the tutor had said it.
+      const reply = extractTutorReply(
+        JSON.stringify({
+          reply: json.reply,
+          translation: json.translation ?? '',
+          tip: json.tip,
+        }),
+        opts.language
+      );
+      return { text: reply.text, translation: reply.translation, tip: reply.tip };
+    }
+    if (res.status === 503 && json?.error === 'ai-not-configured') return null;
+    throw new Error(chatHttpError(res.status, json));
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('The tutor took too long to answer — try again.');
+    }
+    if (err instanceof TypeError) {
+      throw new Error('Could not reach the tutor — check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function directChat(sys: string, opts: TutorOptions): Promise<TutorReply> {
+  const raw = await directCompletion(sys, opts, 0.8);
+  const parsed = parseTutorPayload(raw);
+  if (!parsed.text) throw new Error('The tutor returned an empty reply — try again.');
+  if (scriptMatches(parsed.text, opts.language)) {
+    return { text: parsed.text, translation: parsed.translation, tip: parsed.tip };
+  }
+
+  // Guardrail: non-Latin-script languages get one retry if the model slipped
+  // into English — then fail honestly instead of showing an out-of-language
+  // line as if the tutor had said it in the target language.
+  const retryRaw = await directCompletion(sys, opts, 0.6, true).catch(() => null);
+  if (retryRaw) {
+    const retry = parseTutorPayload(retryRaw);
+    if (retry.text && scriptMatches(retry.text, opts.language)) {
+      return { text: retry.text, translation: retry.translation, tip: retry.tip };
+    }
+  }
+  throw new Error(
+    `The tutor replied in the wrong language for ${opts.language.name} — try again.`
+  );
+}
+
+async function directCompletion(
+  sys: string,
+  opts: TutorOptions,
+  temperature: number,
+  isRetry = false
+): Promise<string> {
+  const messages = isRetry
+    ? [
+        { role: 'system', content: sys },
+        { role: 'user', content: `Reply again, ONLY in ${opts.language.name}.` },
+      ]
+    : [
+        { role: 'system', content: sys },
+        ...opts.history.map((m) => ({ role: m.role, content: m.text })),
+      ];
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
@@ -90,136 +264,275 @@ export async function tutorReply(opts: TutorOptions): Promise<TutorReply> {
         Authorization: `Bearer ${API_KEY}`,
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.8,
-        messages: [
-          { role: 'system', content: sys },
-          ...opts.history.map((m) => ({ role: m.role, content: m.text })),
-        ],
-      }),
+      body: JSON.stringify({ model: MODEL, temperature, messages }),
     });
-
-    if (!res.ok) throw new Error(`AI request failed with status ${res.status}`);
-
-    const data = await res.json();
-    const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    const parsed = parseTutorPayload(raw);
-
-    // Guardrail: the reply must actually be in the target script when the
-    // language uses a non-Latin script — retry once before giving up.
-    if (!scriptMatches(parsed.text, opts.language)) {
-      const retry = await fetchRetry(sys, opts);
-      if (retry) return retry;
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(chatHttpError(res.status, json));
     }
-
-    return {
-      text: parsed.text || demoReply(opts.language, 0).text,
-      translation: parsed.translation,
-      tip: parsed.tip,
-    };
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content ?? '';
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('The tutor took too long to answer — try again.');
+    }
+    if (err instanceof TypeError) {
+      throw new Error(
+        'Could not reach the AI endpoint — check EXPO_PUBLIC_AI_API_URL and your connection.'
+      );
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function fetchRetry(sys: string, opts: TutorOptions): Promise<TutorReply | null> {
+/* ── Speech (device/browser voices via expo-speech) ─────────────────────── */
+
+type SpeechErrorListener = (message: string) => void;
+let speechErrorListener: SpeechErrorListener | null = null;
+let warnedVoiceFallback = false;
+
+/**
+ * Screens can register a banner-style listener (the Speak screen does); when
+ * none is registered, failures surface through `showAlert` so audio problems
+ * are never silent — react-native-web's own Alert is a no-op stub.
+ */
+export function setSpeechErrorListener(listener: SpeechErrorListener | null): void {
+  speechErrorListener = listener;
+}
+
+function reportSpeechError(message: string): void {
+  if (speechErrorListener) speechErrorListener(message);
+  else showAlert('Audio unavailable', message, [{ text: 'OK' }]);
+}
+
+/**
+ * Speaks text with the locale's native voice, e.g. es-ES, ar-EG, ja-JP.
+ *
+ * Hardened for the failure modes behind "no audio comes out":
+ *  - embedded views (iframes) without the speech-synthesis allow-policy expose
+ *    no `window.speechSynthesis` at all — the library then rejects an
+ *    unawaited promise and playback dies with zero feedback. We pre-check and
+ *    say so instead;
+ *  - Chrome can drop an utterance enqueued in the same turn as
+ *    `cancel()` — we wait a beat after stopping;
+ *  - a locale with no installed voice gets an honest one-time notice while
+ *    still playing through the default voice (audible, correctly labeled);
+ *  - native TTS errors (missing engine, muted device) arrive via onError and
+ *    are surfaced instead of ignored.
+ */
+export async function speakNative(text: string, ttsLocale: string, rate = 0.92): Promise<void> {
+  if (!text.trim()) return;
   try {
-    const res = await fetch(`${API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.6,
-        messages: [
-          { role: 'system', content: sys },
-          { role: 'user', content: `Reply again, ONLY in ${opts.language.name}.` },
-        ],
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const parsed = parseTutorPayload(data?.choices?.[0]?.message?.content ?? '');
-    return scriptMatches(parsed.text, opts.language)
-      ? { text: parsed.text, translation: parsed.translation, tip: parsed.tip }
-      : null;
-  } catch {
-    return null;
-  }
-}
+    void Speech.stop().catch(() => undefined);
 
-function parseTutorPayload(raw: string): { text: string; translation: string; tip?: string } {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (match) {
-    try {
-      const json = JSON.parse(match[0]);
-      if (json.reply) {
-        return {
-          text: String(json.reply).trim(),
-          translation: String(json.translation ?? '').trim(),
-          tip: json.tip ? String(json.tip).trim() : undefined,
-        };
+    let voice: string | undefined;
+    if (Platform.OS === 'web') {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+      if (!synthesis) {
+        throw new Error(
+          'Speech playback is blocked in this view — open Nativa in a normal browser tab to hear audio.'
+        );
       }
-    } catch {
-      // fall through to raw text
+
+      // getVoices() can hang until the browser populates its voice list;
+      // treat a timeout (null) as "unknown" and let the engine pick itself.
+      const voices = await Promise.race([
+        Speech.getAvailableVoicesAsync().catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1_500)),
+      ]);
+
+      if (voices && voices.length === 0) {
+        throw new Error('This browser has no speech voices — text-to-speech is unavailable.');
+      } else if (voices) {
+        const base = ttsLocale.split('-')[0].toLowerCase();
+        const match = voices.find((v) =>
+          (v.language ?? '').toLowerCase().replace('_', '-').startsWith(base)
+        );
+        if (match) voice = match.identifier;
+        else if (!warnedVoiceFallback) {
+          warnedVoiceFallback = true;
+          reportSpeechError(
+            `No ${ttsLocale} voice is installed on this device — playing with the default voice.`
+          );
+        }
+      }
     }
+
+    await speakWithCallbacks(text, { language: ttsLocale, rate, pitch: 1.0, voice });
+  } catch (err) {
+    reportSpeechError(
+      err instanceof Error && err.message ? err.message : 'Speech playback failed — try again.'
+    );
   }
-  return { text: raw.trim(), translation: '' };
 }
 
-const SCRIPT_PATTERNS: { test: RegExp; script: string }[] = [
-  { script: 'Arabic', test: /[\u0600-\u06FF]/ },
-  { script: '中文', test: /[\u4E00-\u9FFF]/ },
-  { script: 'देवनागरी', test: /[\u0900-\u097F]/ },
-  { script: 'ひらがな', test: /[\u3040-\u30FF]/ },
-  { script: 'Cyrillic', test: /[\u0400-\u04FF]/ },
-];
-
-function scriptMatches(text: string, language: Language): boolean {
-  const rule = SCRIPT_PATTERNS.find((r) => language.script.includes(r.script));
-  if (!rule) return true; // Latin-script languages: no check needed
-  return rule.test.test(text);
-}
-
-/* ── Speech (native voices via expo-speech) ─────────────────────────────── */
-
-/** Speaks text with the locale's native voice, e.g. es-ES, ar-EG, ja-JP. */
-export function speakNative(text: string, ttsLocale: string, rate = 0.92): void {
-  Speech.stop();
-  Speech.speak(text, { language: ttsLocale, rate, pitch: 1.0 });
+/** Resolves when playback finishes/stops; rejects on engine errors. */
+function speakWithCallbacks(text: string, opts: Speech.SpeechOptions): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const ok = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const fail = (error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      reject(error instanceof Error ? error : new Error('Speech playback failed — try again.'));
+    };
+    // Safety net: some engines never fire onDone when playback is cut short.
+    const timer = setTimeout(ok, Math.min(60_000, 2_000 + text.length * 150));
+    try {
+      Speech.speak(text, {
+        ...opts,
+        onDone: () => {
+          clearTimeout(timer);
+          ok();
+        },
+        onStopped: () => {
+          clearTimeout(timer);
+          ok();
+        },
+        onError: (error) => {
+          clearTimeout(timer);
+          fail(error);
+        },
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      fail(err);
+    }
+  });
 }
 
 export function stopSpeaking(): void {
-  Speech.stop();
+  void Speech.stop().catch(() => undefined);
 }
 
 /* ── Speech-to-text (OpenAI-compatible /audio/transcriptions) ────────────── */
 
 /**
- * Transcribes a recorded audio file (m4a from expo-audio) to text in the
- * target language. Needs the same AI endpoint + key as the chat tutor —
- * the `language` hint keeps Whisper honest about which language to expect.
+ * Transcribes a recorded audio file to text in the target language.
+ *
+ * Transport order matches the chat tutor: backend proxy first (key stays
+ * server-side), then a direct EXPO_PUBLIC_AI_* config. With neither, this
+ * throws the actionable "needs a key" error — the UI already hides mic
+ * actions when voice input is known-unavailable.
+ *
+ * The upload itself goes through `prepareAudioPart`: on web the recording is
+ * a `blob:` URL (MediaRecorder → audio/webm), and the old `{ uri }` object
+ * appended to the browser's FormData serialized to "[object Object]", which
+ * is why web transcription could never succeed before.
  */
-export async function transcribeSpeech(audioUri: string, languageId: string): Promise<string> {
-  if (!isAIConfigured || !API_URL || !API_KEY) {
-    throw new Error('Voice input needs an AI key — set EXPO_PUBLIC_AI_API_KEY.');
-  }
-  const form = new FormData();
-  form.append('file', { uri: audioUri, name: 'speech.m4a', type: 'audio/m4a' } as unknown as Blob);
-  form.append('model', STT_MODEL);
-  form.append('language', languageId);
-  form.append('response_format', 'json');
+export async function transcribeSpeech(
+  audioUri: string,
+  languageId: string,
+  io?: AiTransport | null
+): Promise<string> {
+  const audio = await prepareAudioPart(audioUri, Platform.OS);
 
-  const res = await fetch(`${API_URL}/audio/transcriptions`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${API_KEY}` },
-    body: form,
-  });
-  if (!res.ok) throw new Error(`Transcription failed (HTTP ${res.status}).`);
-  const data = (await res.json()) as { text?: string };
-  const text = String(data?.text ?? '').trim();
-  if (!text) throw new Error("I couldn't catch that — try again or type instead.");
-  return text;
+  if (usable(io)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    try {
+      const form = new FormData();
+      form.append('file', audio.part as Blob, audio.filename);
+      form.append('language', languageId);
+
+      const res = await fetch(`${io.apiBase}/api/ai/stt`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${io.jwt}` },
+        body: form,
+        signal: controller.signal,
+      });
+      const json = (await res.json().catch(() => null)) as {
+        text?: string;
+        error?: string;
+        message?: string;
+      } | null;
+
+      if (res.ok) {
+        const text = String(json?.text ?? '').trim();
+        if (!text) throw new Error("I couldn't catch that — try again or type instead.");
+        return text;
+      }
+      if (res.status === 503 && json?.error === 'ai-not-configured') {
+        // Proxy has no AI key — fall through to the direct config below.
+      } else {
+        throw new Error(sttHttpError(res.status, json));
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Transcription took too long — try again.');
+      }
+      if (err instanceof TypeError) {
+        throw new Error('Could not reach the transcription service — check your connection.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  if (!isAIConfigured || !API_URL || !API_KEY) {
+    throw new Error(
+      'Voice input needs an AI key — set AI_API_KEY on the api Function (production) or EXPO_PUBLIC_AI_API_KEY (dev).'
+    );
+  }
+
+  const form = new FormData();
+  appendTranscriptionFields(form, audio, { model: STT_MODEL, languageId });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(`${API_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${API_KEY}` },
+      body: form,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(sttHttpError(res.status, json));
+    }
+    const data = (await res.json()) as { text?: string };
+    const text = String(data?.text ?? '').trim();
+    if (!text) throw new Error("I couldn't catch that — try again or type instead.");
+    return text;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Transcription took too long — try again.');
+    }
+    if (err instanceof TypeError) {
+      throw new Error(
+        'Could not reach the AI endpoint — check EXPO_PUBLIC_AI_API_URL and your connection.'
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Maps a transcription HTTP failure to a learner-facing, recoverable message. */
+function sttHttpError(
+  status: number,
+  json: { error?: string; message?: string } | null
+): string {
+  if (status === 401 || status === 403) {
+    return 'The voice service rejected its credentials — check the AI key configuration.';
+  }
+  if (status === 413) return 'That recording is too long — keep it under 30 seconds.';
+  if (status === 429) return 'Voice service is rate-limited — try again in a moment.';
+  if (status >= 500) return 'Voice service is unavailable right now — try again.';
+  return (
+    json?.message || json?.error || `Transcription failed (HTTP ${status}) — try again or type instead.`
+  );
 }
 
 /* ── Demo mode: scripted native lines per language ──────────────────────── */

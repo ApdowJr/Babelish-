@@ -117,7 +117,8 @@ export default function HomeScreen() {
         <View style={styles.demoBanner}>
           <Ionicons name="flask-outline" size={15} color={colors.warning} />
           <Text style={styles.demoBannerText}>
-            Demo mode — add Supabase & AI keys to .env for real accounts and a live tutor
+            Demo mode — on-device only (EXPO_PUBLIC_NEON_DISABLED=1). Remove it to reconnect the
+            live backend, and add EXPO_PUBLIC_AI_* for a live tutor.
           </Text>
         </View>
       ) : null}

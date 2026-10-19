@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import type { Exercise, Lesson, VocabSeed } from '@/lib/curriculum/types';
 import { getLanguage } from '@/data/languages';
 import { speakNative, stopSpeaking } from '@/lib/ai';
 import { dayKey } from '@/lib/analytics';
+import { showAlert } from '@/lib/alert';
 import { lessonXp } from '@/lib/xp';
 import { useLearning } from '@/state/learning';
 import { useAnalytics } from '@/state/analytics';
@@ -233,9 +233,9 @@ export default function LessonScreen() {
             onPress={() => {
               const label = redeem('NATIVA-BETA');
               if (label) {
-                Alert.alert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
+                showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
               } else {
-                Alert.alert('Code not accepted', 'Ask support for a valid beta code.');
+                showAlert('Code not accepted', 'Ask support for a valid beta code.');
               }
             }}
           />

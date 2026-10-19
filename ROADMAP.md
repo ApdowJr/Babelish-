@@ -25,14 +25,20 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 |---|---|---|
 | App | **Expo (React Native) + expo-router** | One codebase, OTA updates, native audio APIs |
 | Language | **TypeScript** everywhere | Safety as the codebase grows |
-| Auth/DB | **Supabase** (Auth + Postgres + RLS) | Real email/password + OAuth, row-level security per user |
-| AI (chat) | **OpenAI-compatible LLM API** (configurable URL/model) | Swap providers without code changes |
+| Auth/DB | **Neon** — Managed Better Auth + Lakebase Postgres + Functions | Real email/password accounts, branch-per-environment DB, API and auth verify on the same branch; Supabase remains an optional fallback mode |
+| AI (chat) | **OpenAI-compatible LLM API** via the app's own backend proxy (`/api/ai/chat`), configurable URL/model | Provider key stays server-side; swap providers without shipping a new app |
 | TTS | **expo-speech** (on-device native voices) + cloud TTS API | Device voices give instant, offline pronunciation; cloud voices give studio quality |
-| STT/scoring | Speech-recognition adapter (pluggable) | Score pronunciation per phoneme |
+| STT/scoring | Speech-recognition adapter (pluggable) + backend proxy (`/api/ai/stt`) | Score pronunciation per phoneme; transcribe without a key in the app |
 | State | React Context + hooks (Zustand later if needed) | Simple until it isn't |
 
-**Configuration:** all secrets live in `.env` (see `.env.example`). The app runs in
-**demo mode** (scripted AI) until you paste real keys — so the UI is always testable.
+**Configuration:** the public Neon endpoints are compiled in as build defaults
+(`src/lib/neon.ts`) — they are public URLs, not secrets — so every build talks
+to the real backend; `EXPO_PUBLIC_NEON_DISABLED=1` deliberately forces demo
+mode. The AI tutor and voice run live only when a provider key exists
+(server-side `AI_API_KEY` on the `api` Function, or `EXPO_PUBLIC_AI_*` for
+development); with no key the app degrades to clearly-labeled demo lines or an
+actionable error — never a fake "live" reply. Other secrets live only in the
+backend env (see `docs/DEPLOYMENT.md`).
 
 ---
 
@@ -101,6 +107,42 @@ Working name: **Nativa** (rename freely; it's one constant in `app.json`).
 - [x] Analytics events (privacy-first, no third-party ad SDKs)
 - [x] Beta per language (start: Spanish, Arabic, Japanese, French, Hindi, Mandarin)
 - [x] Feedback loop → weekly curriculum updates
+
+### ✅ Master audit A–J (2026-10-19)
+
+- [x] **A/B — Branding & demo banner:** the "midqhub.com" branding is not
+      present anywhere in the repo, history, or exported web chunks; the demo
+      banner's real root cause was configuration — Neon endpoints are now
+      compiled in as build defaults and startup config warnings are actionable
+      (`src/lib/config.ts`).
+- [x] **C — Voice upload:** web `blob:` → `FormData` fix
+      (`src/lib/sttUpload.ts`), transport order (backend proxy → direct dev
+      endpoint), actionable errors.
+- [x] **D — TTS hardening:** web speech-synthesis pre-check, voice-race
+      timeout, error listener surfaced on the Speak tab (`src/lib/ai.ts`).
+- [x] **E — AI core + backend proxy:** one shared `src/lib/aiCore.ts` used by
+      both the app and the Function; `GET /api/ai/status`,
+      `POST /api/ai/chat`, `POST /api/ai/stt` with a server-side key, strict
+      reply/script validation, and **no demo substitution on a failed live
+      reply**.
+- [x] **F — Auth re-audit:** active provider determined from code = Neon
+      Managed Better Auth — `docs/AUTH_AUDIT.md`.
+- [x] **G — UX:** cross-platform alerts (`Alert.alert` is a no-op on web),
+      capability gates (`tutorLive` / `voiceLive`), honest status rows.
+- [x] **H — CORS & limits:** origin allowlist + `DELETE` preflight, admin
+      Basic-auth failure limiter, per-user in-memory rate limiters (single-
+      instance scope documented honestly).
+- [x] **I — Quality gates:** `npm test` 26/26 · `scripts/local-api-smoke.mjs`
+      **37/37** (real Function from source: auth, CORS, limits, AI proxy,
+      admin) · `npm run neon:e2e` **50/50** (live) · app + functions `tsc` ·
+      `expo lint` · `expo-doctor` 20/20 · web export with `/privacy` route ·
+      secret scan clean.
+- [x] **J — Device test plan:** `docs/DEVICE_TEST_PLAN.md` (checklist only —
+      no hardware in CI).
+- [ ] Deploy the hardened `api` Function (AI proxy + CORS + rate limiting) —
+      **blocked on a Neon API key**; command in `docs/DEPLOYMENT.md`.
+- [ ] Push these commits — **blocked on a fresh GitHub PAT**.
+- [ ] Run `docs/DEVICE_TEST_PLAN.md` on a physical iOS + Android device.
 
 ---
 

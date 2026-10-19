@@ -22,6 +22,9 @@ import {
   type QueryFn,
 } from './admin';
 import * as league from './league';
+import { createFailureLimiter, createLimiter } from './rateLimit';
+import { buildSystemPrompt, extractTutorReply, parseAiChatRequest } from '../../src/lib/aiCore';
+import { getLanguage } from '../../src/data/languages';
 
 /**
  * Nativa API — the mobile app's backend, running on the same branch as the
@@ -87,6 +90,9 @@ function safeEqual(a: string, b: string): boolean {
  * ADMIN_PASSWORD from the Function environment — never a client-supplied id.
  * Returns a ready Response to send, or null when access is allowed.
  */
+/** Failed-attempt budget for Basic-auth guessing (per client IP when known). */
+const adminFailLimiter = createFailureLimiter(10, 10 * 60_000);
+
 async function adminGate(c: Context): Promise<Response | null> {
   const password = process.env.ADMIN_PASSWORD;
   if (!password) {
@@ -97,6 +103,12 @@ async function adminGate(c: Context): Promise<Response | null> {
       ),
       503
     );
+  }
+  // Fail-open when the platform exposes no client IP: better to serve the
+  // admin than to collapse every operator into one shared bucket.
+  const clientIp = (c.req.header('x-forwarded-for') ?? '').split(',')[0].trim();
+  if (clientIp && adminFailLimiter.blocked(clientIp)) {
+    return c.text('Too many failed attempts — try again in 10 minutes.', 429);
   }
   const header = c.req.header('authorization') ?? '';
   if (!header.toLowerCase().startsWith('basic ')) {
@@ -115,6 +127,7 @@ async function adminGate(c: Context): Promise<Response | null> {
   }
   const wantUser = process.env.ADMIN_USERNAME ?? 'admin';
   if (!safeEqual(user, wantUser) || !safeEqual(pass, password)) {
+    if (clientIp) adminFailLimiter.hit(clientIp);
     c.header('WWW-Authenticate', 'Basic realm="nativa-admin", charset="UTF-8"');
     return c.text('Invalid credentials', 401);
   }
@@ -127,12 +140,25 @@ function backTo(c: Context, params: Record<string, string>): Response {
   return c.redirect(`/admin${search.toString() ? `?${search}` : ''}`, 303);
 }
 
+/**
+ * CORS: reflect only Nativa's own web origins — the custom domain, Vercel
+ * previews and localhost/private-network dev — so an unrelated site can't
+ * read API responses in a browser. Requests with no Origin header (the native
+ * app, curl) aren't browser-CORS-governed and pass through untouched; auth
+ * still requires a valid JWT either way.
+ */
+const TRUSTED_WEB_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(nativa\.app|vercel\.app)$/i;
+const DEV_WEB_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
+
 app.use(
   '*',
   cors({
-    origin: '*',
+    origin: (origin) => {
+      if (!origin) return null;
+      return TRUSTED_WEB_ORIGIN.test(origin) || DEV_WEB_ORIGIN.test(origin) ? origin : null;
+    },
     allowHeaders: ['Authorization', 'Content-Type'],
-    allowMethods: ['GET', 'PUT', 'POST', 'OPTIONS'],
+    allowMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
   })
 );
 
@@ -320,6 +346,198 @@ async function removeAuthUser(userId: string): Promise<AuthRemoval> {
   }
   return 'failed';
 }
+
+/* ── AI proxy: chat + speech-to-text ─────────────────────────────────────
+ * The provider key lives ONLY in this Function's environment (AI_API_KEY,
+ * AI_API_URL, AI_MODEL, AI_STT_MODEL) — never in a client bundle. JWT-gated
+ * by the /api/* middleware and rate-limited per user, because these routes
+ * are the ones a provider bills. With no key configured they answer
+ * 503 ai-not-configured so the client can fall back to an explicitly-labeled
+ * demo mode instead of faking a live model.
+ */
+const AI_URL = (process.env.AI_API_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+const AI_KEY = process.env.AI_API_KEY;
+const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
+const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-1';
+
+const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
+const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
+
+/** Capability report for the client's status rows — booleans only, no secrets. */
+app.get('/api/ai/status', (c) => c.json({ chat: Boolean(AI_KEY), stt: Boolean(AI_KEY) }));
+
+app.post('/api/ai/chat', async (c) => {
+  if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
+  const userId = c.get('userId');
+  if (!chatLimiter.take(userId)) {
+    return c.json(
+      { error: 'rate-limited', message: 'The tutor is busy — wait a minute and try again.' },
+      429
+    );
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = parseAiChatRequest(body);
+  if (!parsed.ok) {
+    return c.json({ error: 'invalid-request', message: parsed.error }, 400);
+  }
+  const language = getLanguage(parsed.request.languageId);
+  if (!language) {
+    return c.json({ error: 'invalid-request', message: 'Unknown language.' }, 400);
+  }
+
+  const sys = buildSystemPrompt({
+    language,
+    level: parsed.request.level ?? 'A2',
+    scenarioTitle: parsed.request.scenarioTitle,
+    learnerName: parsed.request.learnerName,
+    profile: parsed.request.profile,
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 55_000);
+  try {
+    const upstream = await fetch(`${AI_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}` },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: AI_MODEL,
+        temperature: 0.8,
+        messages: [
+          { role: 'system', content: sys },
+          ...parsed.request.history.map((m) => ({ role: m.role, content: m.text })),
+        ],
+      }),
+    });
+    if (!upstream.ok) {
+      const detail =
+        upstream.status === 401
+          ? 'The AI provider rejected its key.'
+          : `The AI provider returned HTTP ${upstream.status}.`;
+      return c.json({ error: 'upstream-failed', message: `${detail} Try again later.` }, 502);
+    }
+    const data = (await upstream.json().catch(() => null)) as {
+      choices?: { message?: { content?: string } }[];
+    } | null;
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+
+    // Strict validation: an empty reply or one in the wrong script is an
+    // ERROR here — never replaced with scripted demo content in real mode.
+    let reply: { text: string; translation: string; tip?: string };
+    try {
+      reply = extractTutorReply(raw, language);
+    } catch (err) {
+      return c.json(
+        {
+          error: 'bad-reply',
+          message: err instanceof Error ? err.message : 'The tutor returned an invalid reply.',
+        },
+        502
+      );
+    }
+    return c.json({ reply: reply.text, translation: reply.translation, tip: reply.tip });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return c.json(
+        { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
+        504
+      );
+    }
+    return c.json(
+      { error: 'upstream-failed', message: 'The tutor service hit a problem — try again.' },
+      502
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+app.post('/api/ai/stt', async (c) => {
+  if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
+  const userId = c.get('userId');
+  if (!sttLimiter.take(userId)) {
+    return c.json(
+      { error: 'rate-limited', message: 'Voice service is rate-limited — try again in a moment.' },
+      429
+    );
+  }
+
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json(
+      { error: 'invalid-request', message: 'Expected multipart/form-data audio.' },
+      400
+    );
+  }
+
+  const file = form.get('file');
+  if (!file || typeof file === 'string' || !(file instanceof Blob)) {
+    return c.json({ error: 'invalid-request', message: 'Missing audio file.' }, 400);
+  }
+  if (file.size === 0) {
+    return c.json(
+      { error: 'invalid-request', message: 'The recording came out empty — try again.' },
+      400
+    );
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return c.json({ error: 'invalid-request', message: 'Recording too long.' }, 413);
+  }
+  const languageId = form.get('language');
+  const filename =
+    typeof (file as File).name === 'string' && (file as File).name
+      ? (file as File).name
+      : 'speech.webm';
+
+  const outbound = new FormData();
+  outbound.append('file', file, filename);
+  outbound.append('model', AI_STT_MODEL);
+  outbound.append('response_format', 'json');
+  if (typeof languageId === 'string' && languageId) outbound.append('language', languageId);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const upstream = await fetch(`${AI_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${AI_KEY}` },
+      body: outbound,
+      signal: controller.signal,
+    });
+    if (!upstream.ok) {
+      const detail =
+        upstream.status === 401
+          ? 'The AI provider rejected its key.'
+          : `The AI provider returned HTTP ${upstream.status}.`;
+      return c.json({ error: 'upstream-failed', message: `${detail} Try again later.` }, 502);
+    }
+    const data = (await upstream.json().catch(() => null)) as { text?: string } | null;
+    const text = String(data?.text ?? '').trim();
+    if (!text) {
+      return c.json(
+        { error: 'empty-transcript', message: "I couldn't catch that — try again or type instead." },
+        422
+      );
+    }
+    return c.json({ text });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return c.json(
+        { error: 'upstream-timeout', message: 'Transcription took too long — try again.' },
+        504
+      );
+    }
+    return c.json(
+      { error: 'upstream-failed', message: 'Voice service hit a problem — try again.' },
+      502
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+});
 
 /**
  * Data deletion (Play "Delete account" policy + GDPR erasure): every row

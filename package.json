@@ -52,7 +52,9 @@
     "build:web": "expo export --platform web",
     "check:functions": "tsc -p functions/tsconfig.json --noEmit",
     "neon:e2e": "node --experimental-strip-types scripts/neon-e2e.mjs",
-    "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs"
+    "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs",
+    "test": "node scripts/test.mjs",
+    "smoke:local": "node scripts/local-api-smoke.mjs"
   },
   "private": true
 }
