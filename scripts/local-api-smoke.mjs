@@ -243,6 +243,32 @@ async function phaseNoAi(app, jwt) {
     `status ${preflight.status}, methods [${pMethods}]`
   );
 
+  const productionHostPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://nativa-kappa.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: the current Nativa production hostname is trusted',
+    productionHostPreflight.headers.get('access-control-allow-origin') ===
+      'https://nativa-kappa.vercel.app'
+  );
+
+  const babelishPreviewPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://babelish-git-main-apdowjr.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: Babelish preview host is trusted',
+    babelishPreviewPreflight.headers.get('access-control-allow-origin') ===
+      'https://babelish-git-main-apdowjr.vercel.app'
+  );
+
   const unrelatedVercelPreflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
