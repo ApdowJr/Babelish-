@@ -223,7 +223,7 @@ async function phaseNoAi(app, jwt) {
   );
 
   /* Current Vercel branch alias for this PR must be allowed too. */
-  const branchAliasPreflight = await fetch(`${base}/api/health`, {
+  const branchAliasPreflight = await app.request('/api/health', {
     method: 'OPTIONS',
     headers: {
       Origin: 'https://babelish-git-upgrade-zelvoca-production-hardening-ururka-lp.vercel.app',
