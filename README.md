@@ -1,4 +1,4 @@
-# Zelvoca 🌍
+# Babelish 🌍
 
 **Speak like a native.** An AI language tutor that talks to you *only* in your target
 language — with real dialects, real scenarios, and native pronunciation.
