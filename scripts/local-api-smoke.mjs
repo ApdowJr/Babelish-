@@ -587,15 +587,18 @@ async function runPhase(phase) {
   if (phase === 1) {
     delete process.env.AI_API_KEY;
     delete process.env.AI_API_URL;
+    delete process.env.AI_STT_ENABLED;
     process.env.ADMIN_PASSWORD = ADMIN_PASS;
     process.env.ADMIN_USERNAME = 'admin';
   } else if (phase === 2) {
     fake = await startFakeProvider();
     process.env.AI_API_KEY = FAKE_KEY;
     process.env.AI_API_URL = fake.url;
+    process.env.AI_STT_ENABLED = 'true';
   } else if (phase === 3) {
     process.env.AI_API_KEY = FAKE_KEY;
     process.env.AI_API_URL = await deadProviderUrl();
+    process.env.AI_STT_ENABLED = 'true';
   }
 
   // Local JWKS for the parent's locally minted JWT (a public key — never a
