@@ -1,4 +1,4 @@
-# Zelvoca — Phase 5 delivery checklist
+# Babelish — Phase 5 delivery checklist
 
 _shipped 2026-10-18 · retention & scale_
 
