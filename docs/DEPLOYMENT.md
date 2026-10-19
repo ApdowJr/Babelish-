@@ -67,6 +67,15 @@ curl -s "$API/api/ai/status" -H "Authorization: Bearer <jwt>"
 npm run neon:e2e           # full end-to-end proof against the live backend
 ```
 
+## API CORS policy
+
+The Function allows the branded `zelvoca.app` origin and project-scoped
+`nativa-*.vercel.app` / `zelvoca-*.vercel.app` preview hosts, plus local
+development hosts. It intentionally does **not** trust every unrelated
+`*.vercel.app` project. The smoke suite includes a negative test for an
+unrelated Vercel project; update this policy and that test together if the
+production hostname changes.
+
 ## Web (Vercel)
 
 `vercel.json` rewrites every route to the SPA shell; `dist/` holds the export
