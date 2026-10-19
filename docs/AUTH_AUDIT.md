@@ -46,6 +46,33 @@ and it is clearly labeled in the UI.
   to the JWT `sub`, then removes the auth user itself and reports the outcome
   honestly (`removed` / `already-gone` / `not-configured` / `failed`).
 
+## Platform session model — web vs native (fixed 2026-10-19)
+
+The session is a signed **`HttpOnly`** cookie (`__Secure-neon-auth.session_token`),
+and the two platforms reach it differently. Conflating them was a real bug:
+
+- **Native** — React Native exposes `Set-Cookie` on the response, so the client
+  captures the signed cookie and replays it as a `Cookie` header on
+  `/get-session` and `/token`.
+- **Web** — browsers **never** expose `Set-Cookie` to JavaScript (forbidden
+  response-header name) and refuse a manually-set `Cookie` header. The browser's
+  own jar owns the session, so every auth request must opt in with
+  **`credentials: 'include'`**, and sign-in is confirmed with `GET /get-session`
+  rather than by reading a cookie.
+
+**The bug:** the client required a readable `Set-Cookie` on *every* platform and
+never sent `credentials`, so on the deployed web app a **successful** sign-in
+(HTTP 200 + user) threw the credential error, and no session was ever
+established in the browser — sign-in could not work on web at all.
+**The fix:** `src/lib/authSession.ts` holds the pure rules
+(`sessionTransportFor`, `sessionCookieFromHeaders`, `classifyAuthResponse`,
+`mapAuthErrorCode`); `src/lib/neonAuth.ts` applies them
+(`credentials: 'include'` on web, `/get-session` confirmation, an honest
+"browser blocked the session cookie" message instead of a false
+"wrong password"). The branch sets `SameSite=None; Secure; Partitioned`, so a
+mainstream browser stores the cross-site cookie; a browser that blocks
+third-party cookies now gets a message that says so.
+
 ## Secret handling
 
 - A secret scan of the full working tree (tracked changes + untracked files)
@@ -68,20 +95,29 @@ plain-language, actionable warnings instead of a silent demo banner.
 
 | Gate | Result |
 |---|---|
-| `npm test` (unit) | 26/26 passing |
+| `npm test` (unit, 5 files) | 36/36 passing |
 | `npm run smoke:local` (real app from source: auth/CORS/limits/AI proxy/admin) | 37/37 passing, 3 phases |
 | `npm run neon:e2e` (live deployed backend, real Managed Auth) | 50/50 passing |
 | App `tsc --noEmit` / functions `tsc --noEmit` / `expo lint` / `expo-doctor` | all clean (RC 0), doctor 20/20 |
+| Web export | RC 0; built bundle carries `credentials:'include'` (web folds `IS_WEB` to true) |
 | Secret scan (tree incl. untracked) | clean |
 
 ## Known limitations / external steps not yet done
 
 - **No password-reset email round-trip** was exercised here (needs a mailbox);
-  the code path exists but is untested end-to-end.
+  `POST /request-password-reset` returns 200 and the branch uses shared SMTP
+  (`email_provider: {"type":"shared"}`), but no email was received here. The
+  `callbackURL` now uses the live web origin instead of the unreachable
+  `nativa.app` site.
 - **Provider-key rejection mapping** for live AI calls is covered with a local
   fake provider (401 → 502); a real provider key is not available in this
   environment, so no live provider call was made.
-- **Deployment** of the hardened Function and **push** of these commits are
-  blocked on user-supplied credentials (see the audit report / `docs/DEPLOYMENT.md`).
+- **Deployment and push are done** (Function deployment 6 on branch `production`;
+  commit pushed to `origin/main`). The web client fix in this section ships with
+  the next Vercel build.
+- **The sign-in failure was not reproduced in a browser here** (no browser
+  runtime available in this environment): the platform session bug above is
+  proven by code, by the auth server's own headers, and by the built bundle, but
+  the end-to-end click-through is on the device/web checklist.
 - **On-device** auth/mic/TTS flows are checklist-only — see
   `docs/DEVICE_TEST_PLAN.md`.

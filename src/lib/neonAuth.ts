@@ -1,35 +1,52 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { NEON_AUTH_URL, NEON_TRUSTED_ORIGIN } from '@/lib/neon';
+import {
+  classifyAuthResponse,
+  mapAuthErrorCode,
+  sessionCookieFromHeaders,
+  sessionTransportFor,
+  WEB_SESSION_BLOCKED,
+} from '@/lib/authSession';
 
 /**
- * Managed Better Auth client for React Native.
+ * Managed Better Auth client for React Native + web.
  *
- * The Managed Auth server issues a signed session cookie; the sign-up/sign-in
- * responses also carry the raw session token and user object in JSON. We store
- * the signed cookie value (captured from Set-Cookie — React Native's fetch
- * exposes it, unlike browsers' HttpOnly rule) and reuse it for session restore
- * (`GET /get-session`) and JWT minting (`GET /token`, 15-minute EdDSA JWT the
- * Neon Function verifies against the branch JWKS).
+ * The Managed Auth server issues a signed, **HttpOnly** session cookie. The two
+ * platforms reach that cookie differently, and mixing them up is what made a
+ * successful web sign-in look like a rejected password:
+ *
+ *  • Native (iOS/Android): `Set-Cookie` is readable from the response, so we
+ *    capture the signed cookie and replay it as a `Cookie` header on
+ *    `/get-session` and `/token`.
+ *  • Web: browsers forbid reading `Set-Cookie` and forbid setting `Cookie`.
+ *    The browser's own cookie jar owns the session, which means every auth
+ *    request must opt in with `credentials: 'include'`; after sign-in we confirm
+ *    the session with `GET /get-session` instead of assuming failure.
+ *
+ * Either way, `/token` mints the 15-minute EdDSA JWT the Neon Function API
+ * verifies against the branch JWKS — the app never sends the session cookie to
+ * the API itself.
  */
 
-const COOKIE_NAME = '__Secure-neon-auth.session_token';
+const IS_WEB = Platform.OS === 'web';
+const TRANSPORT = sessionTransportFor(IS_WEB);
 const SESSION_KEY = 'nativa:neon-session';
 
 export type NeonUser = { id: string; email: string; name: string };
-type StoredSession = { cookie: string; user: NeonUser };
+/** `cookie` is absent on web — the browser's jar holds it, not us. */
+type StoredSession = { user: NeonUser; cookie?: string };
 
-/** React Native and Node expose Set-Cookie differently; handle both. */
+type AuthResponseBody = {
+  token?: string;
+  user?: { id?: string; email?: string; name?: string };
+  message?: string;
+  code?: string;
+};
+
+/** React Native and Node expose Set-Cookie differently; web hides it entirely. */
 function cookieFromResponse(res: Response): string | null {
-  const headers = res.headers as unknown as {
-    getSetCookie?: () => string[];
-    get?: (name: string) => string | null;
-  };
-  const candidates: string[] = [];
-  if (typeof headers.getSetCookie === 'function') candidates.push(...headers.getSetCookie());
-  const single = headers.get?.('set-cookie');
-  if (single) candidates.push(single);
-  const match = candidates.find((c) => c.startsWith(`${COOKIE_NAME}=`));
-  return match ? match.split(';')[0] : null;
+  return sessionCookieFromHeaders(res.headers as unknown as Parameters<typeof sessionCookieFromHeaders>[0]);
 }
 
 async function request<T>(
@@ -38,11 +55,14 @@ async function request<T>(
 ): Promise<{ status: number; json: T | null; setCookie: string | null }> {
   const headers: Record<string, string> = { Origin: NEON_TRUSTED_ORIGIN };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (opts.cookie) headers.Cookie = opts.cookie;
+  // Only native replays the cookie by hand; the browser attaches its own and
+  // rejects a manually-set `Cookie` header anyway.
+  if (opts.cookie && TRANSPORT === 'cookie-header') headers.Cookie = opts.cookie;
 
   const res = await fetch(`${NEON_AUTH_URL}${path}`, {
     method: opts.method ?? 'POST',
     headers,
+    ...(IS_WEB ? { credentials: 'include' as RequestCredentials } : {}),
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
   const text = await res.text();
@@ -50,17 +70,8 @@ async function request<T>(
   return { status: res.status, json, setCookie: cookieFromResponse(res) };
 }
 
-/** Turns Managed Auth error payloads into something a human wants to read. */
-function neonError(json: { message?: string; code?: string } | null, fallback: string): Error {
-  const code = json?.code ?? '';
-  const message = json?.message ?? fallback;
-  if (code === 'INVALID_EMAIL_OR_PASSWORD') return new Error('Wrong email or password. Give it another try.');
-  if (code === 'USER_ALREADY_EXISTS' || message.toLowerCase().includes('already'))
-    return new Error('This email already has an account. Try signing in instead.');
-  if (code === 'INVALID_EMAIL' || code === 'EMAIL_INVALID') return new Error('That email address doesn’t look right.');
-  if (code === 'WEAK_PASSWORD') return new Error('Password must be at least 8 characters.');
-  if (code === 'RATE_LIMITED') return new Error('Too many attempts — wait a minute and try again.');
-  return new Error(message);
+function neonError(json: AuthResponseBody | null, fallback: string): Error {
+  return new Error(mapAuthErrorCode(json, fallback));
 }
 
 async function storeSession(session: StoredSession | null) {
@@ -81,13 +92,6 @@ export async function loadStoredSession(): Promise<StoredSession | null> {
   }
 }
 
-type AuthResponseBody = {
-  token?: string;
-  user?: { id?: string; email?: string; name?: string };
-  message?: string;
-  code?: string;
-};
-
 function userFrom(json: AuthResponseBody | null): NeonUser | null {
   if (!json?.user?.id) return null;
   return {
@@ -95,6 +99,41 @@ function userFrom(json: AuthResponseBody | null): NeonUser | null {
     email: json.user.email ?? '',
     name: json.user.name ?? (json.user.email ?? '').split('@')[0],
   };
+}
+
+/** Asks the auth server who we are using the browser's own cookie jar. */
+async function confirmBrowserSession(): Promise<NeonUser | null> {
+  const { status, json } = await request<AuthResponseBody>('/get-session', { method: 'GET' });
+  return status === 200 ? userFrom(json) : null;
+}
+
+/**
+ * Persists a session returned by sign-up/sign-in.
+ *
+ * Native proves the session with the captured cookie. Web proves it by asking
+ * the server again — a 200 with a user but no readable cookie is the *normal*
+ * browser case, not a failure.
+ */
+async function adoptSession(
+  status: number,
+  json: AuthResponseBody | null,
+  setCookie: string | null,
+  fallback: string
+): Promise<NeonUser> {
+  const user = userFrom(json);
+  const outcome = classifyAuthResponse(status, Boolean(user));
+  if (outcome !== 'ok' || !user) throw neonError(json, fallback);
+
+  if (TRANSPORT === 'cookie-header') {
+    if (!setCookie) throw new Error('The auth server did not return a session — please try again.');
+    await storeSession({ user, cookie: setCookie });
+    return user;
+  }
+
+  const confirmed = await confirmBrowserSession();
+  if (!confirmed) throw new Error(WEB_SESSION_BLOCKED);
+  await storeSession({ user: confirmed });
+  return confirmed;
 }
 
 /** Creates an account. Managed Auth returns a live session on success. */
@@ -106,10 +145,7 @@ export async function neonSignUp(params: {
   const { status, json, setCookie } = await request<AuthResponseBody>('/sign-up/email', {
     body: params,
   });
-  const user = userFrom(json);
-  if (status !== 200 || !user || !setCookie) throw neonError(json, 'Could not create the account.');
-  await storeSession({ cookie: setCookie, user });
-  return user;
+  return adoptSession(status, json, setCookie, 'Could not create the account.');
 }
 
 /** Signs in and stores the session. */
@@ -117,21 +153,18 @@ export async function neonSignIn(email: string, password: string): Promise<NeonU
   const { status, json, setCookie } = await request<AuthResponseBody>('/sign-in/email', {
     body: { email, password },
   });
-  const user = userFrom(json);
-  if (status !== 200 || !user || !setCookie) throw neonError(json, 'Could not sign in.');
-  await storeSession({ cookie: setCookie, user });
-  return user;
+  return adoptSession(status, json, setCookie, 'Could not sign in.');
 }
 
 /** Restores the stored session against the server. Clears it when invalid. */
 export async function neonGetSession(): Promise<NeonUser | null> {
   const stored = await loadStoredSession();
   if (!stored) return null;
-  const { status, json } = await request<{ user?: { id?: string } }>('/get-session', {
+  const { status, json } = await request<AuthResponseBody>('/get-session', {
     method: 'GET',
     cookie: stored.cookie,
   });
-  const body = json as { user?: { id?: string } } | null;
+  const body = json as AuthResponseBody | null;
   if (status !== 200 || !body?.user?.id) {
     await storeSession(null);
     return null;
@@ -158,13 +191,24 @@ export async function neonSignOut(): Promise<void> {
   await request('/sign-out', { method: 'POST', cookie: stored.cookie }).catch(() => undefined);
 }
 
+/**
+ * Where a password-reset link should send the user back to.
+ *
+ * On web that is the origin they are actually using (the Vercel preview and
+ * `nativa.app` are different sites); native has no real origin, so it uses the
+ * branch's trusted domain.
+ */
+function resetCallbackOrigin(): string {
+  if (IS_WEB && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return NEON_TRUSTED_ORIGIN;
+}
+
 /** Sends a password-reset email through the branch's shared SMTP. */
 export async function neonRequestPasswordReset(email: string): Promise<void> {
-  const { status, json } = await request<{ message?: string; code?: string }>(
-    '/request-password-reset',
-    {
-      body: { email, callbackURL: NEON_TRUSTED_ORIGIN },
-    }
-  );
+  const { status, json } = await request<AuthResponseBody>('/request-password-reset', {
+    body: { email, callbackURL: resetCallbackOrigin() },
+  });
   if (status !== 200) throw neonError(json, 'Could not send the reset email.');
 }

@@ -90,7 +90,7 @@ export default function LoginScreen() {
 
       {isDemo ? (
         <Text style={styles.demoNote}>
-          Demo mode — accounts stay on this device until you add Supabase keys to .env
+          Demo mode — accounts stay on this device. Add the Neon backend URL to use real accounts.
         </Text>
       ) : null}
 
