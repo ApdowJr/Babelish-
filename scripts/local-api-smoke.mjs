@@ -281,6 +281,32 @@ async function phaseNoAi(app, jwt) {
     unrelatedVercelPreflight.headers.get('access-control-allow-origin') === null
   );
 
+  for (const origin of [
+    'https://nativa-attacker-project.vercel.app',
+    'https://babelish-attacker-project.vercel.app',
+    'https://nativa--attacker.vercel.app',
+  ]) {
+    const response = await app.request('/api/me', {
+      method: 'OPTIONS',
+      headers: { Origin: origin, 'Access-Control-Request-Method': 'DELETE' },
+    });
+    ok(`cors: unregistered branded-looking host is rejected (${origin})`,
+      response.headers.get('access-control-allow-origin') === null);
+  }
+
+  const currentBabelishDeployment = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://babelish-k70kemy23-ururka-lp.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: current Babelish deployment hostname is trusted',
+    currentBabelishDeployment.headers.get('access-control-allow-origin') ===
+      'https://babelish-k70kemy23-ururka-lp.vercel.app'
+  );
+
   const evilPreflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
