@@ -11,19 +11,19 @@
  *    discarded — it is never stored by Babelish.
  */
 
-export const BABELISH_EXPORT_VERSION = 1;
+export const ZELVOCA_EXPORT_VERSION = 1;
 
 /** Every on-device data key. Auth session keys are excluded on purpose —
  * signing out (or account deletion) removes those through the auth layer. */
 export const LOCAL_DATA_KEYS = [
-  'babelish:preferences',
-  'babelish:profile',
-  'babelish:analytics',
-  'babelish:subscription',
-  'babelish:speaking-stats',
-  'babelish:report-queue',
-  'babelish:progress:v1',
-  'babelish:vocab:v1',
+  'zelvoca:preferences',
+  'zelvoca:profile',
+  'zelvoca:analytics',
+  'zelvoca:subscription',
+  'zelvoca:speaking-stats',
+  'zelvoca:report-queue',
+  'zelvoca:progress:v1',
+  'zelvoca:vocab:v1',
 ] as const;
 
 export type DataExportInput = {
@@ -42,7 +42,7 @@ export function buildDataExport(input: DataExportInput, now = new Date()): strin
   return JSON.stringify(
     {
       app: 'Babelish',
-      format: BABELISH_EXPORT_VERSION,
+      format: ZELVOCA_EXPORT_VERSION,
       exportedAt: now.toISOString(),
       includesAudio: false,
       includesAdIdentifiers: false,
