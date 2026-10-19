@@ -3,12 +3,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 export default function PrivacyRoute() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Nativa — Privacy Policy</Text>
+      <Text style={styles.title}>Zelvoca — Privacy Policy</Text>
       <Text style={styles.meta}>Last updated: 2026-10-18</Text>
 
       <Text style={styles.h2}>The short version</Text>
       <Text style={styles.p}>
-        Your practice stays on your phone. Nativa has no ads, no third-party analytics, and no data
+        Your practice stays on your phone. Zelvoca has no ads, no third-party analytics, and no data
         brokers. The only thing that ever syncs to a server is your progress and vocabulary — under
         your own Neon account, on a database branch you control. Microphone audio is transcribed on
         demand and never stored.
@@ -74,13 +74,13 @@ export default function PrivacyRoute() {
       <Text style={styles.p}>
         Tutor replies come from whichever AI endpoint is configured (or from the built-in demo
         responses when none is). Conversation text is sent to that endpoint to generate the reply; it
-        is not stored by Nativa. Every AI-generated item that could reach the curriculum passes the
+        is not stored by Zelvoca. Every AI-generated item that could reach the curriculum passes the
         human approval gate before publication — AI never publishes itself.
       </Text>
 
       <Text style={styles.h2}>Children</Text>
       <Text style={styles.p}>
-        Nativa is general-audience (12+). It is not directed at children under 13 and does not
+        Zelvoca is general-audience (12+). It is not directed at children under 13 and does not
         knowingly collect their data. No ads, no tracking, no behavioral profiling — for anyone, of
         any age. See docs/STORE_COMPLIANCE.md.
       </Text>

@@ -67,6 +67,6 @@ export function validateConfigurationAtStartup(): string[] {
   if (!isSupabaseConfigured && !isNeonConfigured) {
     warnings.push('No auth provider configured — sign-up is local to this device.');
   }
-  for (const w of warnings) console.warn(`[nativa/config] ${w}`);
+  for (const w of warnings) console.warn(`[zelvoca/config] ${w}`);
   return warnings;
 }

@@ -1,4 +1,4 @@
-# Nativa — Auth & API Security Audit (Master Audit, Phase F)
+# Zelvoca — Auth & API Security Audit (Master Audit, Phase F)
 
 _Last updated: 2026-10-19. Determined **from the code**, not assumed._
 
@@ -123,7 +123,7 @@ production step for link-based recovery — see `docs/DEPLOYMENT.md`.
   secret. The AI provider key exists **only** as a server-side Function env var
   (`AI_API_KEY`); the app talks to the proxy first and only falls back to a
   development endpoint when explicitly configured.
-- **CORS** reflects only Nativa's own origins (custom domain, `*.vercel.app`,
+- **CORS** reflects only Zelvoca's own origins (custom domain, `*.vercel.app`,
   localhost / private-network dev) and allows `DELETE`; unknown origins get no
   `Access-Control-Allow-Origin` header (verified in the local smoke).
 
@@ -150,7 +150,7 @@ plain-language, actionable warnings instead of a silent demo banner.
   (`email_provider: {"type":"shared"}`), but no email was received here. The
   server-side reset contract *is* verified (see "Password recovery"); the email
   link's shape and delivery are not. The `callbackURL` now uses the live web
-  origin instead of the unreachable `nativa.app` site.
+  origin instead of the unreachable `zelvoca.app` site.
 - **Provider-key rejection mapping** for live AI calls is covered with a local
   fake provider (401 → 502); a real provider key is not available in this
   environment, so no live provider call was made.

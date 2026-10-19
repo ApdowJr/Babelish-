@@ -32,7 +32,7 @@ import {
 
 const IS_WEB = Platform.OS === 'web';
 const TRANSPORT = sessionTransportFor(IS_WEB);
-const SESSION_KEY = 'nativa:neon-session';
+const SESSION_KEY = 'zelvoca:neon-session';
 
 export type NeonUser = { id: string; email: string; name: string };
 /** `cookie` is absent on web — the browser's jar holds it, not us. */
@@ -206,7 +206,7 @@ export async function neonSignOut(): Promise<void> {
  * Where a password-reset link should send the user back to.
  *
  * On web that is the origin they are actually using (the Vercel preview and
- * `nativa.app` are different sites); native has no real origin, so it uses the
+ * `zelvoca.app` are different sites); native has no real origin, so it uses the
  * branch's trusted domain.
  */
 function resetCallbackOrigin(): string {

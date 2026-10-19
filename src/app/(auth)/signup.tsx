@@ -45,7 +45,7 @@ export default function SignupScreen() {
     try {
       const result = await signUp({ name: name.trim(), email: email.trim(), password });
       // Real Supabase may require email confirmation before a session exists.
-      setDoneMessage(result.message ?? 'Account ready — welcome to Nativa!');
+      setDoneMessage(result.message ?? 'Account ready — welcome to Zelvoca!');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
     } finally {

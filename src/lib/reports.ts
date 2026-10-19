@@ -11,7 +11,7 @@ import { postReport, type ReportPayload } from '@/lib/neonApi';
  * never fails in the learner's face.
  */
 
-const QUEUE_KEY = 'nativa:report-queue';
+const QUEUE_KEY = 'zelvoca:report-queue';
 const MAX_QUEUE = 50;
 
 export type ReportOutcome = 'sent' | 'queued';

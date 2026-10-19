@@ -27,7 +27,7 @@ import { buildSystemPrompt, extractTutorReply, parseAiChatRequest } from '../../
 import { getLanguage } from '../../src/data/languages';
 
 /**
- * Nativa API — the mobile app's backend, running on the same branch as the
+ * Zelvoca API — the mobile app's backend, running on the same branch as the
  * database. Auth: Managed Better Auth JWTs (EdDSA) verified against the
  * branch's injected JWKS. The user id is always the JWT `sub` claim — never
  * a request-supplied value — so callers can only touch their own rows.
@@ -112,7 +112,7 @@ async function adminGate(c: Context): Promise<Response | null> {
   }
   const header = c.req.header('authorization') ?? '';
   if (!header.toLowerCase().startsWith('basic ')) {
-    c.header('WWW-Authenticate', 'Basic realm="nativa-admin", charset="UTF-8"');
+    c.header('WWW-Authenticate', 'Basic realm="zelvoca-admin", charset="UTF-8"');
     return c.text('Auth required', 401);
   }
   let user = '';
@@ -128,7 +128,7 @@ async function adminGate(c: Context): Promise<Response | null> {
   const wantUser = process.env.ADMIN_USERNAME ?? 'admin';
   if (!safeEqual(user, wantUser) || !safeEqual(pass, password)) {
     if (clientIp) adminFailLimiter.hit(clientIp);
-    c.header('WWW-Authenticate', 'Basic realm="nativa-admin", charset="UTF-8"');
+    c.header('WWW-Authenticate', 'Basic realm="zelvoca-admin", charset="UTF-8"');
     return c.text('Invalid credentials', 401);
   }
   return null;
@@ -141,13 +141,13 @@ function backTo(c: Context, params: Record<string, string>): Response {
 }
 
 /**
- * CORS: reflect only Nativa's own web origins — the custom domain, Vercel
+ * CORS: reflect only Zelvoca's own web origins — the custom domain, Vercel
  * previews and localhost/private-network dev — so an unrelated site can't
  * read API responses in a browser. Requests with no Origin header (the native
  * app, curl) aren't browser-CORS-governed and pass through untouched; auth
  * still requires a valid JWT either way.
  */
-const TRUSTED_WEB_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(nativa\.app|vercel\.app)$/i;
+const TRUSTED_WEB_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(zelvoca\.app|vercel\.app)$/i;
 const DEV_WEB_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
 
 app.use(
@@ -165,7 +165,7 @@ app.use(
 /** Health check: proves the function is up AND can reach Postgres. */
 app.get('/', async (c) => {
   const { rows } = await pool.query('select now() as now');
-  return c.json({ ok: true, service: 'nativa-api', branch: process.env.NEON_BRANCH, now: rows[0].now });
+  return c.json({ ok: true, service: 'zelvoca-api', branch: process.env.NEON_BRANCH, now: rows[0].now });
 });
 
 /** Every /api/* route requires a valid Managed Auth JWT. */

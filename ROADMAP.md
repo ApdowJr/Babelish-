@@ -1,9 +1,9 @@
-# Nativa — Roadmap to the 2027 Language Learning App
+# Zelvoca — Roadmap to the 2027 Language Learning App
 
 > **Vision:** An AI language tutor that speaks *every* language like a native speaker —
 > accurate curriculum, real pronunciation, real scenarios, personalized to each learner.
 
-Working name: **Nativa** (rename freely; it's one constant in `app.json`).
+Working name: **Zelvoca** (rename freely; it's one constant in `app.json`).
 
 ---
 
@@ -63,7 +63,7 @@ backend env (see `docs/DEPLOYMENT.md`).
 
 ### ✅ Backend on Neon (shipped 2026-10-18)
 - [x] Infra as code: `neon.ts` → `neon deploy` provisions Managed Better Auth, Functions, Object Storage (`assets`) on branch `production`
-- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://nativa.app`
+- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://zelvoca.app`
 - [x] **`api` Function** (`functions/api/index.ts`, Hono): health, `GET/PUT /api/state` (JWT-verified against branch JWKS, user id from `sub`), presigned storage URLs — cross-user access denied by construction
 - [x] **Lakebase Postgres**: `neon/schema.sql` (`public.app_state`) applied to the branch
 - [x] **Object Storage**: private `assets` bucket, presigned PUT/GET under `users/{id}/` prefixes

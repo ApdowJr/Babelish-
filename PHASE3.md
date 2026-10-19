@@ -1,4 +1,4 @@
-# Nativa — Phase 3 delivery checklist
+# Zelvoca — Phase 3 delivery checklist
 
 _shipped 2026-10-18 · personalization_
 

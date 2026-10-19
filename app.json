@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Nativa",
-    "slug": "nativa",
+    "name": "Zelvoca",
+    "slug": "zelvoca",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "nativa",
+    "scheme": "zelvoca",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -27,7 +27,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Nativa uses your microphone so you can practice speaking with your AI tutor."
+          "microphonePermission": "Zelvoca uses your microphone so you can practice speaking with your AI tutor."
         }
       ]
     ],

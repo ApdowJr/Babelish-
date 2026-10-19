@@ -14,7 +14,7 @@ export function Logo({ size = 28 }: { size?: number }) {
         <Text style={[styles.markText, { fontSize: size * 0.5 }]}>N</Text>
       </LinearGradient>
       <Text style={[styles.wordmark, { fontSize: size * 0.78 }]}>
-        Nativa<Text style={{ color: colors.accent }}>.</Text>
+        Zelvoca<Text style={{ color: colors.accent }}>.</Text>
       </Text>
     </View>
   );

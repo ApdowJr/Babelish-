@@ -1,5 +1,5 @@
 /**
- * Design tokens — the single source of truth for Nativa's look.
+ * Design tokens — the single source of truth for Zelvoca's look.
  * Dark, calm, and premium: deep indigo canvas, violet primary, teal accent.
  */
 export const colors = {

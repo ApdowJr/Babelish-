@@ -10,7 +10,7 @@ import {
 /**
  * Daily practice reminders — LOCAL notifications only (no push servers, no
  * telemetry). Expo Go supports local notifications on SDK 58; only remote
- * push would need a development build, and Nativa doesn't use it.
+ * push would need a development build, and Zelvoca doesn't use it.
  *
  * One repeating reminder at the learner's chosen time; we own the schedule,
  * so enabling replaces any previous reminder instead of stacking them.

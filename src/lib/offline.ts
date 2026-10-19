@@ -1,5 +1,5 @@
 /**
- * Offline packs — what actually works without a network. Nativa's curriculum
+ * Offline packs — what actually works without a network. Zelvoca's curriculum
  * ships inside the bundle, so every language pack is installed from first
  * launch; this module gives that fact a testable shape (sizes, copy).
  */

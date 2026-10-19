@@ -478,13 +478,13 @@ export function renderDashboard(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nativa · Content review</title>
+<title>Zelvoca · Content review</title>
 <style>${STYLES}</style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Nativa <span>· content review</span></h1>
+    <h1>Zelvoca <span>· content review</span></h1>
     <div>
       <span class="badge">${data.openDrafts} draft(s)</span>
       <span class="badge warn">${data.openReports} report(s)</span>

@@ -11,8 +11,8 @@ export const FREE_DAILY_SCENARIOS = 1;
 
 /** Codes accepted by the beta stand-in for real billing (documented in PHASE5). */
 export const PREMIUM_CODES: Record<string, string> = {
-  'NATIVA-BETA': 'Nativa beta programme',
-  'NATIVA-PREMIUM': 'Nativa premium',
+  'ZELVOCA-BETA': 'Zelvoca beta programme',
+  'ZELVOCA-PREMIUM': 'Zelvoca premium',
 };
 
 /** On-device plan usage; day-rolls lazily so midnight needs no timer. */

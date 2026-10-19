@@ -18,7 +18,7 @@ type PreferencesValue = Preferences & {
   setReminderKey: (key: string | null) => void;
 };
 
-const STORAGE_KEY = 'nativa:preferences';
+const STORAGE_KEY = 'zelvoca:preferences';
 
 const DEFAULTS: Preferences = {
   targetLanguageId: DEFAULT_LANGUAGE_ID,
