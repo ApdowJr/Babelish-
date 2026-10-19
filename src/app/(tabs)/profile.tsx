@@ -126,7 +126,7 @@ export default function ProfileScreen() {
 
   function shareReferral() {
     void Share.share({
-      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://zelvoca.app`,
+      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get a premium month at launch. https://babelish.app`,
     }).catch(() => {
       // sharing dismissed — nothing to do
     });
@@ -327,7 +327,7 @@ export default function ProfileScreen() {
               <Button
                 label="Start premium (beta)"
                 onPress={() => {
-                  const label = redeem('ZELVOCA-BETA');
+                  const label = redeem('BABELISH-BETA');
                   if (label) {
                     showAlert('Premium preview enabled', `${label} — preview features are unlocked on this device. Paid billing is not available yet.`);
                   } else {
