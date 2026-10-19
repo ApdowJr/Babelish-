@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { NEON_AUTH_URL, NEON_TRUSTED_ORIGIN } from '@/lib/neon';
 import {
   classifyAuthResponse,
+  jsonBodyFor,
   mapAuthErrorCode,
   sessionCookieFromHeaders,
   sessionTransportFor,
@@ -53,17 +54,21 @@ async function request<T>(
   path: string,
   opts: { method?: string; body?: unknown; cookie?: string } = {}
 ): Promise<{ status: number; json: T | null; setCookie: string | null }> {
+  const method = String(opts.method ?? 'POST').toUpperCase();
+  // Non-GET requests are always real JSON (`{}` when there is nothing to say),
+  // otherwise Managed Auth answers 415 and the call silently does nothing.
+  const payload = jsonBodyFor(method, opts.body);
   const headers: Record<string, string> = { Origin: NEON_TRUSTED_ORIGIN };
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (payload !== undefined) headers['Content-Type'] = 'application/json';
   // Only native replays the cookie by hand; the browser attaches its own and
   // rejects a manually-set `Cookie` header anyway.
   if (opts.cookie && TRANSPORT === 'cookie-header') headers.Cookie = opts.cookie;
 
   const res = await fetch(`${NEON_AUTH_URL}${path}`, {
-    method: opts.method ?? 'POST',
+    method,
     headers,
     ...(IS_WEB ? { credentials: 'include' as RequestCredentials } : {}),
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: payload,
   });
   const text = await res.text();
   const json = text ? (JSON.parse(text) as T) : null;
@@ -184,6 +189,12 @@ export async function neonGetJwt(): Promise<string | null> {
   return json.token;
 }
 
+/**
+ * Signs out. The local session is cleared first so the user always gets out;
+ * the server is then asked to revoke the signed cookie (verified live: with the
+ * JSON `{}` body the response is 200 and `/get-session` stops returning the
+ * user — without it the server answers 415 and the session stayed alive).
+ */
 export async function neonSignOut(): Promise<void> {
   const stored = await loadStoredSession();
   await storeSession(null);

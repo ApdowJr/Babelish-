@@ -55,6 +55,18 @@ export function classifyAuthResponse(status: number, hasUser: boolean): AuthOutc
   return 'server-error';
 }
 
+/**
+ * Managed Auth endpoints are JSON-only. A POST sent with **no body** arrives as
+ * `text/plain` (or with no content type at all) and is refused with `415`/`400`
+ * — which is exactly how `POST /sign-out` silently failed to revoke the
+ * session while the app told the user they were signed out. Non-GET requests
+ * therefore always carry JSON, at minimum `{}`; GETs never carry a body.
+ */
+export function jsonBodyFor(method: string, body: unknown): string | undefined {
+  if (String(method).toUpperCase() === 'GET') return undefined;
+  return JSON.stringify(body ?? {});
+}
+
 type ErrorPayload = { message?: string; code?: string } | null | undefined;
 
 const GENERIC = 'Something went wrong. Try again.';

@@ -16,6 +16,7 @@ import {
   SESSION_COOKIE,
   WEB_SESSION_BLOCKED,
   classifyAuthResponse,
+  jsonBodyFor,
   mapAuthErrorCode,
   sessionCookieFromHeaders,
   sessionTransportFor,
@@ -101,4 +102,21 @@ test('reset-password failures say what to do next', () => {
 test('the blocked-cookie message names the cause and the fix', () => {
   assert.match(WEB_SESSION_BLOCKED, /browser blocked the session cookie/);
   assert.match(WEB_SESSION_BLOCKED, /Allow cookies/);
+});
+
+test('a body-less POST still sends JSON — the sign-out revocation bug', () => {
+  // Observed live: `POST /sign-out` with no body -> 415
+  // ("Content-Type text/plain... is not allowed") and, with
+  // `Content-Type: application/json` and no body -> 400. Both left a valid
+  // 7-day session alive after the app claimed to have signed the user out.
+  assert.equal(jsonBodyFor('POST', undefined), '{}', 'must send {} rather than nothing');
+  assert.equal(jsonBodyFor('post', undefined), '{}', 'method case must not matter');
+  assert.equal(jsonBodyFor('POST', null), '{}');
+  assert.equal(jsonBodyFor('POST', { email: 'a@b.c' }), '{"email":"a@b.c"}');
+  assert.equal(
+    jsonBodyFor('GET', undefined),
+    undefined,
+    'GET must not acquire a body or content type'
+  );
+  assert.equal(jsonBodyFor('GET', { ignored: true }), undefined);
 });
