@@ -79,7 +79,7 @@ npm run neon:e2e           # full end-to-end proof against the live backend
 
 ## API CORS policy
 
-The Function allows the branded `babelish.app` / `babelish.app` origins and an explicit set of known Vercel aliases. Babelish deployment URLs are limited to the `babelish-<deployment-hash>-ururka-lp.vercel.app` form, with the known Git alias retained. It does not trust arbitrary hosts merely because they start with `nativa-` or `babelish-`. Local development hosts are handled separately. The smoke suite includes negative tests for unrelated and branded-looking but unregistered hosts; update the allowlist and tests together when aliases change.
+The Function allows the branded `babelish.app` / `babelish.app` origins and an explicit set of known Vercel aliases. Babelish deployment URLs are limited to the `babelish-<deployment-hash>-ururka-lp.vercel.app` form, with the known Git alias retained. It does not trust arbitrary Vercel hosts merely because they start with `babelish-` or `babelish-`. Local development hosts are handled separately. The smoke suite includes negative tests for unrelated and branded-looking but unregistered hosts; update the allowlist and tests together when aliases change.
 
 ## Web (Vercel)
 
