@@ -180,7 +180,7 @@ async function phaseNoAi(app, jwt) {
   const healthBody = await jsonOf(health);
   ok(
     'health: GET / reaches Postgres',
-    health.status === 200 && healthBody?.ok === true && healthBody?.service === 'zelvoca-api',
+    health.status === 200 && healthBody?.ok === true && healthBody?.service === 'babelish-api',
     `status ${health.status}`
   );
 
@@ -226,7 +226,7 @@ async function phaseNoAi(app, jwt) {
   const preflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
-      Origin: 'https://zelvoca-kappa.vercel.app',
+      Origin: 'https://babelish-git-main-apdowjr.vercel.app',
       'Access-Control-Request-Method': 'DELETE',
       'Access-Control-Request-Headers': 'authorization,content-type',
     },
@@ -237,7 +237,7 @@ async function phaseNoAi(app, jwt) {
   ok(
     'cors: DELETE preflight from a Vercel origin is allowed',
     preflight.status === 204 &&
-      pAcao === 'https://zelvoca-kappa.vercel.app' &&
+      pAcao === 'https://babelish-git-main-apdowjr.vercel.app' &&
       pMethods.includes('DELETE') &&
       pHeaders.includes('authorization'),
     `status ${preflight.status}, methods [${pMethods}]`
@@ -246,14 +246,14 @@ async function phaseNoAi(app, jwt) {
   const productionHostPreflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
-      Origin: 'https://nativa-kappa.vercel.app',
+      Origin: 'https://babelish-k70kemy23-ururka-lp.vercel.app',
       'Access-Control-Request-Method': 'DELETE',
     },
   });
   ok(
-    'cors: the current Nativa production hostname is trusted',
+    'cors: the current Babelish deployment hostname is trusted',
     productionHostPreflight.headers.get('access-control-allow-origin') ===
-      'https://nativa-kappa.vercel.app'
+      'https://babelish-k70kemy23-ururka-lp.vercel.app'
   );
 
   const babelishPreviewPreflight = await app.request('/api/me', {
@@ -329,12 +329,12 @@ async function phaseNoAi(app, jwt) {
   );
 
   const trustedActual = await app.request('/api/state', {
-    headers: { ...bearer, Origin: 'https://zelvoca.app' },
+    headers: { ...bearer, Origin: 'https://babelish.app' },
   });
   ok(
     'cors: trusted origin on an actual response is echoed',
     trustedActual.status === 200 &&
-      trustedActual.headers.get('access-control-allow-origin') === 'https://zelvoca.app'
+      trustedActual.headers.get('access-control-allow-origin') === 'https://babelish.app'
   );
 
   const evilActual = await app.request('/api/state', {
@@ -357,7 +357,7 @@ async function phaseNoAi(app, jwt) {
   ok(
     'admin: no credentials → 401 with a Basic challenge',
     challenge.status === 401 &&
-      (challenge.headers.get('www-authenticate') ?? '').includes('zelvoca-admin')
+      (challenge.headers.get('www-authenticate') ?? '').includes('babelish-admin')
   );
 
   let badHits = 0;
@@ -678,7 +678,7 @@ async function parent() {
   // localhost. The issuer string still comes from the real config, so the
   // function's issuer check runs against exactly what production uses.
   const { publicKey, privateKey } = await generateKeyPair('EdDSA', { extractable: true });
-  const jwk = { ...(await exportJWK(publicKey)), kid: 'zelvoca-smoke-key', alg: 'EdDSA', use: 'sig' };
+  const jwk = { ...(await exportJWK(publicKey)), kid: 'babelish-smoke-key', alg: 'EdDSA', use: 'sig' };
   const jwt = await new SignJWT({ sub: `smoke-${Date.now()}-${Math.floor(Math.random() * 1e6)}` })
     .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
     .setIssuer(new URL(auth).origin)
