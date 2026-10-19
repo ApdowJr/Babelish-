@@ -147,7 +147,7 @@ function backTo(c: Context, params: Record<string, string>): Response {
  * app, curl) aren't browser-CORS-governed and pass through untouched; auth
  * still requires a valid JWT either way.
  */
-const TRUSTED_WEB_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(zelvoca\.app|vercel\.app)$/i;
+const TRUSTED_WEB_ORIGIN = /^https:\/\/(?:(?:[a-z0-9-]+\.)*(?:zelvoca|babelish)\.app|(?:nativa-kappa|nativa-ururka-lp|nativa-git-main-ururka-lp|zelvoca-kappa|babelish-git-main-apdowjr|babelish-[a-z0-9]{8,12}-ururka-lp)\.vercel\.app)$/i;
 const DEV_WEB_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
 
 app.use(
@@ -359,12 +359,17 @@ const AI_URL = (process.env.AI_API_URL ?? 'https://api.openai.com/v1').replace(/
 const AI_KEY = process.env.AI_API_KEY;
 const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
 const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-1';
+// Custom OpenAI-compatible endpoints are not assumed to implement audio transcription.
+// Explicitly opt in only when the configured provider supports /audio/transcriptions.
+const AI_STT_ENABLED = process.env.AI_STT_ENABLED === 'true' || (!process.env.AI_API_URL && Boolean(AI_KEY));
 
 const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
 const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
 
 /** Capability report for the client's status rows — booleans only, no secrets. */
-app.get('/api/ai/status', (c) => c.json({ chat: Boolean(AI_KEY), stt: Boolean(AI_KEY) }));
+app.get('/api/ai/status', (c) =>
+  c.json({ chat: Boolean(AI_KEY), stt: Boolean(AI_KEY && AI_STT_ENABLED) })
+);
 
 app.post('/api/ai/chat', async (c) => {
   if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
@@ -455,6 +460,7 @@ app.post('/api/ai/chat', async (c) => {
 
 app.post('/api/ai/stt', async (c) => {
   if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
+  if (!AI_STT_ENABLED) return c.json({ error: 'ai-stt-not-configured' }, 503);
   const userId = c.get('userId');
   if (!sttLimiter.take(userId)) {
     return c.json(

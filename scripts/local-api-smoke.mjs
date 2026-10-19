@@ -243,6 +243,70 @@ async function phaseNoAi(app, jwt) {
     `status ${preflight.status}, methods [${pMethods}]`
   );
 
+  const productionHostPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://nativa-kappa.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: the current Nativa production hostname is trusted',
+    productionHostPreflight.headers.get('access-control-allow-origin') ===
+      'https://nativa-kappa.vercel.app'
+  );
+
+  const babelishPreviewPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://babelish-git-main-apdowjr.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: Babelish preview host is trusted',
+    babelishPreviewPreflight.headers.get('access-control-allow-origin') ===
+      'https://babelish-git-main-apdowjr.vercel.app'
+  );
+
+  const unrelatedVercelPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://attacker-project.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: unrelated Vercel project is not trusted',
+    unrelatedVercelPreflight.headers.get('access-control-allow-origin') === null
+  );
+
+  for (const origin of [
+    'https://nativa-attacker-project.vercel.app',
+    'https://babelish-attacker-project.vercel.app',
+    'https://nativa--attacker.vercel.app',
+  ]) {
+    const response = await app.request('/api/me', {
+      method: 'OPTIONS',
+      headers: { Origin: origin, 'Access-Control-Request-Method': 'DELETE' },
+    });
+    ok(`cors: unregistered branded-looking host is rejected (${origin})`,
+      response.headers.get('access-control-allow-origin') === null);
+  }
+
+  const currentBabelishDeployment = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://babelish-k70kemy23-ururka-lp.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: current Babelish deployment hostname is trusted',
+    currentBabelishDeployment.headers.get('access-control-allow-origin') ===
+      'https://babelish-k70kemy23-ururka-lp.vercel.app'
+  );
+
   const evilPreflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
@@ -513,6 +577,27 @@ async function phaseDeadProvider(app, jwt) {
   ok('stt: dead provider → 502 upstream-failed', r2.status === 502 && b2?.error === 'upstream-failed');
 }
 
+
+/* ── phase 4: custom chat provider without STT capability ─────────────────── */
+
+async function phaseChatOnlyProvider(app, jwt) {
+  const bearer = { Authorization: `Bearer ${jwt}` };
+  const statusResponse = await app.request('/api/ai/status', { headers: bearer });
+  const status = await jsonOf(statusResponse);
+  ok(
+    'status: custom provider without STT opt-in reports {chat:true, stt:false}',
+    statusResponse.status === 200 && status?.chat === true && status?.stt === false,
+    JSON.stringify(status)
+  );
+
+  const stt = await app.request('/api/ai/stt', { method: 'POST', headers: bearer });
+  const body = await jsonOf(stt);
+  ok(
+    'stt: custom provider without STT opt-in returns 503 ai-stt-not-configured',
+    stt.status === 503 && body?.error === 'ai-stt-not-configured'
+  );
+}
+
 /* ── child dispatcher ────────────────────────────────────────────────────── */
 
 async function runPhase(phase) {
@@ -523,15 +608,23 @@ async function runPhase(phase) {
   if (phase === 1) {
     delete process.env.AI_API_KEY;
     delete process.env.AI_API_URL;
+    delete process.env.AI_STT_ENABLED;
     process.env.ADMIN_PASSWORD = ADMIN_PASS;
     process.env.ADMIN_USERNAME = 'admin';
   } else if (phase === 2) {
     fake = await startFakeProvider();
     process.env.AI_API_KEY = FAKE_KEY;
     process.env.AI_API_URL = fake.url;
+    process.env.AI_STT_ENABLED = 'true';
   } else if (phase === 3) {
     process.env.AI_API_KEY = FAKE_KEY;
     process.env.AI_API_URL = await deadProviderUrl();
+    process.env.AI_STT_ENABLED = 'true';
+  } else if (phase === 4) {
+    fake = await startFakeProvider();
+    process.env.AI_API_KEY = FAKE_KEY;
+    process.env.AI_API_URL = fake.url;
+    delete process.env.AI_STT_ENABLED;
   }
 
   // Local JWKS for the parent's locally minted JWT (a public key — never a
@@ -554,12 +647,14 @@ async function runPhase(phase) {
     1: 'Phase 1 — no AI key: auth, honest status, CORS, admin gate',
     2: 'Phase 2 — fake provider: scenarios, multipart contract, rate budgets',
     3: 'Phase 3 — dead provider: honest upstream failures',
+    4: 'Phase 4 — chat-only provider: STT stays unavailable',
   };
   console.log(`\n── ${titles[phase]} ${'─'.repeat(Math.max(0, 60 - titles[phase].length))}`);
   try {
     if (phase === 1) await phaseNoAi(app, jwt);
     else if (phase === 2) await phaseFakeProvider(app, jwt);
     else if (phase === 3) await phaseDeadProvider(app, jwt);
+    else if (phase === 4) await phaseChatOnlyProvider(app, jwt);
   } finally {
     if (fake) fake.server.close();
   }
@@ -569,7 +664,7 @@ async function runPhase(phase) {
   process.exit(fail === 0 ? 0 : 1);
 }
 
-/* ── parent: sign a throwaway local JWT, run the three phases ────────────── */
+/* ── parent: sign a throwaway local JWT, run all four phases ────────────── */
 
 async function parent() {
   const env = loadEnvLocal();
@@ -596,7 +691,7 @@ async function parent() {
   const flags = ['--experimental-strip-types', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'];
   const script = fileURLToPath(import.meta.url);
   const results = [];
-  for (const phase of [1, 2, 3]) {
+  for (const phase of [1, 2, 3, 4]) {
     const run = spawnSync(process.execPath, [...flags, script], {
       env: {
         ...process.env,
@@ -611,7 +706,7 @@ async function parent() {
 
   const failed = results.filter((r) => r.status !== 0);
   if (failed.length === 0) {
-    console.log('\n✔ local smoke: all 3 phases passed');
+    console.log('\n✔ local smoke: all 4 phases passed');
     process.exit(0);
   }
   console.error(`\n✘ local smoke FAILED: ${failed.map((r) => `phase ${r.phase}`).join(', ')}`);

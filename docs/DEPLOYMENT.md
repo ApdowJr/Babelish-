@@ -41,21 +41,31 @@ Set once, preserved across deploys (only pass `--env KEY=VALUE` to change one):
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION` | Object Storage presigning (injected) | yes |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | `/admin` review dashboard Basic auth | yes |
 | `NEON_AUTH_ADMIN_EMAIL`, `NEON_AUTH_ADMIN_PASSWORD` | Ops admin for auth-user deletion | for account deletion |
-| `AI_API_KEY` | Enables live tutor + voice; **server-side only** | optional |
+| `AI_API_KEY` | Enables live tutor chat; transcription additionally requires a compatible provider | optional |
 | `AI_API_URL` | OpenAI-compatible base URL (default `https://api.openai.com/v1`) | optional |
 | `AI_MODEL`, `AI_STT_MODEL` | Chat / transcription models | optional |
+| `AI_STT_ENABLED` | Explicitly enables transcription when using a custom `AI_API_URL` that supports `/audio/transcriptions` | optional |
 
-### Enabling live AI + voice
+### Enabling live AI
+
+For OpenRouter's free-model router, use chat-only configuration. Replace the placeholder with a **new, rotated** OpenRouter key locally; never commit it or put it in `EXPO_PUBLIC_*`:
 
 ```bash
-# Merges into the existing env; the app then reports {chat:true, stt:true}
-neon functions deploy api --src functions/api/index.ts --env AI_API_KEY=... --wait
+read -rsp "New OpenRouter API key: " OPENROUTER_API_KEY; echo
+neon functions deploy api --src functions/api/index.ts \
+  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
+  --env AI_API_URL=https://openrouter.ai/api/v1 \
+  --env AI_MODEL=openrouter/free --wait
+Remove-Variable OPENROUTER_API_KEY
 ```
+
+With a custom `AI_API_URL`, speech-to-text is reported as unavailable unless `AI_STT_ENABLED=true` is explicitly set. OpenRouter free chat configuration alone does not enable transcription. The default OpenAI endpoint keeps the existing `whisper-1` transcription path.
 
 Until `AI_API_KEY` is set, the backend is deliberately honest:
 
 - `GET /api/ai/status` → `{ "chat": false, "stt": false }`
-- `POST /api/ai/chat` and `POST /api/ai/stt` → `503 { "error": "ai-not-configured" }`
+- `POST /api/ai/chat` → `503 { "error": "ai-not-configured" }`
+- `POST /api/ai/stt` → `503 { "error": "ai-not-configured" }`; custom chat-only providers return `503 { "error": "ai-stt-not-configured" }`
 
 The app then shows clearly-labeled demo lines — it never fakes a live reply.
 
@@ -66,6 +76,10 @@ curl -s "$API/"            # { "ok": true, "service": "zelvoca-api", ... }
 curl -s "$API/api/ai/status" -H "Authorization: Bearer <jwt>"
 npm run neon:e2e           # full end-to-end proof against the live backend
 ```
+
+## API CORS policy
+
+The Function allows the branded `zelvoca.app` / `babelish.app` origins and an explicit set of known Vercel aliases. Babelish deployment URLs are limited to the `babelish-<deployment-hash>-ururka-lp.vercel.app` form, with the known Git alias retained. It does not trust arbitrary hosts merely because they start with `nativa-` or `babelish-`. Local development hosts are handled separately. The smoke suite includes negative tests for unrelated and branded-looking but unregistered hosts; update the allowlist and tests together when aliases change.
 
 ## Web (Vercel)
 

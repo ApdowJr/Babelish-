@@ -263,7 +263,7 @@ export default function HomeScreen() {
             <Ionicons name="globe" size={22} color={colors.primarySoft} />
           </View>
           <Text style={styles.actionTitle}>Browse languages</Text>
-          <Text style={styles.actionSubtitle}>10 languages live today</Text>
+          <Text style={styles.actionSubtitle}>10 languages to explore</Text>
         </Pressable>
       </View>
 
