@@ -69,8 +69,8 @@ npm run neon:e2e           # full end-to-end proof against the live backend
 
 ## API CORS policy
 
-The Function allows the branded `zelvoca.app` origin and project-scoped
-`nativa-*.vercel.app` / `zelvoca-*.vercel.app` preview hosts, plus local
+The Function allows the branded `zelvoca.app` / `babelish.app` origins and project-scoped
+`nativa-*.vercel.app`, `zelvoca-*.vercel.app`, and `babelish-*.vercel.app` preview hosts, plus local
 development hosts. It intentionally does **not** trust every unrelated
 `*.vercel.app` project. The smoke suite includes a negative test for an
 unrelated Vercel project; update this policy and that test together if the
