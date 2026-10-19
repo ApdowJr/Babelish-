@@ -313,7 +313,7 @@ export default function ProfileScreen() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Current plan</Text>
           <Text style={styles.rowValue}>
-            {plan === 'premium' ? '⭐ Premium' : 'Free · 1 scenario/day'}
+            {plan === 'premium' ? '⭐ Premium preview' : 'Free · 1 scenario/day'}
           </Text>
         </View>
         {plan === 'free' ? (
@@ -329,7 +329,7 @@ export default function ProfileScreen() {
                 onPress={() => {
                   const label = redeem('ZELVOCA-BETA');
                   if (label) {
-                    showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
+                    showAlert('Premium preview enabled', `${label} — preview features are unlocked on this device. Paid billing is not available yet.`);
                   } else {
                     showAlert('Code not accepted', 'Ask support for a valid beta code.');
                   }
@@ -342,7 +342,7 @@ export default function ProfileScreen() {
             <View style={styles.rowDivider} />
             <View style={styles.profileField}>
               <Text style={styles.fieldLabel}>
-                Premium is active on this device. Billing activates at launch.
+                Premium preview access is enabled on this device. Paid billing is not available yet.
               </Text>
               <Button label="Return to free plan" variant="secondary" onPress={() => resetToFree()} />
             </View>
