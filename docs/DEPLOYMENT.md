@@ -51,10 +51,12 @@ Set once, preserved across deploys (only pass `--env KEY=VALUE` to change one):
 For OpenRouter's free-model router, use chat-only configuration. Replace the placeholder with a **new, rotated** OpenRouter key locally; never commit it or put it in `EXPO_PUBLIC_*`:
 
 ```bash
-neon functions deploy api --src functions/api/index.ts \\
-  --env AI_API_KEY=<new-openrouter-key> \
+read -rsp "New OpenRouter API key: " OPENROUTER_API_KEY; echo
+neon functions deploy api --src functions/api/index.ts \
+  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
   --env AI_API_URL=https://openrouter.ai/api/v1 \
   --env AI_MODEL=openrouter/free --wait
+Remove-Variable OPENROUTER_API_KEY
 ```
 
 With a custom `AI_API_URL`, speech-to-text is reported as unavailable unless `AI_STT_ENABLED=true` is explicitly set. OpenRouter free chat configuration alone does not enable transcription. The default OpenAI endpoint keeps the existing `whisper-1` transcription path.
