@@ -243,6 +243,18 @@ async function phaseNoAi(app, jwt) {
     `status ${preflight.status}, methods [${pMethods}]`
   );
 
+  const unrelatedVercelPreflight = await app.request('/api/me', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://attacker-project.vercel.app',
+      'Access-Control-Request-Method': 'DELETE',
+    },
+  });
+  ok(
+    'cors: unrelated Vercel project is not trusted',
+    unrelatedVercelPreflight.headers.get('access-control-allow-origin') === null
+  );
+
   const evilPreflight = await app.request('/api/me', {
     method: 'OPTIONS',
     headers: {
