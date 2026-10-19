@@ -30,14 +30,16 @@ export const LOCAL_DATA_KEYS = [
 ] as const;
 
 /**
- * The same data under the pre-rename `nativa:*` prefix.
+ * The same data under the two pre-rename prefixes: the original `nativa:*` and
+ * the interim `zelvoca:*` from the competing rename that briefly reached the
+ * Vercel preview (see src/lib/storageKeys.ts).
  *
  * Kept in the wipe set deliberately: src/lib/storageMigration.ts carries these
  * values over on first launch and then deletes the originals, but a learner may
  * exercise their right to erase before that ever runs — or the migration may
  * have failed on their device and left the originals in place. Erasing a key
- * that no longer exists is a harmless no-op, so listing both is strictly safer
- * than assuming the migration succeeded.
+ * that no longer exists is a harmless no-op, so listing every prefix is
+ * strictly safer than assuming the migration succeeded.
  */
 export const LEGACY_LOCAL_DATA_KEYS = [
   'nativa:preferences',
@@ -48,6 +50,14 @@ export const LEGACY_LOCAL_DATA_KEYS = [
   'nativa:report-queue',
   'nativa:progress:v1',
   'nativa:vocab:v1',
+  'zelvoca:preferences',
+  'zelvoca:profile',
+  'zelvoca:analytics',
+  'zelvoca:subscription',
+  'zelvoca:speaking-stats',
+  'zelvoca:report-queue',
+  'zelvoca:progress:v1',
+  'zelvoca:vocab:v1',
 ] as const;
 
 /** What an erase must actually remove: current keys plus any un-migrated legacy copy. */
