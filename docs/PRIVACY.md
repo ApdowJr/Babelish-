@@ -43,8 +43,15 @@ id so reviewers can follow up; they are never shown to other learners.
   **for transcription only**; the audio is discarded immediately and only the
   transcribed phrase is kept as practice content. The provider's API key lives
   in the backend's configuration — never inside the app.
-- With no STT configured, audio never leaves the device — and the app says so
-  instead of pretending otherwise.
+- On the **web** app, when no provider is configured, Babelish can use your
+  **browser's own speech recognition** (the Web Speech API) so the microphone
+  still works with no server key. In that mode your audio is handled by the
+  browser's speech service (in Chrome, Google's) — **not** by Babelish — and
+  only the resulting text returns to the page; Babelish keeps nothing from it
+  beyond the same practice content described above. The Speak tab labels this
+  mode while it is active.
+- With no STT configured *and* no browser recogniser available, audio never
+  leaves the device — and the app says so instead of pretending otherwise.
 
 ## AI tutor content
 

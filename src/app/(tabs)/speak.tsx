@@ -38,6 +38,11 @@ import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
+import {
+  isWebSpeechSupported,
+  startWebSpeech,
+  type WebSpeechSession,
+} from '@/lib/webSpeech';
 import { flushReportQueue, sendReport } from '@/lib/reports';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
@@ -88,6 +93,17 @@ export default function SpeakScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const recorder = useVoiceRecorder();
+  // Active browser-recognition session (web, no provider key). Null whenever
+  // the mic is idle or the server/direct transport is in use.
+  const webSpeechRef = useRef<WebSpeechSession | null>(null);
+
+  // Never leave a recogniser listening if the screen unmounts mid-session.
+  useEffect(() => {
+    return () => {
+      webSpeechRef.current?.cancel();
+      webSpeechRef.current = null;
+    };
+  }, []);
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
   const phrases = scenario ? getPracticePhrases(language.id, scenario.id) : [];
 
@@ -107,6 +123,12 @@ export default function SpeakScreen() {
   // fall back to build-time knowledge, never claim live from wishful thinking.
   const tutorLive = isAIConfigured || aiStatus?.chat === true;
   const voiceLive = isAIConfigured || aiStatus?.stt === true;
+  // A third, key-free voice path: the browser's own speech recogniser (web
+  // only). Without it a deployment with no provider key has a dead mic and can
+  // only say "type instead"; with it the mic genuinely transcribes. Audio goes
+  // to the browser's speech service, never to Babelish — the UI says so.
+  const browserVoice = isWebSpeechSupported();
+  const voiceAvailable = voiceLive || browserVoice;
 
   /** Transport for AI calls: JWT for the backend proxy when available. */
   async function aiIo() {
@@ -247,12 +269,36 @@ export default function SpeakScreen() {
       return;
     }
     // Known-unavailable voice input: don't record a clip we can't transcribe.
-    if (aiStatus && !voiceLive) {
+    if (aiStatus && !voiceAvailable) {
       setVoiceError('Voice input is not configured on this deployment yet — type your reply instead.');
       return;
     }
     if (chatRecording) {
       setChatRecording(false);
+      // Browser recognition: the live session already holds the transcript,
+      // so there is no audio file to upload.
+      if (webSpeechRef.current) {
+        const session = webSpeechRef.current;
+        webSpeechRef.current = null;
+        setBusy(true);
+        try {
+          const text = await session.stop();
+          setBusy(false);
+          if (!text) {
+            setVoiceError("I didn't catch that — try again, or type your reply instead.");
+            return;
+          }
+          const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
+          setMessages(history);
+          await respond(history);
+        } catch (error) {
+          setBusy(false);
+          setVoiceError(
+            error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
+          );
+        }
+        return;
+      }
       const uri = await recorder.stop();
       if (!uri) return;
       setBusy(true);
@@ -269,11 +315,25 @@ export default function SpeakScreen() {
         );
       }
     } else {
+      setVoiceError(null);
+      // No provider key on this deployment, but the browser can recognise
+      // speech itself — use it instead of dead-ending the mic.
+      if (!voiceLive && browserVoice) {
+        const session = startWebSpeech(language.ttsLocale);
+        if (!session) {
+          setVoiceError(
+            'Voice input is not configured on this deployment yet — type your reply instead.'
+          );
+          return;
+        }
+        webSpeechRef.current = session;
+        setChatRecording(true);
+        return;
+      }
       if (!(await ensureRecordingReady())) {
         setVoiceError('Microphone access is off — enable it in Settings to speak.');
         return;
       }
-      setVoiceError(null);
       setChatRecording(true);
       await recorder.start();
     }
@@ -294,6 +354,28 @@ export default function SpeakScreen() {
     if (recorder.isBusy || busy) return;
     if (practice?.phase === 'recording' && practice.phraseId === phrase.id) {
       setPractice({ phraseId: phrase.id, phase: 'scoring' });
+      // Browser recognition: transcript lives in the session, no upload.
+      if (webSpeechRef.current) {
+        const session = webSpeechRef.current;
+        webSpeechRef.current = null;
+        try {
+          const transcript = await session.stop();
+          if (!transcript) {
+            setPractice(null);
+            setVoiceError("I didn't catch that — try again, or type the phrase instead.");
+            return;
+          }
+          finishPractice(phrase, transcript);
+        } catch (error) {
+          setPractice(null);
+          setVoiceError(
+            error instanceof Error
+              ? error.message
+              : "Couldn't catch that — try again, or type the phrase instead."
+          );
+        }
+        return;
+      }
       const uri = await recorder.stop();
       if (!uri) {
         setPractice(null);
@@ -312,11 +394,24 @@ export default function SpeakScreen() {
       }
     } else {
       if (practice?.phase === 'recording' || chatRecording) return;
+      setVoiceError(null);
+      // No provider key here, but the browser's recogniser can score practice.
+      if (!voiceLive && browserVoice) {
+        const session = startWebSpeech(language.ttsLocale);
+        if (!session) {
+          setVoiceError(
+            'Voice input is not configured on this deployment yet — type your reply instead.'
+          );
+          return;
+        }
+        webSpeechRef.current = session;
+        setPractice({ phraseId: phrase.id, phase: 'recording' });
+        return;
+      }
       if (!(await ensureRecordingReady())) {
         setVoiceError('Microphone access is off — enable it in Settings to speak.');
         return;
       }
-      setVoiceError(null);
       setPractice({ phraseId: phrase.id, phase: 'recording' });
       await recorder.start();
     }
@@ -397,7 +492,7 @@ export default function SpeakScreen() {
           >
             <Text style={styles.phraseActionLabel}>🐢 Slow</Text>
           </Pressable>
-          {voiceLive ? (
+          {voiceAvailable ? (
             <Pressable
               onPress={() => togglePracticeMic(phrase)}
               style={[
@@ -520,7 +615,7 @@ export default function SpeakScreen() {
             ) : null}
             <Text style={styles.scoreHeard}>I heard: “{active.transcript}”</Text>
             <View style={styles.scoreActions}>
-              {voiceLive ? (
+              {voiceAvailable ? (
                 <Pressable
                   onPress={() => togglePracticeMic(phrase)}
                   style={styles.scoreAction}
@@ -632,7 +727,7 @@ export default function SpeakScreen() {
                   <Text style={styles.practiceTitle}>Say it out loud</Text>
                 </View>
                 <Text style={styles.practiceSubtitle}>
-                  {voiceLive
+                  {voiceAvailable
                     ? 'Practice key phrases — scored word by word'
                     : 'Practice key phrases — type to get scored word by word'}
                 </Text>
@@ -720,6 +815,12 @@ export default function SpeakScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
+        {!voiceLive && browserVoice ? (
+          <Text style={styles.voiceModeNote}>
+            Mic uses your browser&apos;s speech recognition — audio goes to the browser, not to
+            Babelish.
+          </Text>
+        ) : null}
         <View style={styles.inputBar}>
           <Pressable
             style={[styles.micButton, chatRecording && styles.micButtonRecording]}
@@ -732,7 +833,7 @@ export default function SpeakScreen() {
             <Ionicons
               name={chatRecording ? 'stop' : 'mic-outline'}
               size={20}
-              color={chatRecording ? colors.white : voiceLive ? colors.accent : colors.textFaint}
+              color={chatRecording ? colors.white : voiceAvailable ? colors.accent : colors.textFaint}
             />
           </Pressable>
           <TextInput
@@ -915,6 +1016,13 @@ const styles = StyleSheet.create({
   voiceError: {
     ...typography.caption,
     color: colors.danger,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  voiceModeNote: {
+    ...typography.caption,
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

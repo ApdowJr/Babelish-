@@ -40,6 +40,11 @@ no "may be used for…" legalese.
      phrase. The provider API key lives only in the Function's server-side
      environment, never in the app binary (`EXPO_PUBLIC_*` is not used for
      privileged secrets).
+  3. **Browser speech recognition** (web only, and only when no provider is
+     configured): the page uses the Web Speech API, so audio is handled by the
+     browser's own speech service rather than by Babelish or its backend, and
+     only the transcript returns to the page. Disclosed in docs/PRIVACY.md and
+     labelled in the Speak tab while active. Native builds never use it.
 - If no STT provider is configured the backend answers `503 ai-not-configured`
   and the app says so (Profile → APP STATUS, and the Speak tab degrades
   honestly) — it never sends audio anywhere or fakes a transcript.

@@ -21,7 +21,7 @@ language — with real dialects, real scenarios, and native pronunciation.
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
 | **Translations** — toggle English under every AI message | ✅ |
 | **Language library** — real dialects, native names, speaker counts | ✅ 10 languages |
-| **Voice input** — speak your replies (record → Whisper STT → AI reply) | ✅ Any OpenAI-compatible endpoint |
+| **Voice input** — speak your replies (record → Whisper STT → AI reply) | ✅ Any OpenAI-compatible endpoint; on web, the browser's own recogniser when no key is set |
 | **Pronunciation scoring** — per-word green/amber/red chips + reference audio | ✅ Accent-blind, works typed in demo mode |
 | **Learner profile** — name, job, interests, goals, native language | ✅ Feeds every AI prompt with their real life |
 | **Adaptive difficulty** — per-skill analytics pick the weakest skill | ✅ Tutor level auto-rises A1 → B2 |
