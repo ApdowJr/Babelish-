@@ -158,36 +158,44 @@ export default function SpeakScreen() {
     };
   }, []);
 
-  // Fresh opening line for every new conversation.
+  // Fresh opening line for every new conversation. Pass the same authenticated
+  // backend transport as later turns; otherwise a server-only AI_API_KEY would
+  // be ignored for the greeting and the screen could silently start in demo mode.
   useEffect(() => {
     let cancelled = false;
-    tutorReply({
-      language,
-      history: [],
-      learnerName,
-      scenarioTitle: scenario?.title,
-      profile: tutorProfile,
-      level,
-    })
-      .then((reply) => {
+    void (async () => {
+      try {
+        const reply = await tutorReply(
+          {
+            language,
+            history: [],
+            learnerName,
+            scenarioTitle: scenario?.title,
+            profile: tutorProfile,
+            level,
+          },
+          await aiIo()
+        );
         if (!cancelled) {
           setMessages([{ role: 'assistant', text: reply.text, translation: reply.translation }]);
         }
-      })
-      .catch(() => {
+      } catch (error) {
         if (!cancelled) {
           setMessages([
             {
               role: 'assistant',
               text: '…',
-              translation: 'Could not reach the tutor. Check your AI key in .env.',
+              translation:
+                error instanceof Error && error.message
+                  ? error.message
+                  : 'Could not reach the tutor — try again.',
             },
           ]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setBusy(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
