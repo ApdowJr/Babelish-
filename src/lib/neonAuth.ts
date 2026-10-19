@@ -212,3 +212,16 @@ export async function neonRequestPasswordReset(email: string): Promise<void> {
   });
   if (status !== 200) throw neonError(json, 'Could not send the reset email.');
 }
+
+/**
+ * Completes a reset with the token from the email link.
+ *
+ * The email carries a one-time token; Managed Auth has no hosted reset page, so
+ * the app must collect the new password itself (`/reset-password` screen).
+ */
+export async function neonResetPassword(token: string, newPassword: string): Promise<void> {
+  const { status, json } = await request<AuthResponseBody>('/reset-password', {
+    body: { newPassword, token },
+  });
+  if (status !== 200) throw neonError(json, 'Could not set the new password.');
+}

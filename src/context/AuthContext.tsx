@@ -13,6 +13,7 @@ import {
   neonGetJwt,
   neonGetSession,
   neonRequestPasswordReset,
+  neonResetPassword,
   neonSignIn,
   neonSignOut,
   neonSignUp,
@@ -37,6 +38,8 @@ type AuthContextValue = {
   signUp: (params: { name: string; email: string; password: string }) => Promise<{ message?: string }>;
   signIn: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Completes a reset with the one-time token from the email link. */
+  resetPasswordWithToken: (token: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -180,6 +183,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (!supabase) return;
         const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw new Error(friendlyAuthError(error.message));
+      },
+      async resetPasswordWithToken(token, newPassword) {
+        if (isNeonConfigured) {
+          await neonResetPassword(token, newPassword);
+          return;
+        }
+        if (!supabase) {
+          throw new Error('Password reset needs a real backend — this build is in demo mode.');
+        }
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw new Error(friendlyAuthError(error.message));
       },
       async signOut() {

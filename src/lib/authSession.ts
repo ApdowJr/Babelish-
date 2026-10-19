@@ -72,9 +72,14 @@ export function mapAuthErrorCode(json: ErrorPayload, fallback: string = GENERIC)
     case 'EMAIL_INVALID':
       return 'That email address doesn’t look right.';
     case 'WEAK_PASSWORD':
+    case 'PASSWORD_TOO_SHORT':
       return 'Password must be at least 8 characters.';
     case 'RATE_LIMITED':
       return 'Too many attempts — wait a minute and try again.';
+    case 'INVALID_TOKEN':
+      return 'That reset link is invalid or has already been used. Request a new one.';
+    case 'TOKEN_EXPIRED':
+      return 'That reset link has expired. Request a new one.';
     default:
       break;
   }

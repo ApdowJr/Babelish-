@@ -73,6 +73,27 @@ established in the browser — sign-in could not work on web at all.
 mainstream browser stores the cross-site cookie; a browser that blocks
 third-party cookies now gets a message that says so.
 
+## Password recovery (added 2026-10-19)
+
+**Managed Auth has no hosted reset page** — `GET {auth}/reset-password/<token>`
+answers `400` and the query form answers `404`. Recovery is therefore two steps,
+and the second one lives in the app:
+
+1. `POST /request-password-reset` (screen `(auth)/forgot-password`) — the branch
+   uses shared SMTP (`email_provider: {"type":"shared"}`) and returns 200.
+2. `POST /reset-password` with the one-time token — screen
+   `(auth)/reset-password`, mounted at both link shapes (`?token=…` and
+   `/reset-password/<token>`), via `src/components/ResetPasswordForm.tsx`.
+
+Verified against the live branch: `POST /reset-password { newPassword, token }`
+→ `200`, the old password then `401`, the new password `200`; failures surface as
+`INVALID_TOKEN` / `PASSWORD_TOO_SHORT` (mapped in `authSession.ts`).
+
+⚠️ **Not verified:** the exact URL inside the email and its delivery. No mailbox
+is reachable from this environment, and Neon documents that **verification links
+need custom SMTP** (codes work on shared SMTP). Enabling custom SMTP is the
+production step for link-based recovery — see `docs/DEPLOYMENT.md`.
+
 ## Secret handling
 
 - A secret scan of the full working tree (tracked changes + untracked files)
@@ -95,7 +116,7 @@ plain-language, actionable warnings instead of a silent demo banner.
 
 | Gate | Result |
 |---|---|
-| `npm test` (unit, 5 files) | 36/36 passing |
+| `npm test` (unit, 5 files) | 37/37 passing |
 | `npm run smoke:local` (real app from source: auth/CORS/limits/AI proxy/admin) | 37/37 passing, 3 phases |
 | `npm run neon:e2e` (live deployed backend, real Managed Auth) | 50/50 passing |
 | App `tsc --noEmit` / functions `tsc --noEmit` / `expo lint` / `expo-doctor` | all clean (RC 0), doctor 20/20 |
@@ -107,8 +128,9 @@ plain-language, actionable warnings instead of a silent demo banner.
 - **No password-reset email round-trip** was exercised here (needs a mailbox);
   `POST /request-password-reset` returns 200 and the branch uses shared SMTP
   (`email_provider: {"type":"shared"}`), but no email was received here. The
-  `callbackURL` now uses the live web origin instead of the unreachable
-  `nativa.app` site.
+  server-side reset contract *is* verified (see "Password recovery"); the email
+  link's shape and delivery are not. The `callbackURL` now uses the live web
+  origin instead of the unreachable `nativa.app` site.
 - **Provider-key rejection mapping** for live AI calls is covered with a local
   fake provider (401 → 502); a real provider key is not available in this
   environment, so no live provider call was made.

@@ -91,6 +91,13 @@ test('every known provider error maps to plain language', () => {
   assert.equal(mapAuthErrorCode(null, 'fallback text'), 'fallback text');
 });
 
+test('reset-password failures say what to do next', () => {
+  // Codes returned by POST /reset-password (observed from the live branch).
+  assert.match(mapAuthErrorCode({ code: 'INVALID_TOKEN' }), /invalid or has already been used/);
+  assert.match(mapAuthErrorCode({ code: 'TOKEN_EXPIRED' }), /expired/);
+  assert.match(mapAuthErrorCode({ code: 'PASSWORD_TOO_SHORT' }), /at least 8 characters/);
+});
+
 test('the blocked-cookie message names the cause and the fix', () => {
   assert.match(WEB_SESSION_BLOCKED, /browser blocked the session cookie/);
   assert.match(WEB_SESSION_BLOCKED, /Allow cookies/);

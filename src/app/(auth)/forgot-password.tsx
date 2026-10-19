@@ -91,7 +91,7 @@ export default function ForgotPasswordScreen() {
 
       {!isSupabaseConfigured ? (
         <Text style={styles.demoNote}>
-          Demo mode — password reset needs Supabase keys in .env
+          Demo mode — password reset needs the Neon backend in .env
         </Text>
       ) : null}
 
