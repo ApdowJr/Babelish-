@@ -45,7 +45,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const DEMO_SESSION_KEY = 'babelish:demo-user';
+const DEMO_SESSION_KEY = 'zelvoca:demo-user';
 
 /** Turns provider error strings into something a human wants to read. */
 function friendlyAuthError(message: string): string {
