@@ -73,6 +73,26 @@ established in the browser — sign-in could not work on web at all.
 mainstream browser stores the cross-site cookie; a browser that blocks
 third-party cookies now gets a message that says so.
 
+## Sign-out revocation (fixed 2026-10-19)
+
+Managed Auth is **JSON-only**: a `POST` with no body arrives as `text/plain` and
+is refused. `neonSignOut` used to send `/sign-out` with neither body nor content
+type and **swallowed the response**, so the app reported a successful sign-out
+while a valid 7-day session cookie stayed alive server-side. Verified live:
+
+| `POST /sign-out` shape (with the session cookie) | Result |
+| --- | --- |
+| no body, no content type | `415`, session still valid |
+| `Content-Type: application/json`, no body | `400`, session still valid |
+| `Content-Type: application/json` + `{}` | `200`, `/get-session` no longer returns the user |
+
+The fix is structural: `jsonBodyFor(method, body)` in `src/lib/authSession.ts`
+(non-GET requests always carry JSON, at minimum `{}`; GETs never carry a body)
+is routed through by every `neonAuth.ts` request, so no future body-less `POST`
+can repeat the bug. `tests/authSession.test.ts` guards the invariant. The local
+session is still cleared first, so signing out always succeeds from the user's
+point of view.
+
 ## Password recovery (added 2026-10-19)
 
 **Managed Auth has no hosted reset page** — `GET {auth}/reset-password/<token>`
