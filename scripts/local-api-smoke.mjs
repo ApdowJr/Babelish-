@@ -577,6 +577,27 @@ async function phaseDeadProvider(app, jwt) {
   ok('stt: dead provider → 502 upstream-failed', r2.status === 502 && b2?.error === 'upstream-failed');
 }
 
+
+/* ── phase 4: custom chat provider without STT capability ─────────────────── */
+
+async function phaseChatOnlyProvider(app, jwt) {
+  const bearer = { Authorization: `Bearer ${jwt}` };
+  const statusResponse = await app.request('/api/ai/status', { headers: bearer });
+  const status = await jsonOf(statusResponse);
+  ok(
+    'status: custom provider without STT opt-in reports {chat:true, stt:false}',
+    statusResponse.status === 200 && status?.chat === true && status?.stt === false,
+    JSON.stringify(status)
+  );
+
+  const stt = await app.request('/api/ai/stt', { method: 'POST', headers: bearer });
+  const body = await jsonOf(stt);
+  ok(
+    'stt: custom provider without STT opt-in returns 503 ai-stt-not-configured',
+    stt.status === 503 && body?.error === 'ai-stt-not-configured'
+  );
+}
+
 /* ── child dispatcher ────────────────────────────────────────────────────── */
 
 async function runPhase(phase) {
@@ -599,6 +620,11 @@ async function runPhase(phase) {
     process.env.AI_API_KEY = FAKE_KEY;
     process.env.AI_API_URL = await deadProviderUrl();
     process.env.AI_STT_ENABLED = 'true';
+  } else if (phase === 4) {
+    fake = await startFakeProvider();
+    process.env.AI_API_KEY = FAKE_KEY;
+    process.env.AI_API_URL = fake.url;
+    delete process.env.AI_STT_ENABLED;
   }
 
   // Local JWKS for the parent's locally minted JWT (a public key — never a
@@ -621,12 +647,14 @@ async function runPhase(phase) {
     1: 'Phase 1 — no AI key: auth, honest status, CORS, admin gate',
     2: 'Phase 2 — fake provider: scenarios, multipart contract, rate budgets',
     3: 'Phase 3 — dead provider: honest upstream failures',
+    4: 'Phase 4 — chat-only provider: STT stays unavailable',
   };
   console.log(`\n── ${titles[phase]} ${'─'.repeat(Math.max(0, 60 - titles[phase].length))}`);
   try {
     if (phase === 1) await phaseNoAi(app, jwt);
     else if (phase === 2) await phaseFakeProvider(app, jwt);
     else if (phase === 3) await phaseDeadProvider(app, jwt);
+    else if (phase === 4) await phaseChatOnlyProvider(app, jwt);
   } finally {
     if (fake) fake.server.close();
   }
@@ -663,7 +691,7 @@ async function parent() {
   const flags = ['--experimental-strip-types', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'];
   const script = fileURLToPath(import.meta.url);
   const results = [];
-  for (const phase of [1, 2, 3]) {
+  for (const phase of [1, 2, 3, 4]) {
     const run = spawnSync(process.execPath, [...flags, script], {
       env: {
         ...process.env,
@@ -678,7 +706,7 @@ async function parent() {
 
   const failed = results.filter((r) => r.status !== 0);
   if (failed.length === 0) {
-    console.log('\n✔ local smoke: all 3 phases passed');
+    console.log('\n✔ local smoke: all 4 phases passed');
     process.exit(0);
   }
   console.error(`\n✘ local smoke FAILED: ${failed.map((r) => `phase ${r.phase}`).join(', ')}`);
