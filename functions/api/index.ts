@@ -147,7 +147,7 @@ function backTo(c: Context, params: Record<string, string>): Response {
  * app, curl) aren't browser-CORS-governed and pass through untouched; auth
  * still requires a valid JWT either way.
  */
-const TRUSTED_WEB_ORIGIN = /^https:\/\/(?:(?:[a-z0-9-]+\.)*(?:zelvoca|babelish)\.app|(?:nativa|zelvoca|babelish)(?:-[a-z0-9-]+)*\.vercel\.app)$/i;
+const TRUSTED_WEB_ORIGIN = /^https:\/\/(?:(?:[a-z0-9-]+\.)*(?:zelvoca|babelish)\.app|(?:nativa-kappa|nativa-ururka-lp|nativa-git-main-ururka-lp|zelvoca-kappa|babelish-git-main-apdowjr|babelish-[a-z0-9]{8,12}-ururka-lp)\.vercel\.app)$/i;
 const DEV_WEB_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
 
 app.use(
