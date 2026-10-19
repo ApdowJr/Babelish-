@@ -1,4 +1,4 @@
--- Nativa app state on Neon (Lakebase Postgres).
+-- Zelvoca app state on Neon (Lakebase Postgres).
 -- progress + spaced-repetition vocabulary, synced from the app through the
 -- `api` Neon Function. user_id = Managed Auth JWT `sub` claim (Better Auth
 -- user id). Authorization is enforced in the Function from the JWT; rows are

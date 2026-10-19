@@ -1,4 +1,4 @@
-# Nativa — Deployment
+# Zelvoca — Deployment
 
 _Last updated: 2026-10-19._ Names and commands only — **never** put secret
 values in this file, in `EXPO_PUBLIC_*`, or in git. Real values live in the
@@ -62,7 +62,7 @@ The app then shows clearly-labeled demo lines — it never fakes a live reply.
 ### Verify after deploy
 
 ```bash
-curl -s "$API/"            # { "ok": true, "service": "nativa-api", ... }
+curl -s "$API/"            # { "ok": true, "service": "zelvoca-api", ... }
 curl -s "$API/api/ai/status" -H "Authorization: Bearer <jwt>"
 npm run neon:e2e           # full end-to-end proof against the live backend
 ```

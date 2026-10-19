@@ -59,7 +59,7 @@ test('web: a zero-byte recording is rejected before it can hit the API', async (
 });
 
 test('native: returns the classic { uri } part React Native FormData uploads', async () => {
-  const uri = 'file:///data/user/0/dev.nativa/cache/speech.m4a';
+  const uri = 'file:///data/user/0/dev.zelvoca/cache/speech.m4a';
   const res = await prepareAudioPart(uri, 'android');
   assert.deepEqual(res.part, { uri, name: 'speech.m4a', type: 'audio/m4a' });
   assert.equal(res.filename, 'speech.m4a');
