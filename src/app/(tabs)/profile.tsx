@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { showAlert } from '@/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
@@ -25,6 +26,13 @@ import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
 import { loadCurriculum } from '@/lib/curriculum/store';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
+
+/**
+ * The shipped app version, read from app.json through expo-constants so the
+ * footer can never drift out of sync with a release bump. `expoConfig` is
+ * null only in bare/unconfigured contexts, hence the honest `dev` fallback.
+ */
+const APP_VERSION = Constants.expoConfig?.version ?? 'dev';
 
 function StatusDot({ ok }: { ok: boolean }) {
   return <View style={[styles.dot, { backgroundColor: ok ? colors.success : colors.warning }]} />;
@@ -550,7 +558,7 @@ export default function ProfileScreen() {
 
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
-        <Text style={styles.footerText}>Nativa v1.0.0 · 2027 preview</Text>
+        <Text style={styles.footerText}>Nativa v{APP_VERSION} · 2027 preview</Text>
       </View>
     </Screen>
   );
