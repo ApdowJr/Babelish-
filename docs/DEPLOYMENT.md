@@ -44,13 +44,20 @@ Set once, preserved across deploys (only pass `--env KEY=VALUE` to change one):
 | `AI_API_KEY` | Enables live tutor + voice; **server-side only** | optional |
 | `AI_API_URL` | OpenAI-compatible base URL (default `https://api.openai.com/v1`) | optional |
 | `AI_MODEL`, `AI_STT_MODEL` | Chat / transcription models | optional |
+| `AI_STT_ENABLED` | Explicitly enables transcription when using a custom `AI_API_URL` that supports `/audio/transcriptions` | optional |
 
-### Enabling live AI + voice
+### Enabling live AI
+
+For OpenRouter's free-model router, use chat-only configuration. Replace the placeholder with a **new, rotated** OpenRouter key locally; never commit it or put it in `EXPO_PUBLIC_*`:
 
 ```bash
-# Merges into the existing env; the app then reports {chat:true, stt:true}
-neon functions deploy api --src functions/api/index.ts --env AI_API_KEY=... --wait
+neon functions deploy api --src functions/api/index.ts \\
+  --env AI_API_KEY=<new-openrouter-key> \\
+  --env AI_API_URL=https://openrouter.ai/api/v1 \\
+  --env AI_MODEL=openrouter/free --wait
 ```
+
+With a custom `AI_API_URL`, speech-to-text is reported as unavailable unless `AI_STT_ENABLED=true` is explicitly set. OpenRouter free chat configuration alone does not enable transcription. The default OpenAI endpoint keeps the existing `whisper-1` transcription path.
 
 Until `AI_API_KEY` is set, the backend is deliberately honest:
 
@@ -69,12 +76,7 @@ npm run neon:e2e           # full end-to-end proof against the live backend
 
 ## API CORS policy
 
-The Function allows the branded `zelvoca.app` / `babelish.app` origins and project-scoped
-`nativa-*.vercel.app`, `zelvoca-*.vercel.app`, and `babelish-*.vercel.app` preview hosts, plus local
-development hosts. It intentionally does **not** trust every unrelated
-`*.vercel.app` project. The smoke suite includes a negative test for an
-unrelated Vercel project; update this policy and that test together if the
-production hostname changes.
+The Function allows the branded `zelvoca.app` / `babelish.app` origins and an explicit set of known Vercel aliases. Babelish deployment URLs are limited to the `babelish-<deployment-hash>-ururka-lp.vercel.app` form, with the known Git alias retained. It does not trust arbitrary hosts merely because they start with `nativa-` or `babelish-`. Local development hosts are handled separately. The smoke suite includes negative tests for unrelated and branded-looking but unregistered hosts; update the allowlist and tests together when aliases change.
 
 ## Web (Vercel)
 
