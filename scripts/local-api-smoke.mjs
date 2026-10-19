@@ -329,12 +329,12 @@ async function phaseNoAi(app, jwt) {
   );
 
   const trustedActual = await app.request('/api/state', {
-    headers: { ...bearer, Origin: 'https://babelish.app' },
+    headers: { ...bearer, Origin: 'https://zelvoca.app' },
   });
   ok(
     'cors: trusted origin on an actual response is echoed',
     trustedActual.status === 200 &&
-      trustedActual.headers.get('access-control-allow-origin') === 'https://babelish.app'
+      trustedActual.headers.get('access-control-allow-origin') === 'https://zelvoca.app'
   );
 
   const evilActual = await app.request('/api/state', {
