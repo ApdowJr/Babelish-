@@ -100,14 +100,15 @@ export default function HomeScreen() {
       <View style={styles.topRow}>
         <View>
           <Text style={styles.greeting}>{greeting},</Text>
-          <Text style={styles.name}>{user?.displayName ?? 'friend'} 👋</Text>
+          <Text style={styles.name}>{user?.displayName ?? 'friend'}</Text>
         </View>
         <View style={styles.chipsRow}>
           <View style={styles.xpChip}>
-            <Text style={styles.xpChipText}>✨ {analytics.xp.lifetime} XP</Text>
+            <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
+            <Text style={styles.xpChipText}>{analytics.xp.lifetime} XP</Text>
           </View>
           <View style={styles.streakChip}>
-            <Text style={styles.streakEmoji}>🔥</Text>
+            <Ionicons name="flame-outline" size={16} color={colors.accent} />
             <Text style={styles.streakText}>{streak > 0 ? `Day ${streak}` : 'Start today'}</Text>
           </View>
         </View>
