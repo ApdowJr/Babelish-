@@ -1,34 +1,31 @@
-/**
- * Design tokens — the single source of truth for Zelvoca's look.
- * Dark, calm, and premium: deep indigo canvas, violet primary, teal accent.
- */
+/** Babelish design tokens: warm, editorial, and grounded in conversation. */
 export const colors = {
-  bg: '#0B1020',
-  surface: '#151C30',
-  surfaceHigh: '#1D2740',
-  border: '#273252',
+  bg: '#FAF7F0',
+  surface: '#FFFFFF',
+  surfaceHigh: '#E5EEE6',
+  border: '#E6E8E1',
 
-  primary: '#6C5CE7',
-  primaryPressed: '#5A4BD1',
-  primarySoft: 'rgba(108, 92, 231, 0.16)',
-  gradientFrom: '#6C5CE7',
-  gradientTo: '#8B7CFF',
+  primary: '#174D3B',
+  primaryPressed: '#10382D',
+  primarySoft: 'rgba(23, 77, 59, 0.12)',
+  gradientFrom: '#174D3B',
+  gradientTo: '#2D7158',
 
-  accent: '#00D1B2',
-  accentSoft: 'rgba(0, 209, 178, 0.14)',
+  accent: '#E77C5B',
+  accentSoft: 'rgba(231, 124, 91, 0.14)',
 
-  text: '#F2F5FC',
-  textMuted: '#98A2BE',
-  textFaint: '#5F6B8C',
+  text: '#202923',
+  textMuted: '#69736B',
+  textFaint: '#89928B',
 
-  danger: '#FF6B6B',
-  dangerSoft: 'rgba(255, 107, 107, 0.12)',
-  success: '#2ED573',
-  successSoft: 'rgba(46, 213, 115, 0.12)',
-  warning: '#FFC542',
+  danger: '#B84242',
+  dangerSoft: 'rgba(184, 66, 66, 0.12)',
+  success: '#287A55',
+  successSoft: 'rgba(40, 122, 85, 0.12)',
+  warning: '#A66A22',
 
   white: '#FFFFFF',
-  black: '#000000',
+  black: '#202923',
 } as const;
 
 export const spacing = {
