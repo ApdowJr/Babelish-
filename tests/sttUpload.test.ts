@@ -58,6 +58,51 @@ test('web: a zero-byte recording is rejected before it can hit the API', async (
   );
 });
 
+test('web: the blob: URL is revoked once its bytes are read (no leak per take)', async () => {
+  const revoked: string[] = [];
+  const blob = new Blob([new Uint8Array(9)], { type: 'audio/webm' });
+  const res = await prepareAudioPart(
+    blobUrl,
+    'web',
+    async () => new Response(blob),
+    (url) => revoked.push(url)
+  );
+  assert.deepEqual(revoked, [blobUrl], 'exactly one revoke, with the recorder URL');
+  assert.equal(res.sizeBytes, 9, 'the bytes must be read before the URL dies');
+
+  // A zero-byte take is still revoked — it is garbage either way.
+  const revokedEmpty: string[] = [];
+  await assert.rejects(
+    prepareAudioPart(
+      blobUrl,
+      'web',
+      async () => new Response(new Blob([], { type: 'audio/webm' })),
+      (url) => revokedEmpty.push(url)
+    ),
+    /came out empty/
+  );
+  assert.deepEqual(revokedEmpty, [blobUrl]);
+
+  // An unreadable URL is NOT revoked: the fetch failed, so the recording
+  // may still be diagnosable from that same URL.
+  const revokedFail: string[] = [];
+  await assert.rejects(
+    prepareAudioPart(blobUrl, 'web', async () => new Response(null, { status: 404 }), (url) =>
+      revokedFail.push(url)
+    ),
+    /Could not read the recording/
+  );
+  assert.deepEqual(revokedFail, [], 'no revoke when the read failed');
+});
+
+test('native: never touches object URLs — the { uri } part survives for FormData', async () => {
+  const revoked: string[] = [];
+  const fileUri = 'file:///data/user/0/dev.nativa/cache/speech.m4a';
+  const res = await prepareAudioPart(fileUri, 'ios', undefined, (url) => revoked.push(url));
+  assert.deepEqual(revoked, [], 'native path must not revoke anything');
+  assert.equal((res.part as { uri: string }).uri, fileUri);
+});
+
 test('native: returns the classic { uri } part React Native FormData uploads', async () => {
   const uri = 'file:///data/user/0/dev.zelvoca/cache/speech.m4a';
   const res = await prepareAudioPart(uri, 'android');

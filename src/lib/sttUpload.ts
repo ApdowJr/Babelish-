@@ -43,6 +43,20 @@ function extensionFor(mime: string): string {
 }
 
 /**
+ * Releases a web `blob:` URL once its bytes have been read. Every MediaRecorder
+ * take creates one of these object URLs, and nothing else ever revokes it, so a
+ * long speak session leaked one URL (and its audio buffer) per recording.
+ * Only `blob:` URLs are touched — a native file URI is the recorder's output,
+ * and revoking anything here would be wrong on platforms where the default is
+ * a no-op anyway.
+ */
+export function defaultRevokeBlobUrl(url: string): void {
+  if (url.startsWith('blob:') && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
  * Prepares a recorded audio URI for upload.
  * Throws user-visible errors for the two silent-failure cases: an unreadable
  * URI and an empty recording (0 bytes) — the transcription API would reject
@@ -51,7 +65,8 @@ function extensionFor(mime: string): string {
 export async function prepareAudioPart(
   audioUri: string,
   platform: 'web' | 'native' | string,
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = fetch,
+  revoke: (url: string) => void = defaultRevokeBlobUrl
 ): Promise<PreparedAudio> {
   if (platform === 'web') {
     let res: Response;
@@ -64,6 +79,8 @@ export async function prepareAudioPart(
       throw new Error('Could not read the recording — try recording again.');
     }
     const blob = await res.blob();
+    // The bytes are in hand now; the object URL is no longer needed.
+    revoke(audioUri);
     if (!blob || blob.size === 0) {
       throw new Error('The recording came out empty — check your microphone and try again.');
     }

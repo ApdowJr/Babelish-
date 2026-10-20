@@ -251,9 +251,12 @@ export default function SpeakScreen() {
   /* ── Voice: chat turns ─────────────────────────────────────────────────── */
 
   async function toggleChatMic() {
-    if (busy || recorder.isBusy || practice?.phase === 'recording' || practice?.phase === 'scoring') {
+    if (busy || practice?.phase === 'recording' || practice?.phase === 'scoring') {
       return;
     }
+    // While start() prepares, a second tap must be able to stop that same
+    // clip — only reject it when there is nothing (yet) being recorded.
+    if (!chatRecording && recorder.isBusy) return;
     // Known-unavailable voice input: don't record a clip we can't transcribe.
     if (aiStatus && !voiceLive) {
       setVoiceError('Voice input is not configured on this deployment yet — type your reply instead.');
@@ -262,7 +265,10 @@ export default function SpeakScreen() {
     if (chatRecording) {
       setChatRecording(false);
       const uri = await recorder.stop();
-      if (!uri) return;
+      if (!uri) {
+        setVoiceError('Nothing was captured — try again, or type your reply.');
+        return;
+      }
       setBusy(true);
       try {
         const text = await transcribeSpeech(uri, language.id, await aiIo());
@@ -283,7 +289,14 @@ export default function SpeakScreen() {
       }
       setVoiceError(null);
       setChatRecording(true);
-      await recorder.start();
+      try {
+        await recorder.start();
+      } catch {
+        // Permission revoked mid-flight, no mic available, or the browser
+        // refused the stream — say so instead of showing a dead recorder.
+        setChatRecording(false);
+        setVoiceError("Couldn't start recording — check your microphone and try again.");
+      }
     }
   }
 
@@ -299,12 +312,13 @@ export default function SpeakScreen() {
   }
 
   async function togglePracticeMic(phrase: PracticePhrase) {
-    if (recorder.isBusy || busy) return;
+    if (busy) return;
     if (practice?.phase === 'recording' && practice.phraseId === phrase.id) {
       setPractice({ phraseId: phrase.id, phase: 'scoring' });
       const uri = await recorder.stop();
       if (!uri) {
         setPractice(null);
+        setVoiceError('Nothing was captured — try again, or type the phrase.');
         return;
       }
       try {
@@ -319,14 +333,19 @@ export default function SpeakScreen() {
         );
       }
     } else {
-      if (practice?.phase === 'recording' || chatRecording) return;
+      if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
       if (!(await ensureRecordingReady())) {
         setVoiceError('Microphone access is off — enable it in Settings to speak.');
         return;
       }
       setVoiceError(null);
       setPractice({ phraseId: phrase.id, phase: 'recording' });
-      await recorder.start();
+      try {
+        await recorder.start();
+      } catch {
+        setPractice(null);
+        setVoiceError("Couldn't start recording — check your microphone and try again.");
+      }
     }
   }
 
