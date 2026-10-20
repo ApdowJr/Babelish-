@@ -361,7 +361,7 @@ const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
 const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-1';
 // Custom OpenAI-compatible endpoints are not assumed to implement audio transcription.
 // Explicitly opt in only when the configured provider supports /audio/transcriptions.
-const AI_STT_ENABLED = process.env.AI_STT_ENABLED === 'true' || (!process.env.AI_API_URL && Boolean(AI_KEY));
+const AI_STT_ENABLED = Boolean(AI_KEY) && process.env.AI_STT_ENABLED !== 'false';
 
 const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
 const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
