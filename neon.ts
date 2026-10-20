@@ -11,7 +11,17 @@ export default defineConfig({
     hello: { name: "Hello World", source: "./hello.ts" },
     // The app's backend: health, per-user state sync, storage presigning.
     // The mobile client calls it directly with a Managed Auth JWT (Bearer).
-    api: { name: "Babelish API", source: "./functions/api/index.ts" },
+    api: {
+      name: "Babelish API",
+      source: "./functions/api/index.ts",
+      env: {
+        AI_API_KEY: process.env.AI_API_KEY,
+        AI_API_URL: process.env.AI_API_URL,
+        AI_MODEL: process.env.AI_MODEL,
+        AI_STT_MODEL: process.env.AI_STT_MODEL,
+        AI_STT_ENABLED: process.env.AI_STT_ENABLED,
+      },
+    },
   },
   buckets: {
     // "private" is the default; use "public_read" for anonymous reads
