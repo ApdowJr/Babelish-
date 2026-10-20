@@ -39,7 +39,12 @@ if (!AUTH || !API || !HELLO) {
   console.error('Missing Neon env vars in .env.local — run `neon deploy` first.');
   process.exit(2);
 }
-const ORIGIN = 'https://zelvoca.app';
+// The production origin Neon Auth actually trusts TODAY (verified 2026-10-20
+// with a live probe: `zelvoca.app` → 403 INVALID_ORIGIN, this origin →
+// 401 credential check). The intended custom domain (`babelish.app`) is not
+// configured in Neon Auth yet — see docs/DEPLOYMENT.md — so the script must
+// exercise the origin the site is really served from, not a planned one.
+const ORIGIN = 'https://babelish.vercel.app';
 const COOKIE_NAME = '__Secure-neon-auth.session_token';
 
 let pass = 0;
