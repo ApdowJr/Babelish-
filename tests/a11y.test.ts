@@ -94,5 +94,10 @@ test('interactive rows in the tutor screen carry labels', () => {
   assert.match(source, /accessibilityLabel=\{chatRecording \? 'Stop recording' : 'Speak your reply'\}/);
   // The conversation itself is announced as a region, and status changes are live.
   assert.match(source, /accessibilityLabel="Conversation with your tutor"/);
+  // Destructive actions must be named, and the crash probe must not ship as a
+  // route that throws in production.
+  assert.match(source, /accessibilityLabel="Clear this conversation"/);
+  const probe = readFileSync(path.join(SRC, 'app', 'dev-crash.tsx'), 'utf8');
+  assert.match(probe, /if \(!__DEV__\) return <Redirect href="\/" \/>/);
   assert.match(source, /accessibilityLiveRegion="polite"/);
 });
