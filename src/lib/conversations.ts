@@ -182,6 +182,16 @@ export function upsertConversation(
   return { version: 1, conversations: Object.fromEntries(kept) };
 }
 
+/**
+ * Removes one slot and leaves every other conversation alone.
+ * Used by "Clear conversation" in the Speak screen.
+ */
+export function removeConversation(book: ConversationBook, slot: string): ConversationBook {
+  const conversations = { ...book.conversations };
+  delete conversations[slot];
+  return { version: 1, conversations };
+}
+
 /** True when the slot has something a learner would recognise as a chat. */
 export function hasConversation(book: ConversationBook, slot: string, now = Date.now()): boolean {
   return getConversation(book, slot, now) !== null;

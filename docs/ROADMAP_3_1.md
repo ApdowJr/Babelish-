@@ -142,3 +142,13 @@ Function, a second client parse path, and different quota accounting for
 abandoned streams. That is a real feature, not a flag — it belongs in its own
 change with the guardrail redesigned (e.g. plain-text reply plus a separate
 translation call), not smuggled in at the end of a hardening pass.
+
+### Follow-ups from the 5-risk review (2026-10-22)
+
+| Risk | Status | What changed |
+|---|---|---|
+| Guest key spoofable (`X-Forwarded-For`) | **Reduced** | `src/lib/clientIp.ts` normalises the header (first hop, no port, IPv4/IPv6 validated, ≤45 chars) and falls back to `unknown`; admin throttle uses it too. A spoofed address can still buy another *guest* allowance (6/day), never more — `AI_DAILY_BUDGET` caps total spend. Only a trusted proxy hop or a platform-provided client IP can close it fully. |
+| Restore is per-device, no clear action | **Done (by design)** | Trash button in the Speak header clears one language/scenario chat after confirmation. No cloud sync: the privacy rules forbid server-side conversation storage, so transcripts stay in AsyncStorage and are capped (40 messages / 12 slots / 45 days). |
+| Wrong-script retry costs two slots | **Fixed** | The server retries once inside the same request (`correctiveUsed`), keeping a single quota claim; the client no longer re-asks in gateway mode. A failed retry returns `bad-reply` and refunds. |
+| Live tutor unproven | **Open — environment** | Requires `AI_API_KEY` and egress to OpenRouter/Neon from a networked machine: `AI_API_KEY=... npm run deploy:tutor` (or fill `.env.tutor`, gitignored, and run the same command). The gate then proves a real reply. Not verifiable in this sandbox. |
+| Device verification (screen readers, 200 % text, RTL focus) | **Open — hardware** | `docs/A11Y_3_1.md` lists the script; `/dev-crash` now exercises the crash screen on-device. |

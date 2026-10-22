@@ -12,6 +12,7 @@ import {
   getConversation,
   normalizeBook,
   ownerIdFor,
+  removeConversation,
   slotId,
   upsertConversation,
   type ConversationBook,
@@ -53,6 +54,24 @@ export async function saveConversation(
     await AsyncStorage.setItem(bookKey(owner), JSON.stringify(next));
   } catch {
     // Offline, quota-full or private-mode storage: the session still works.
+  }
+}
+
+/**
+ * Forgets one conversation (language + scenario) and keeps the rest.
+ * Best-effort: a failed write only means the old chat comes back.
+ */
+export async function clearConversation(
+  owner: string,
+  languageId: string,
+  scenarioId?: string | null
+): Promise<void> {
+  try {
+    const book = await loadBook(owner);
+    const next = removeConversation(book, slotId(languageId, scenarioId));
+    await AsyncStorage.setItem(bookKey(owner), JSON.stringify(next));
+  } catch {
+    // Nothing to do; the in-memory transcript is already cleared.
   }
 }
 

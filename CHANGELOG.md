@@ -24,6 +24,26 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **One slot per turn, even for a bad answer.** If the model replies in the
+  wrong script the server asks once more, in the same request, before giving
+  up — so a wobbly answer costs one daily slot instead of two. The app no
+  longer retries that case either; it would have been billed twice.
+- **Clear this conversation.** A trash button in the Speak header forgets the
+  current language/scenario chat on the device after a confirmation, and a
+  fresh opening line is requested. Other conversations, lessons and progress
+  are untouched. Restore stays deliberately device-local: the tutor transcript
+  is never stored on a server.
+- **Guest identity can no longer grow the database.** `X-Forwarded-For` is
+  client-controlled, so it is normalised (first hop, strips ports, quoted
+  values and `::ffff:`, validates IPv4/IPv6, ≤45 chars) and collapses to
+  `unknown` instead of becoming an address-shaped key. The admin login throttle
+  uses the same normaliser. Spoofing still buys another *guest* allowance —
+  the server-wide daily budget is the real ceiling, and the docs say so.
+- **A crash probe you can open.** `/dev-crash` throws on purpose in a
+  development build, so the crash screen can be verified on a device instead of
+  waiting for a real crash. Production builds redirect it home and throw
+  nothing.
+
 - **Accessibility pass (static).** Every tappable element in `src` now has an
   accessible name or an explicit decorative opt-out, every modal can be
   dismissed without its close button, the language picker is marked modal, the

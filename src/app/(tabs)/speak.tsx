@@ -40,7 +40,11 @@ import {
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
 import { isCancelled, QuotaExceeded } from '@/lib/models/types';
-import { loadConversation, saveConversation } from '@/lib/conversationStorage';
+import {
+  clearConversation,
+  loadConversation,
+  saveConversation,
+} from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
@@ -116,6 +120,9 @@ export default function SpeakScreen() {
   // Which line is playing right now (`msg-3`, `phrase-cafe-1`, …). One at a
   // time: starting another stops this one, so two lines never overlap.
   const [speakingKey, setSpeakingKey] = useState<string | null>(null);
+  // Bumped by "Clear conversation": re-runs the restore/opening effect with an
+  // empty slot, without pretending the language changed.
+  const [resetNonce, setResetNonce] = useState(0);
   // One picker for both tutor selectors: target language and explanation language.
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // A fixable voice problem (with a button that actually fixes it), as opposed
@@ -273,6 +280,7 @@ export default function SpeakScreen() {
         return;
       }
       try {
+        setBusy(true);
         const reply = await tutorReply(
           {
             language,
@@ -336,7 +344,7 @@ export default function SpeakScreen() {
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationKey, siteOwner]);
+  }, [conversationKey, siteOwner, resetNonce]);
 
   async function respond(history: ChatMessage[]) {
     const controller = new AbortController();
@@ -422,6 +430,35 @@ export default function SpeakScreen() {
     } finally {
       setSpeakingKey((current) => (current === key ? null : current));
     }
+  }
+
+  /** Forgets this language/scenario chat on this device and starts fresh. */
+  function confirmClearChat() {
+    if (messages.length === 0) return;
+    showAlert(
+      'Clear this conversation?',
+      'The tutor forgets this chat on this device. Lessons, reviews and your streak are untouched.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              abortRef.current?.abort();
+              abortRef.current = null;
+              stopSpeaking();
+              setSpeakingKey(null);
+              setBusy(false);
+              setQuotaNote(null);
+              setMessages([]);
+              await clearConversation(siteOwner, language.id, scenarioId);
+              setResetNonce((value) => value + 1);
+            })();
+          },
+        },
+      ]
+    );
   }
 
   /** Stop the turn in flight — chat or voice — without inventing a reply. */
@@ -858,6 +895,16 @@ export default function SpeakScreen() {
             </Text>
           </View>
         </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={confirmClearChat}
+            style={styles.headerIcon}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Clear this conversation"
+          >
+            <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
+          </Pressable>
         <Pressable
           onPress={() => setShowTranslation((v) => !v)}
           style={styles.translateToggle}
@@ -873,6 +920,7 @@ export default function SpeakScreen() {
             {showTranslation ? 'Translation on' : 'Translation off'}
           </Text>
         </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -1274,6 +1322,15 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerLanguage: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceHigh,
+  },
   headerFlag: { fontSize: 28 },
   headerTitle: { ...typography.bodyStrong, color: colors.text },
   headerSubtitle: { ...typography.caption, color: colors.textMuted },

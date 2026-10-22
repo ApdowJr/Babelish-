@@ -23,11 +23,36 @@
  * SKIP_TUTOR_GATE=1 to deploy without the check.
  */
 import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+
+/**
+ * Reads key=value lines from a gitignored file (default `.env.tutor`, or
+ * `TUTOR_ENV_FILE=...`) into the environment when the variable is not already
+ * set. Keeps the key out of shell history, and never prints a value.
+ */
+function loadEnvFile() {
+  const file = process.env.TUTOR_ENV_FILE ?? '.env.tutor';
+  if (!existsSync(file)) return;
+  for (const rawLine of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) continue;
+    const value = match[2].replace(/^(['"])(.*)\1$/, '$2');
+    if (!process.env[match[1]]) process.env[match[1]] = value;
+  }
+}
+
+loadEnvFile();
 
 const key = process.env.AI_API_KEY?.trim();
 if (!key) {
   console.error(
-    'Missing AI_API_KEY. Run:\n\n  AI_API_KEY=sk-or-... npm run deploy:tutor\n'
+    'Missing AI_API_KEY. Either export it for one command:\n\n' +
+      '  AI_API_KEY=sk-or-... npm run deploy:tutor\n\n' +
+      'or put the server settings in a gitignored .env.tutor file (AI_API_KEY, ' +
+      'AI_MODELS, AI_DAILY_*):\n\n' +
+      '  cp .env.example .env.tutor   # then fill it in\n'
   );
   process.exit(1);
 }

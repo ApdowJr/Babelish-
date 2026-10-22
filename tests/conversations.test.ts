@@ -19,6 +19,7 @@ import {
   hasConversation,
   normalizeBook,
   ownerIdFor,
+  removeConversation,
   slotId,
   upsertConversation,
 } from '../src/lib/conversations';
@@ -129,4 +130,18 @@ test('a round-trip through JSON preserves the book', () => {
   );
   const restored = normalizeBook(JSON.stringify(book));
   assert.deepEqual(restored, book);
+});
+
+test('clearing one conversation leaves the others alone', () => {
+  let book = emptyBook();
+  book = upsertConversation(book, 'es:cafe', [turn('hola')], now);
+  book = upsertConversation(book, 'es:free', [turn('buenas')], now + 1);
+  book = upsertConversation(book, 'fr:cafe', [turn('bonjour')], now + 2);
+
+  const cleared = removeConversation(book, 'es:cafe');
+  assert.equal(getConversation(cleared, 'es:cafe', now), null);
+  assert.ok(getConversation(cleared, 'es:free', now));
+  assert.ok(getConversation(cleared, 'fr:cafe', now));
+  assert.equal(Object.keys(cleared.conversations).length, 2);
+  assert.ok(getConversation(book, 'es:cafe', now), 'the original book is not mutated');
 });
