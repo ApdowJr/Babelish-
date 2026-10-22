@@ -3,7 +3,8 @@ import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { BrandMark } from '@/components/BrandMark';
-import { colors, gradients, spacing, typography } from '@/theme/tokens';
+import { gradients, spacing, typography, type Palette } from '@/theme/tokens';
+import { useThemedStyles } from '@/theme/theme';
 
 /**
  * The first second of the app.
@@ -31,6 +32,7 @@ export function AnimatedSplash({
   reduceMotion?: boolean;
   onDone: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   // Animated.Value lives in state-like storage, not a ref: the React Compiler
   // lint rule treats a ref read as a render-time side effect.
   const [markOpacity] = useState(() => new Animated.Value(0));
@@ -154,8 +156,8 @@ export function AnimatedSplash({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gradientFrom },
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.gradientFrom },
   halo: {
     position: 'absolute',
     width: 320,
@@ -167,12 +169,12 @@ const styles = StyleSheet.create({
   copy: { alignItems: 'center', gap: spacing.xs },
   wordmark: {
     ...typography.display,
-    color: colors.onDark,
+    color: c.onDark,
     letterSpacing: -1.1,
   },
   tagline: {
     ...typography.caption,
-    color: colors.onDarkMuted,
+    color: c.onDarkMuted,
     letterSpacing: 0.3,
   },
   track: {
@@ -184,5 +186,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244, 248, 243, 0.16)',
     overflow: 'hidden',
   },
-  fill: { height: 3, borderRadius: 2, backgroundColor: colors.accent },
+  fill: { height: 3, borderRadius: 2, backgroundColor: c.accent },
 });

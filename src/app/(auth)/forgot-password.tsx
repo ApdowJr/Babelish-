@@ -8,11 +8,14 @@ import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,7 @@ export default function ForgotPasswordScreen() {
       <Screen scroll>
         <View style={styles.doneWrap}>
           <View style={styles.doneIcon}>
-            <Ionicons name="paper-plane-outline" size={30} color={colors.accent} />
+            <Ionicons name="paper-plane-outline" size={30} color={colors.accentInk} />
           </View>
           <Text style={styles.doneTitle}>Check your inbox</Text>
           <Text style={styles.doneText}>
@@ -109,23 +112,23 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   header: { marginTop: spacing.xxl, marginBottom: spacing.xl },
-  title: { ...typography.display, color: colors.text, marginTop: spacing.xxl },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
+  title: { ...typography.display, color: c.text, marginTop: spacing.xxl },
+  subtitle: { ...typography.body, color: c.textMuted, marginTop: spacing.sm, lineHeight: 22 },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: c.dangerSoft,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  errorText: { ...typography.caption, color: colors.danger, flex: 1 },
+  errorText: { ...typography.caption, color: c.danger, flex: 1 },
   demoNote: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
   },
@@ -136,21 +139,21 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xxl,
   },
-  backText: { ...typography.bodyStrong, color: colors.primary },
+  backText: { ...typography.bodyStrong, color: c.primary },
   doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl },
   doneIcon: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: c.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  doneTitle: { ...typography.title, color: colors.text },
+  doneTitle: { ...typography.title, color: c.text },
   doneText: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,

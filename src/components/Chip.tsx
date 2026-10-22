@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useThemedStyles } from '@/theme/theme';
 
 type Props = {
   label: string;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function Chip({ label, onPress, selected = false, icon }: Props) {
+  const styles = useThemedStyles(createStyles);
   const content = (
     <View style={[styles.chip, selected && styles.chipSelected]}>
       {icon}
@@ -34,22 +36,22 @@ export function Chip({ label, onPress, selected = false, icon }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: 15,
     paddingVertical: 9,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: c.primary,
+    borderColor: c.primary,
   },
-  label: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  labelSelected: { color: colors.onDark, fontWeight: '700' },
+  label: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  labelSelected: { color: c.onDark, fontWeight: '700' },
 });

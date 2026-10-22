@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { avatarInitials, type AvatarColor } from '@/lib/learnerProfile';
-import { colors, radii } from '@/theme/tokens';
+import { radii, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 /**
  * The learner's avatar: an emoji on a tinted disc, or their initials when no
@@ -8,14 +9,14 @@ import { colors, radii } from '@/theme/tokens';
  * editor preview and the home greeting cannot disagree.
  */
 
-const TINTS: Record<AvatarColor, { background: string; ink: string; ring: string }> = {
-  forest: { background: colors.primaryTint, ink: colors.primary, ring: colors.primary },
-  mint: { background: colors.mintSoft, ink: colors.success, ring: colors.mint },
-  tangerine: { background: colors.accentSoft, ink: colors.accentPressed, ring: colors.accent },
-  sun: { background: colors.sunSoft, ink: '#8A6412', ring: colors.sun },
-  sky: { background: colors.skySoft, ink: '#2C6C8B', ring: colors.sky },
-  lilac: { background: colors.lilacSoft, ink: '#5F4E96', ring: colors.lilac },
-};
+const tints = (c: Palette): Record<AvatarColor, { background: string; ink: string; ring: string }> => ({
+  forest: { background: c.primaryTint, ink: c.primary, ring: c.primary },
+  mint: { background: c.mintSoft, ink: c.mintInk, ring: c.mint },
+  tangerine: { background: c.accentSoft, ink: c.accentInk, ring: c.accent },
+  sun: { background: c.sunSoft, ink: c.sunInk, ring: c.sun },
+  sky: { background: c.skySoft, ink: c.skyInk, ring: c.sky },
+  lilac: { background: c.lilacSoft, ink: c.lilacInk, ring: c.lilac },
+});
 
 export function Avatar({
   name,
@@ -34,7 +35,10 @@ export function Avatar({
   /** Adds a 2 px brand ring (used on the profile hero). */
   ring?: boolean;
 }) {
-  const tint = TINTS[color] ?? TINTS.forest;
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
+  const allTints = tints(colors);
+  const tint = allTints[color] ?? allTints.forest;
   const initials = avatarInitials(name);
 
   return (
@@ -69,7 +73,7 @@ export function Avatar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   // Kept for callers that want the pill shape (chips in the editor preview).
   pill: { borderRadius: radii.pill },

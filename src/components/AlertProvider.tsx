@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { subscribeAlerts, type AlertTask } from '@/lib/alert';
-import { colors, typography, spacing, radii } from '@/theme/tokens';
+import { typography, spacing, radii, type Palette } from '@/theme/tokens';
+import { useThemedStyles } from '@/theme/theme';
 
 /**
  * Web renderer for `showAlert`. Native keeps using react-native's own Alert;
@@ -9,6 +10,7 @@ import { colors, typography, spacing, radii } from '@/theme/tokens';
  * where RN's Alert is a no-op stub). Mounted once in the root layout.
  */
 export function AlertProvider({ children }: { children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   const [task, setTask] = useState<AlertTask | null>(null);
 
   useEffect(() => subscribeAlerts(setTask), []);
@@ -70,7 +72,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   root: { flex: 1 },
   content: { flex: 1 },
   backdrop: {
@@ -81,17 +83,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     padding: spacing.lg,
     width: '100%',
     maxWidth: 420,
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
-  title: { ...typography.bodyStrong, color: colors.text },
-  message: { ...typography.body, color: colors.textMuted, lineHeight: 22 },
+  title: { ...typography.bodyStrong, color: c.text },
+  message: { ...typography.body, color: c.textMuted, lineHeight: 22 },
   row: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   rowMulti: { flexDirection: 'row-reverse' },
   button: {
@@ -99,13 +101,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
   },
   buttonGrow: { flex: 1 },
-  buttonCancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
-  buttonDanger: { backgroundColor: colors.danger },
+  buttonCancel: { backgroundColor: c.bg, borderWidth: 1, borderColor: c.border },
+  buttonDanger: { backgroundColor: c.danger },
   buttonPressed: { opacity: 0.75 },
-  buttonLabel: { ...typography.bodyStrong, color: colors.white },
-  labelDanger: { color: colors.white },
-  labelCancel: { color: colors.text },
+  buttonLabel: { ...typography.bodyStrong, color: c.white },
+  labelDanger: { color: c.white },
+  labelCancel: { color: c.text },
 });

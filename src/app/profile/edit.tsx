@@ -19,7 +19,8 @@ import {
   type AvatarColor,
   type LearnerProfile,
 } from '@/lib/learnerProfile';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 /**
  * The profile editor.
@@ -31,6 +32,8 @@ import { colors, radii, spacing, typography } from '@/theme/tokens';
  * lines the tutor will receive.
  */
 export default function EditProfileScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { user } = useAuth();
   const { profile, saveProfile } = useProfile();
   const [draft, setDraft] = useState<LearnerProfile>(profile);
@@ -298,6 +301,8 @@ function Field({
   multiline?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const remaining = maxLength - value.length;
   return (
     <View style={styles.field}>
@@ -333,6 +338,8 @@ function ChipGrid({
   onToggle: (chip: string) => void;
   labelPrefix: string;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={styles.chipWrap}>
       {options.map((option) => {
@@ -355,7 +362,7 @@ function ChipGrid({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,16 +370,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   textButton: { minWidth: 64, paddingVertical: spacing.xs },
-  title: { ...typography.heading, color: colors.text },
-  cancelText: { ...typography.bodyStrong, color: colors.textMuted },
-  saveText: { ...typography.bodyStrong, color: colors.primary, textAlign: 'right' },
-  saveTextMuted: { color: colors.textFaint },
+  title: { ...typography.heading, color: c.text },
+  cancelText: { ...typography.bodyStrong, color: c.textMuted },
+  saveText: { ...typography.bodyStrong, color: c.primary, textAlign: 'right' },
+  saveTextMuted: { color: c.textFaint },
 
   preview: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    backgroundColor: colors.gradientFrom,
+    backgroundColor: c.gradientFrom,
     borderRadius: radii.xl,
     padding: spacing.lg,
     overflow: 'hidden',
@@ -387,21 +394,21 @@ const styles = StyleSheet.create({
     right: -40,
   },
   previewText: { flex: 1, gap: 2 },
-  previewName: { ...typography.title, color: colors.onDark },
-  previewMeta: { ...typography.caption, color: colors.onDarkMuted, lineHeight: 18 },
+  previewName: { ...typography.title, color: c.onDark },
+  previewMeta: { ...typography.caption, color: c.onDarkMuted, lineHeight: 18 },
 
   sectionTitle: {
     ...typography.micro,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.md,
     gap: spacing.md,
   },
@@ -412,30 +419,30 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
-  emojiCellOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint, borderWidth: 2 },
+  emojiCellOn: { borderColor: c.primary, backgroundColor: c.primaryTint, borderWidth: 2 },
   emoji: { fontSize: 22 },
-  initials: { ...typography.bodyStrong, color: colors.textMuted },
+  initials: { ...typography.bodyStrong, color: c.textMuted },
   colorRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   colorDotWrap: { borderRadius: 17, padding: 2, borderWidth: 2, borderColor: 'transparent' },
-  colorDotWrapOn: { borderColor: colors.primary },
+  colorDotWrapOn: { borderColor: c.primary },
 
   field: { gap: 6 },
   fieldHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fieldLabel: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  counter: { ...typography.caption, color: colors.textFaint },
+  fieldLabel: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  counter: { ...typography.caption, color: c.textFaint },
   input: {
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     ...typography.body,
-    color: colors.text,
+    color: c.text,
   },
   inputMulti: { minHeight: 76, textAlignVertical: 'top' },
 
@@ -448,20 +455,20 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.bg,
+    borderColor: c.borderStrong,
+    backgroundColor: c.bg,
   },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  chipTextOn: { color: colors.onDark },
+  chipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  chipTextOn: { color: c.onDark },
 
-  promptCard: { backgroundColor: colors.surfaceHigh },
-  promptText: { ...typography.caption, color: colors.text, lineHeight: 20 },
-  hint: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  promptCard: { backgroundColor: c.surfaceHigh },
+  promptText: { ...typography.caption, color: c.text, lineHeight: 20 },
+  hint: { ...typography.caption, color: c.textMuted, lineHeight: 18 },
   saveButton: { marginTop: spacing.xl },
   progressNote: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
@@ -473,5 +480,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingVertical: spacing.sm,
   },
-  clearText: { ...typography.caption, color: colors.danger, fontWeight: '700' },
+  clearText: { ...typography.caption, color: c.danger, fontWeight: '700' },
 });

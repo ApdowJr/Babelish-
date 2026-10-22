@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'light';
 
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export function Button({ label, onPress, variant = 'primary', loading, disabled, style }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const isBlocked = disabled || loading;
 
   if (variant === 'primary') {
@@ -82,7 +85,7 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   base: {
     minHeight: 54,
     borderRadius: radii.md,
@@ -91,7 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryShadow: {
-    shadowColor: colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.32,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 9 },
@@ -104,5 +107,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   label: { ...typography.bodyStrong, fontSize: 15.5, textAlign: 'center', letterSpacing: 0.1 },
-  primaryLabel: { color: colors.white },
+  primaryLabel: { color: c.white },
 });

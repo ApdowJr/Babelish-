@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { BrandMark } from '@/components/BrandMark';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { spacing, typography, type Palette } from '@/theme/tokens';
+import { useThemedStyles } from '@/theme/theme';
 
 /** Mark + wordmark, the lockup used in headers and the welcome flow. */
 export function Logo({ size = 28, tone = 'dark' }: { size?: number; tone?: 'dark' | 'light' }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.row} accessibilityRole="image" accessibilityLabel="Babelish">
       <BrandMark size={size * 1.06} tone={tone} />
@@ -20,8 +22,8 @@ export function Logo({ size = 28, tone = 'dark' }: { size?: number; tone?: 'dark
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  wordmark: { ...typography.title, color: colors.text, letterSpacing: -0.9 },
-  wordmarkLight: { color: colors.onDark },
+  wordmark: { ...typography.title, color: c.text, letterSpacing: -0.9 },
+  wordmarkLight: { color: c.onDark },
 });

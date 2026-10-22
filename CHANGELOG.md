@@ -3,6 +3,43 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.4.0] — 2026-10-22
+
+Night mode, a progress screen that explains the streak, and a theme system the
+compiler enforces.
+
+### Added
+
+- **Dark mode, everywhere.** A second palette ("night atlas") with the same
+  keys as the daylight one, so no component branches on the theme. Settings →
+  Appearance offers **System / Light / Dark**; `System` follows the device and
+  updates live. The status bar, navigation background, tab bar, every card,
+  chip, icon and modal follow along — there is no light-mode leftover.
+- **`useTheme()` / `useThemedStyles()`.** StyleSheets are now built from the
+  active palette and rebuilt only when it changes. The old static `colors`
+  export is gone, so a screen that forgets the hook fails to compile rather
+  than staying stubbornly light.
+- **A detailed progress screen** (`/progress`, reachable from Profile →
+  Momentum → Details): a six-week activity calendar with monthly labels, the
+  current streak and active-day count, level progress, and a per-skill
+  breakdown (reading, listening, writing, speaking) with sample counts. Skills
+  without enough answers say **"Not enough yet"** instead of drawing a
+  confident percentage from one tap. Empty accounts get an honest empty state.
+- **Contrast tests** (`tests/theme.test.ts`, `tests/progressCalendar.test.ts`):
+  WCAG AA ratios are computed for every ink/surface pair in both palettes,
+  plus guards that no file imports the static palette and that every themed
+  StyleSheet is actually used.
+
+### Changed
+
+- The **hero gradient** is slightly deeper (`#22705A` at its light end) and
+  `onDarkMuted` is more opaque, because white text on the old green only
+  reached 3.9:1. Muted text, warnings and tint inks were darkened for the same
+  reason: the light theme now passes AA where it previously did not.
+- **`userInterfaceStyle`** is `automatic`, so the OS stops forcing light
+  chrome under a dark UI.
+- Version **3.4.0** (versionCode 30400, iOS build 3.4.0).
+
 ## [3.3.0] — 2026-10-22
 
 Release-candidate build: the profile learners control, and everything the

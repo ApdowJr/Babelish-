@@ -3,11 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useWindowDimensions, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii, shadows } from '@/theme/tokens';
+import { radii, shadows, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 function TabIcon({ name, color, focused }: { name: IconName; color: ColorValue; focused: boolean }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const tint = (color ?? colors.textFaint) as string;
   return (
     <View style={styles.iconWrap}>
@@ -23,9 +26,17 @@ function TabIcon({ name, color, focused }: { name: IconName; color: ColorValue; 
 
 /** The centre action: a raised gradient orb that reads as "talk to someone". */
 function SpeakIcon({ focused }: { focused: boolean }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <LinearGradient
-      colors={focused ? ['#0F4C3A', '#2E8B6F'] : ['#1C6852', '#2E8B6F']}
+      // The orb keeps the brand gradient in both themes; only its ring reacts
+      // to focus. Using the gradient tokens keeps it in brand sync.
+      colors={
+        focused
+          ? [colors.gradientFrom, colors.gradientTo]
+          : [colors.gradientMid, colors.gradientTo]
+      }
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.orb, focused && styles.orbFocused]}
@@ -36,6 +47,7 @@ function SpeakIcon({ focused }: { focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   // Full-width on phones, a centred floating pill on wide screens.
@@ -121,7 +133,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   iconWrap: { alignItems: 'center', justifyContent: 'center', height: 26, gap: 3 },
   dot: { width: 4, height: 4, borderRadius: 2 },
   orb: {
@@ -132,12 +144,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -6,
     borderWidth: 2,
-    borderColor: colors.surface,
-    shadowColor: colors.primary,
+    borderColor: c.surface,
+    shadowColor: c.primary,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
-  orbFocused: { borderColor: colors.sun },
+  orbFocused: { borderColor: c.sun },
 });

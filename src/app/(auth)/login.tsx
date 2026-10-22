@@ -7,11 +7,14 @@ import { AuthHero } from '@/components/AuthHero';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { signIn, isDemo } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -125,23 +128,23 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: c.dangerSoft,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  errorText: { ...typography.caption, color: colors.danger, flex: 1 },
+  errorText: { ...typography.caption, color: c.danger, flex: 1 },
   forgot: { alignSelf: 'flex-end', marginBottom: spacing.xl },
-  forgotText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
+  forgotText: { ...typography.caption, color: c.primary, fontWeight: '600' },
   demoButton: { marginTop: spacing.md },
   demoNote: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
   },
@@ -150,6 +153,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.xxl,
   },
-  footerText: { ...typography.body, color: colors.textMuted },
-  footerLink: { ...typography.bodyStrong, color: colors.primary },
+  footerText: { ...typography.body, color: c.textMuted },
+  footerLink: { ...typography.bodyStrong, color: c.primary },
 });

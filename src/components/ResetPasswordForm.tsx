@@ -7,7 +7,8 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 /**
  * Step 2 of password recovery: set the new password.
@@ -20,6 +21,8 @@ import { colors, radii, spacing, typography } from '@/theme/tokens';
  * as `token`.
  */
 export function ResetPasswordForm() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
   const token = Array.isArray(params.token) ? params.token[0] : params.token;
   const { resetPasswordWithToken } = useAuth();
@@ -134,20 +137,20 @@ export function ResetPasswordForm() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   header: { marginTop: spacing.xxl, marginBottom: spacing.xl },
-  title: { ...typography.display, color: colors.text, marginTop: spacing.xxl },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
+  title: { ...typography.display, color: c.text, marginTop: spacing.xxl },
+  subtitle: { ...typography.body, color: c.textMuted, marginTop: spacing.sm, lineHeight: 22 },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: c.dangerSoft,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  errorText: { ...typography.caption, color: colors.danger, flex: 1 },
+  errorText: { ...typography.caption, color: c.danger, flex: 1 },
   back: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,21 +158,21 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xxl,
   },
-  backText: { ...typography.bodyStrong, color: colors.primary },
+  backText: { ...typography.bodyStrong, color: c.primary },
   doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl },
   doneIcon: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: c.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  doneTitle: { ...typography.title, color: colors.text },
+  doneTitle: { ...typography.title, color: c.text },
   doneText: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,

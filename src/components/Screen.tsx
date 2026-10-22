@@ -9,7 +9,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, layout, spacing } from '@/theme/tokens';
+import { layout, spacing, type Palette } from '@/theme/tokens';
+import { useThemedStyles } from '@/theme/theme';
 
 type Props = {
   children: ReactNode;
@@ -29,6 +30,7 @@ export function Screen({
   tabBarSpace = false,
   style,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const contentStyle = [
     styles.scrollContent,
     edgeToEdge && styles.edgeToEdge,
@@ -62,8 +64,8 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,

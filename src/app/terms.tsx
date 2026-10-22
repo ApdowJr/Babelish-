@@ -1,3 +1,5 @@
+import { useThemedStyles } from '@/theme/theme';
+import type { Palette } from '@/theme/tokens';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 /**
@@ -10,6 +12,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
  * deletion). If a feature changes, change this file in the same commit.
  */
 export default function TermsRoute() {
+  const styles = useThemedStyles(createStyles);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Babelish — Terms of Service</Text>
@@ -95,13 +98,13 @@ export default function TermsRoute() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F4ED' },
+const createStyles = (c: Palette) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   content: { padding: 24, paddingBottom: 64, maxWidth: 760, alignSelf: 'center', width: '100%' },
-  title: { fontSize: 26, fontWeight: '800', color: '#15231D', marginBottom: 4 },
-  meta: { fontSize: 13, color: '#5E6B63', marginBottom: 24 },
-  h2: { fontSize: 17, fontWeight: '700', color: '#0F4C3A', marginTop: 24, marginBottom: 8 },
-  p: { fontSize: 15, lineHeight: 24, color: '#15231D', marginBottom: 12 },
+  title: { fontSize: 26, fontWeight: '800', color: c.text, marginBottom: 4 },
+  meta: { fontSize: 13, color: c.textMuted, marginBottom: 24 },
+  h2: { fontSize: 17, fontWeight: '700', color: c.primary, marginTop: 24, marginBottom: 8 },
+  p: { fontSize: 15, lineHeight: 24, color: c.text, marginBottom: 12 },
   ul: { marginBottom: 12, gap: 6 },
-  li: { fontSize: 15, lineHeight: 23, color: '#15231D' },
+  li: { fontSize: 15, lineHeight: 23, color: c.text },
 });

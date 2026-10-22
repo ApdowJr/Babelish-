@@ -1,5 +1,6 @@
 import { View } from 'react-native';
-import { colors } from '@/theme/tokens';
+import { useTheme } from '@/theme/theme';
+
 
 /**
  * The Babelish mark: two speech bubbles — a large answering bubble with a
@@ -20,6 +21,7 @@ export function BrandMark({
   size?: number;
   tone?: 'dark' | 'light';
 }) {
+  const { colors } = useTheme();
   const onDark = tone === 'light';
   const ink = onDark ? colors.onDark : colors.primary;
   const barColour = onDark ? colors.primary : colors.onDark;

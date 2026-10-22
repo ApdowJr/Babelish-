@@ -36,7 +36,9 @@ import { buildPack, formatPackSize } from '@/lib/offline';
 import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
 import { fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { NEON_API_URL } from '@/lib/neon';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
+import { THEME_MODES, type ThemeMode } from '@/theme/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -60,6 +62,12 @@ type Row =
 
 type Group = { id: string; title: string; rows: Row[] };
 
+const THEME_LABELS: Record<ThemeMode, string> = {
+  system: 'System',
+  light: 'Light',
+  dark: 'Dark',
+};
+
 const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
   slow: 'Slow',
   normal: 'Normal',
@@ -67,10 +75,20 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 };
 
 export default function SettingsScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors, isDark } = useTheme();
   const { user, signOut, isNeon, getAccessToken } = useAuth();
   const prefs = usePreferences();
-  const { setDailyGoal, setNativeLanguage, setReminderKey, setShowTranslation, setVoiceSpeed, setAutoSpeak, setReduceMotion } =
-    prefs;
+  const {
+    setDailyGoal,
+    setNativeLanguage,
+    setReminderKey,
+    setShowTranslation,
+    setVoiceSpeed,
+    setAutoSpeak,
+    setReduceMotion,
+    setThemeMode,
+  } = prefs;
   const { progress, vocab, resetLearning } = useLearning();
   const { profile } = useProfile();
   const { state: analytics, resetAnalytics } = useAnalytics();
@@ -321,6 +339,28 @@ export default function SettingsScreen() {
             hint: 'Progress stays on this device',
             keywords: 'logout leave account',
             onPress: confirmSignOut,
+          },
+        ],
+      },
+      {
+        id: 'appearance',
+        title: 'Appearance',
+        rows: [
+          {
+            id: 'theme',
+            kind: 'chips',
+            icon: 'contrast-outline',
+            label: 'Theme',
+            hint:
+              prefs.themeMode === 'system'
+                ? `Following this device — ${isDark ? 'dark' : 'light'} right now`
+                : `${THEME_LABELS[prefs.themeMode]} palette in every screen`,
+            keywords: 'dark light night mode appearance colour color',
+            options: THEME_MODES.map((mode) => ({
+              label: THEME_LABELS[mode],
+              active: prefs.themeMode === mode,
+              onPress: () => setThemeMode(mode),
+            })),
           },
         ],
       },
@@ -693,6 +733,8 @@ export default function SettingsScreen() {
 }
 
 function RowView({ row }: { row: Row }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const danger = row.kind === 'nav' && row.danger === true;
   const tint = danger ? colors.danger : (row.tint ?? colors.primary);
   const tileBg = danger ? colors.dangerSoft : colors.primarySoft;
@@ -794,6 +836,8 @@ function LanguageModal({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close language picker" accessibilityRole="button" />
@@ -836,7 +880,7 @@ function LanguageModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -845,29 +889,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.title, color: colors.text },
+  title: { ...typography.title, color: c.text },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     height: 44,
   },
-  searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: 0 },
+  searchInput: { flex: 1, ...typography.body, color: c.text, paddingVertical: 0 },
   empty: { paddingVertical: spacing.xxl, alignItems: 'center', gap: spacing.xs },
-  emptyTitle: { ...typography.bodyStrong, color: colors.text },
-  emptyBody: { ...typography.caption, color: colors.textMuted },
+  emptyTitle: { ...typography.bodyStrong, color: c.text },
+  emptyBody: { ...typography.caption, color: c.textMuted },
   group: { marginTop: spacing.xl },
-  groupTitle: { ...typography.micro, color: colors.textMuted, marginBottom: spacing.sm, marginLeft: spacing.xs },
+  groupTitle: { ...typography.micro, color: c.textMuted, marginBottom: spacing.sm, marginLeft: spacing.xs },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     overflow: 'hidden',
     ...shadows.card,
   },
@@ -879,14 +923,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 58,
   },
-  rowPressed: { backgroundColor: colors.surfaceTint },
+  rowPressed: { backgroundColor: c.surfaceTint },
   iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
-  rowLabel: { ...typography.bodyStrong, color: colors.text },
-  rowHint: { ...typography.caption, color: colors.textMuted, lineHeight: 17 },
+  rowLabel: { ...typography.bodyStrong, color: c.text },
+  rowHint: { ...typography.caption, color: c.textMuted, lineHeight: 17 },
   rowEnd: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rowDetail: { ...typography.caption, color: colors.textMuted, maxWidth: 160, textAlign: 'right' },
-  divider: { height: 1, backgroundColor: colors.border, marginLeft: spacing.md + 32 + spacing.md },
+  rowDetail: { ...typography.caption, color: c.textMuted, maxWidth: 160, textAlign: 'right' },
+  divider: { height: 1, backgroundColor: c.border, marginLeft: spacing.md + 32 + spacing.md },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -899,13 +943,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.bg,
+    borderColor: c.borderStrong,
+    backgroundColor: c.bg,
   },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  chipTextOn: { color: colors.onDark },
-  footer: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+  chipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  chipTextOn: { color: c.onDark },
+  footer: { ...typography.caption, color: c.textMuted, textAlign: 'center', marginTop: spacing.xxl },
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -920,7 +964,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     maxHeight: '82%',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     paddingTop: spacing.sm,
@@ -931,11 +975,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.borderStrong,
+    backgroundColor: c.borderStrong,
     marginBottom: spacing.md,
   },
-  sheetTitle: { ...typography.heading, color: colors.text },
-  sheetBody: { ...typography.caption, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
+  sheetTitle: { ...typography.heading, color: c.text },
+  sheetBody: { ...typography.caption, color: c.textMuted, marginTop: 2, marginBottom: spacing.md },
   sheetList: { marginBottom: spacing.md },
   langRow: {
     flexDirection: 'row',
@@ -945,7 +989,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
   },
-  langRowOn: { backgroundColor: colors.surfaceHigh },
+  langRowOn: { backgroundColor: c.surfaceHigh },
   langFlag: { fontSize: 20 },
-  langName: { ...typography.body, color: colors.text, flex: 1 },
+  langName: { ...typography.body, color: c.text, flex: 1 },
 });

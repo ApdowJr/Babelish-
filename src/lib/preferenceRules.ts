@@ -9,6 +9,7 @@
  */
 
 import { DEFAULT_LANGUAGE_ID } from '../data/languages';
+import { isThemeMode, type ThemeMode } from '../theme/palette';
 
 /** Daily goal options in minutes; XP target = minutes × 10 (published rule). */
 export const DAILY_GOALS = [5, 10, 15, 20] as const;
@@ -40,6 +41,8 @@ export type Preferences = {
   autoSpeak: boolean;
   /** Skip decorative animation (splash entrance, picker fades). */
   reduceMotion: boolean;
+  /** Light, dark, or follow the device. */
+  themeMode: ThemeMode;
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -53,6 +56,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   voiceSpeed: 'normal',
   autoSpeak: false,
   reduceMotion: false,
+  themeMode: 'system',
 };
 
 /** XP needed to fill the daily ring — one lesson is roughly 20–35 XP. */
@@ -116,5 +120,6 @@ export function normalizePreferences(raw: unknown, fallback: Preferences, valida
     autoSpeak: typeof parsed.autoSpeak === 'boolean' ? parsed.autoSpeak : fallback.autoSpeak,
     reduceMotion:
       typeof parsed.reduceMotion === 'boolean' ? parsed.reduceMotion : fallback.reduceMotion,
+    themeMode: isThemeMode(parsed.themeMode) ? parsed.themeMode : fallback.themeMode,
   };
 }
