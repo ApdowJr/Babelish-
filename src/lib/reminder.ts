@@ -45,7 +45,7 @@ export function slotLabel(hour: number, minute: number): string {
  * an absence (ethical gamification: no dark patterns).
  */
 export function reminderTitle(): string {
-  return 'Zelvoca 🌍';
+  return 'Babelish 🌍';
 }
 
 export function reminderBody(input: {
