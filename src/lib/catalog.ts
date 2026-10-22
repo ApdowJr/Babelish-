@@ -65,7 +65,7 @@ export function progressForLanguage(
   };
 }
 
-/** Aggregate over the whole atlas — "24 languages · 66 lessons · free". */
+/** Aggregate over the whole atlas; the displayed language count is derived from the data. */
 export function catalogueStats(): CourseStats & { languages: number } {
   return LANGUAGES.reduce(
     (total, language) => {
