@@ -155,7 +155,7 @@ export default function OnboardingScreen() {
                   style={styles.searchInput}
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search 24 languages, scripts, families…"
+                  placeholder={`Search ${LANGUAGES.length} languages, scripts, families…`}
                   placeholderTextColor={colors.textFaint}
                   autoCapitalize="none"
                   accessibilityLabel="Search languages"
