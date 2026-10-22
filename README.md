@@ -64,13 +64,13 @@ needed a model at all.
 |---|---|
 | **Professional auth** — sign up / sign in / forgot password | ✅ Real Supabase or Neon auth; friendly errors |
 | **Demo mode** — full app without any keys | ✅ Clearly labeled, device-local accounts |
-| **24-language atlas** — real dialects, native names, scripts, speaker counts | ✅ `src/data/languages.ts` |
+| **25-language atlas** — real dialects, native names, scripts, speaker counts | ✅ `src/data/languages.ts` |
 | **Starter courses** — 4 chapters × 8 lessons for 23 languages, all offline | ✅ 1,518 starter exercises + 160 in the Spanish course |
 | **Spanish CEFR course** — 5 hand-authored chapters × 4 lessons × 8 exercises | ✅ Culture/grammar notes on every exercise |
 | **Lesson player** — choose · type · listen · speak with native TTS | ✅ Accent-lenient grading, XP + completion |
 | **Chapter unlocking** — chapter N opens at 70%+ on N−1 | ✅ Per-lesson scores on the language page |
 | **Spaced repetition** — missed words enter a Leitner queue (1/2/4/8/15 days) | ✅ Rebuilt review screen + Words tab |
-| **AI tutor** — conversation in 24 languages, level-aware | ✅ Hosted tutor server (zero setup) · coach fallback |
+| **AI tutor** — level-aware conversation; verified model coverage varies by language | ✅ Hosted tutor server (zero setup) · coach fallback |
 | **Voice input** — record → Whisper → tutor reply | ✅ Server or in-browser Whisper; typing always available; failures explain themselves |
 | **Native TTS** — hear every reply in a locale voice (`es-ES`, `ar-EG`, `ja-JP`…) | ✅ expo-speech, with replay + slow mode |
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
@@ -111,7 +111,7 @@ AI_API_KEY=sk-or-... npm run deploy:tutor
 That one command deploys the `api` Function with the model chain in its
 environment — the key stays on the server, the app is untouched.
 
-Free Qwen3 endpoints cover all 24 atlas languages. Prefer your own hardware?
+Free Qwen3 endpoints document 24 of 25 atlas languages; Somali is available as a starter course but remains unverified for this model. Prefer your own hardware?
 Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see
 [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §7.
 
@@ -172,9 +172,9 @@ src/
     xp.ts               # published XP rules + lifetime/weekly/daily ledgers
   state/                # preferences · learning · profile · analytics
   data/
-    languages.ts        # 24-language atlas: dialects, scripts, difficulty, greetings
+    languages.ts        # 25-language atlas: dialects, scripts, difficulty, greetings
     starters.ts         # curated 22-word starter packs for every language
-    practice.ts         # per-scenario key phrases (+ starter fallback for all 24)
+    practice.ts         # per-scenario key phrases (+ starter fallback for all 25)
     curriculum/
       es/               # hand-authored CEFR Spanish course (5 chapters)
       samplers.ts       # deterministic 4-chapter starter courses for the other 23
