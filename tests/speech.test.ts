@@ -12,6 +12,7 @@ import {
   isMobileWeb,
   matchVoice,
   normalizeLocale,
+  scaleSpeechRate,
   speechErrorMessage,
   toggleSpeechTarget,
   toVoiceLike,
@@ -94,4 +95,16 @@ test('one line plays at a time: tapping the playing line stops it', () => {
   const other = toggleSpeechTarget('msg-2', 'msg-5');
   assert.deepEqual(other, { action: 'speak', next: 'msg-5' }, 'another line replaces the current one');
   assert.equal(other.next === 'msg-2', false, 'the old key is never left active');
+});
+
+test('playback speed is a multiplier with hard sanity bounds', () => {
+  assert.equal(scaleSpeechRate(1, 'normal'), 1);
+  assert.equal(scaleSpeechRate(0.55, 'normal'), 0.55);
+  assert.ok(scaleSpeechRate(1, 'slow') < 1);
+  assert.ok(scaleSpeechRate(1, 'fast') > 1);
+  // "Slow" must stay slower than "normal" for every base rate, and the result
+  // can never leave the range a speech engine accepts.
+  assert.ok(scaleSpeechRate(0.55, 'slow') < scaleSpeechRate(0.55, 'normal'));
+  assert.ok(scaleSpeechRate(2, 'fast') <= 2);
+  assert.ok(scaleSpeechRate(0.05, 'slow') >= 0.1);
 });

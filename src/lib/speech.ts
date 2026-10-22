@@ -126,3 +126,16 @@ export function toggleSpeechTarget(
 ): { action: 'speak' | 'stop'; next: string | null } {
   return current === key ? { action: 'stop', next: null } : { action: 'speak', next: key };
 }
+
+/**
+ * Playback speed relative to the voice's own rate.
+ *
+ * Kept here (not in the screen) so the mapping is one rule: a learner who set
+ * "slow" gets the same multiplier for a single word, a slow replay and a full
+ * sentence. Clamped so a stored blob can never produce a rate the engine
+ * rejects.
+ */
+export function scaleSpeechRate(base: number, speed: 'slow' | 'normal' | 'fast'): number {
+  const factor = speed === 'slow' ? 0.82 : speed === 'fast' ? 1.18 : 1;
+  return Math.min(2, Math.max(0.1, Math.round(base * factor * 100) / 100));
+}

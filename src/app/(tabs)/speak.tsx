@@ -25,7 +25,7 @@ import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
 import { getLanguage, LANGUAGES } from '@/data/languages';
 import { bundledCurriculum } from '@/data/curriculum';
-import { isMobileWeb, toggleSpeechTarget } from '@/lib/speech';
+import { isMobileWeb, scaleSpeechRate, toggleSpeechTarget } from '@/lib/speech';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
@@ -84,8 +84,17 @@ const SLOW_RATE = 0.55;
 
 export default function SpeakScreen() {
   const { user, getAccessToken } = useAuth();
-  const { targetLanguageId, nativeLanguageId, setTargetLanguage, setNativeLanguage } =
-    usePreferences();
+  const {
+    targetLanguageId,
+    nativeLanguageId,
+    setTargetLanguage,
+    setNativeLanguage,
+    showTranslation,
+    setShowTranslation,
+    voiceSpeed,
+    autoSpeak,
+    reduceMotion,
+  } = usePreferences();
   const { settings } = useModelSettings();
   const { lessonsCompleted, progress } = useLearning();
   const { profile } = useProfile();
@@ -108,7 +117,6 @@ export default function SpeakScreen() {
   const [scenarioId, setScenarioId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(true);
   const [revealed, setRevealed] = useState<number[]>([]);
   const [stats, setStats] = useState<SpeakingStats>({});
   const [practice, setPractice] = useState<PracticeState | null>(null);
@@ -381,6 +389,11 @@ export default function SpeakScreen() {
       ];
       setMessages(withReply);
       persist(withReply);
+      // Optional auto-play. Never while the mic is open: the two audio paths
+      // must not overlap, and hearing yourself delayed is disorienting.
+      if (autoSpeak && !chatRecording) {
+        void speakLine(`msg-${withReply.length - 1}`, reply.text);
+      }
     } catch (error) {
       // Stop is a choice, not a failure: no error card, no retry, and the
       // turn keeps its place in the daily budget (the model was asked).
@@ -416,7 +429,7 @@ export default function SpeakScreen() {
    * line — nothing listens in the background. Any new sound stops the old one
    * first, which is also what keeps two utterances from overlapping.
    */
-  async function speakLine(key: string, text: string, rate = 0.92) {
+  async function speakLine(key: string, text: string, rate = scaleSpeechRate(0.92, voiceSpeed)) {
     const toggle = toggleSpeechTarget(speakingKey, key);
     if (toggle.action === 'stop') {
       stopSpeaking();
@@ -699,7 +712,9 @@ export default function SpeakScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => void speakLine(`phrase-${phrase.id}-slow`, phrase.target, SLOW_RATE)}
+            onPress={() =>
+              void speakLine(`phrase-${phrase.id}-slow`, phrase.target, scaleSpeechRate(SLOW_RATE, voiceSpeed))
+            }
             style={styles.phraseAction}
             hitSlop={6}
             accessibilityRole="button"
@@ -853,7 +868,9 @@ export default function SpeakScreen() {
                 <Text style={styles.phraseActionLabel}>Type</Text>
               </Pressable>
               <Pressable
-                onPress={() => speakNative(phrase.target, language.ttsLocale, SLOW_RATE)}
+                onPress={() =>
+                  speakNative(phrase.target, language.ttsLocale, scaleSpeechRate(SLOW_RATE, voiceSpeed))
+                }
                 style={styles.scoreAction}
                 hitSlop={6}
                 accessibilityRole="button"
@@ -906,7 +923,7 @@ export default function SpeakScreen() {
             <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
           </Pressable>
         <Pressable
-          onPress={() => setShowTranslation((v) => !v)}
+          onPress={() => setShowTranslation(!showTranslation)}
           style={styles.translateToggle}
           accessibilityRole="button"
           accessibilityState={{ selected: showTranslation }}
@@ -1057,7 +1074,9 @@ export default function SpeakScreen() {
                   </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => void speakLine(`msg-${index}-slow`, item.text, SLOW_RATE)}
+                  onPress={() =>
+                    void speakLine(`msg-${index}-slow`, item.text, scaleSpeechRate(SLOW_RATE, voiceSpeed))
+                  }
                   style={styles.listenRow}
                   hitSlop={8}
                   accessibilityRole="button"
@@ -1242,7 +1261,7 @@ export default function SpeakScreen() {
       <Modal
         visible={picker !== null}
         transparent
-        animationType="fade"
+        animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => setPicker(null)}
       >
         <Pressable
