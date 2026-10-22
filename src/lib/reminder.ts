@@ -54,7 +54,7 @@ export function isDailyReminderNotification(
   data: unknown,
 ): boolean {
   if (data && typeof data === 'object' && 'kind' in data) {
-    if ((data as { kind?: unknown }).kind === 'babelish-daily-reminder') return true;
+    return (data as { kind?: unknown }).kind === 'babelish-daily-reminder';
   }
   // Backward compatibility for reminders scheduled before the marker existed.
   return title === reminderTitle();
