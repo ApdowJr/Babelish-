@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   REMINDER_SLOTS,
+  isDailyReminderNotification,
   isValidSlot,
   reminderBody,
   reminderTitle,
@@ -44,6 +45,14 @@ test('slot keys are zero-padded and presets can be looked up', () => {
 
 test('reminder title uses the current Babelish brand', () => {
   assert.equal(reminderTitle(), 'Babelish 🌍');
+});
+
+
+test('daily reminder matching never treats test or unrelated notifications as the daily reminder', () => {
+  assert.equal(isDailyReminderNotification('Babelish 🌍', undefined), true, 'supports older scheduled reminders');
+  assert.equal(isDailyReminderNotification('Updated title', { kind: 'babelish-daily-reminder' }), true);
+  assert.equal(isDailyReminderNotification('This is your reminder', { kind: 'babelish-test-reminder' }), false);
+  assert.equal(isDailyReminderNotification('Another app notification', { kind: 'other' }), false);
 });
 
 test('reminder copy invites practice without shaming the learner', () => {

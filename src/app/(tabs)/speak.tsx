@@ -99,7 +99,7 @@ export default function SpeakScreen() {
     reduceMotion,
   } = usePreferences();
   const { settings } = useModelSettings();
-  const { lessonsCompleted, progress } = useLearning();
+  const { progress } = useLearning();
   const { profile } = useProfile();
   const { logSpeakingScore } = useAnalytics();
   const language = getLanguage(targetLanguageId);
@@ -163,8 +163,21 @@ export default function SpeakScreen() {
     goals: profile.goals,
     nativeLanguageName: languageName(nativeLanguageId),
   };
-  // CEFR: follow progress automatically, or honour the learner's override.
-  const level = settings.level === 'auto' ? suggestLevel(lessonsCompleted) : settings.level;
+  // Use this target language's lesson history, not completions in unrelated languages.
+  const targetLanguageProgress = useMemo(() => {
+    return bundledCurriculum(language.id)
+      .flatMap((chapter) => chapter.lessons)
+      .map((lesson) => progress[lesson.id])
+      .filter((entry): entry is { score: number; completedAt: string } => Boolean(entry))
+      .sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+  }, [language.id, progress]);
+  const targetLessonsCompleted = targetLanguageProgress.filter((entry) => entry.score >= 70).length;
+  const recentLessonScores = targetLanguageProgress.slice(-5).map((entry) => entry.score);
+
+  // CEFR: use completion as a baseline, gently adjusted by recent accuracy.
+  const level = settings.level === 'auto'
+    ? suggestLevel(targetLessonsCompleted, recentLessonScores)
+    : settings.level;
   const explanationLanguage = languageName(nativeLanguageId);
 
   // Honest capability gates: "live" only when either transport can actually

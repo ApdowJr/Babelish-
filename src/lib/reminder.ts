@@ -48,6 +48,18 @@ export function reminderTitle(): string {
   return 'Babelish 🌍';
 }
 
+/** Identifies this app's daily reminder without matching unrelated notifications. */
+export function isDailyReminderNotification(
+  title: string | null | undefined,
+  data: unknown,
+): boolean {
+  if (data && typeof data === 'object' && 'kind' in data) {
+    return (data as { kind?: unknown }).kind === 'babelish-daily-reminder';
+  }
+  // Backward compatibility for reminders scheduled before the marker existed.
+  return title === reminderTitle();
+}
+
 export function reminderBody(input: {
   languageName: string;
   streak: number;
