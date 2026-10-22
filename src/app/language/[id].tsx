@@ -13,6 +13,7 @@ import { starterPhrasebook } from '@/lib/phrasebook';
 import { usePreferences } from '@/state/preferences';
 import { normalizeKey, useLearning } from '@/state/learning';
 import { isChapterUnlocked, loadCurriculum } from '@/lib/curriculum/store';
+import { courseStatus } from '@/lib/curriculum/status';
 import { speakNative } from '@/lib/ai';
 import type { Chapter, Lesson } from '@/lib/curriculum/types';
 import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
@@ -84,6 +85,7 @@ export default function LanguageDetailScreen() {
   }
 
   const status = languageStatus(language.id);
+  const course = courseStatus(language.id);
 
   return (
     <Screen scroll>
@@ -185,10 +187,24 @@ export default function LanguageDetailScreen() {
       </View>
 
       <SectionHeader
-        title="Course · CEFR A1"
+        title={`Course · ${course.level}`}
         action={completedLessons > 0 ? 'Start over' : undefined}
         onAction={firstIncomplete ? () => startLesson(chapters[0]?.lessons[0] ?? null) : undefined}
       />
+
+      <View style={styles.courseCard}>
+        <View style={styles.courseTop}>
+          <Pill
+            label={course.tier === 'authored' ? 'AUTHORED' : 'STARTER COURSE'}
+            tone={course.tier === 'authored' ? 'free' : 'sky'}
+            icon={course.tier === 'authored' ? 'checkmark-circle' : 'construct'}
+          />
+          <Text style={styles.courseMeta}>
+            {course.chapters} chapters · {course.lessons} lessons · {course.exercises} exercises
+          </Text>
+        </View>
+        <Text style={styles.courseNote}>{course.note}</Text>
+      </View>
 
       {!chaptersLoaded ? (
         <View style={styles.loading}>
@@ -510,6 +526,17 @@ const styles = StyleSheet.create({
   progressStatValue: { ...typography.heading, color: colors.text, fontSize: 17 },
   progressStatLabel: { ...typography.micro, color: colors.textFaint, fontSize: 8.5, marginTop: 2 },
   progressDivider: { width: 1, height: 24, backgroundColor: colors.border },
+  courseCard: {
+    backgroundColor: colors.surfaceTint,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  courseTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  courseMeta: { ...typography.micro, color: colors.textFaint, flexShrink: 1, textAlign: 'right' },
+  courseNote: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 18 },
   blurb: { ...typography.body, color: colors.text, lineHeight: 23, marginTop: spacing.xl },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   dialectChip: {

@@ -4,7 +4,7 @@
  * in the 2.0 atlas. Powers the Speak tab's "say it out loud" cards; the same
  * phrases score typed practice in demo mode (no AI key needed).
  */
-import { STARTERS } from '@/data/starters';
+import { STARTERS } from './starters';
 export type PracticePhrase = {
   id: string;
   /** In the target language. */

@@ -3,10 +3,10 @@
  * come. Pure (bundled curriculum only) so the home rail, Learn cards and the
  * language page can all show identical numbers without network access.
  */
-import { bundledCurriculum } from '@/data/curriculum';
-import { LANGUAGES } from '@/data/languages';
-import { STARTERS } from '@/data/starters';
-import type { Chapter } from '@/lib/curriculum/types';
+import { bundledCurriculum } from '../data/curriculum';
+import { LANGUAGES } from '../data/languages';
+import { STARTERS } from '../data/starters';
+import type { Chapter } from './curriculum/types';
 
 export type CourseStats = {
   chapters: number;

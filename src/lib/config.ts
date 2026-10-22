@@ -9,12 +9,13 @@
  *   - the Profile → APP STATUS rows (honest labels, never fake "Connected").
  */
 import { isNeonConfigured, NEON_AUTH_URL } from '@/lib/neon';
-import { isAIConfigured } from '@/lib/ai';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { getModelSettings } from '@/lib/models/settings';
+import { MODE_LABEL } from '@/lib/models/config';
 
 export type ServiceState =
   | { service: 'auth'; mode: 'neon' | 'supabase' | 'demo'; label: string }
-  | { service: 'tutor'; mode: 'live' | 'demo'; label: string }
+  | { service: 'tutor'; mode: 'local' | 'server' | 'browser' | 'offline'; label: string }
   | { service: 'speech-output'; mode: 'device'; label: string };
 
 export function configurationReport(): ServiceState[] {
@@ -24,9 +25,19 @@ export function configurationReport(): ServiceState[] {
       ? { service: 'auth', mode: 'supabase', label: 'Supabase' }
       : { service: 'auth', mode: 'demo', label: 'On-device demo accounts' };
 
-  const tutor: ServiceState = isAIConfigured
-    ? { service: 'tutor', mode: 'live', label: 'AI connected' }
-    : { service: 'tutor', mode: 'demo', label: 'Demo tutor (scripted lines)' };
+  const settings = getModelSettings();
+  const tutor: ServiceState =
+    settings.mode === 'browser' && settings.browser.enabled
+      ? { service: 'tutor', mode: 'browser', label: 'Browser model (on-device)' }
+      : settings.mode === 'server'
+        ? { service: 'tutor', mode: 'server', label: 'App inference server' }
+        : settings.mode === 'offline'
+          ? { service: 'tutor', mode: 'offline', label: 'Offline coach (bundled content)' }
+          : {
+              service: 'tutor',
+              mode: 'local',
+              label: `Local models · ${MODE_LABEL[settings.mode]}`,
+            };
 
   return [
     auth,
@@ -58,10 +69,14 @@ export function validateConfigurationAtStartup(): string[] {
       'Neon backend disabled (EXPO_PUBLIC_NEON_DISABLED=1) — accounts are on-device demo only.'
     );
   }
-  if (!isAIConfigured) {
+  const settings = getModelSettings();
+  // Whether a model actually answers is decided by a real probe on the Speak
+  // and Profile screens; startup can only report what the learner selected.
+  if (settings.mode === 'offline') {
+    warnings.push('AI mode is set to the offline coach — no model will be contacted.');
+  } else if (settings.mode === 'browser' && !settings.browser.enabled) {
     warnings.push(
-      'AI tutor not configured — set EXPO_PUBLIC_AI_API_URL + EXPO_PUBLIC_AI_API_KEY (dev) or ' +
-        'AI_API_KEY on the api Function (production proxy). Scripted demo lines are used, labeled as demo.'
+      'Browser mode is selected but browser inference is off — the tutor will fall back to the offline coach.'
     );
   }
   if (!isSupabaseConfigured && !isNeonConfigured) {

@@ -348,31 +348,45 @@ async function removeAuthUser(userId: string): Promise<AuthRemoval> {
 }
 
 /* ── AI proxy: chat + speech-to-text ─────────────────────────────────────
- * The provider key lives ONLY in this Function's environment (AI_API_KEY,
- * AI_API_URL, AI_MODEL, AI_STT_MODEL) — never in a client bundle. JWT-gated
- * by the /api/* middleware and rate-limited per user, because these routes
- * are the ones a provider bills. With no key configured they answer
- * 503 ai-not-configured so the client can fall back to an explicitly-labeled
- * demo mode instead of faking a live model.
+ * This Function is an *optional* adapter to an OpenAI-compatible endpoint the
+ * app owner hosts. Nothing here requires a paid provider: point AI_API_URL at
+ * an Ollama / llama.cpp / LM Studio / vLLM server (or a self-hosted Whisper
+ * server) and it works with no key at all.
+ *
+ * Configuration lives ONLY in this Function's environment — never in a client
+ * bundle. The gateway counts as configured only when the owner opts in
+ * explicitly (AI_API_URL, AI_API_KEY or AI_MODEL set). Otherwise it answers
+ * 503 ai-not-configured and the client uses its local/browser/offline paths.
+ * JWT-gated by the /api/* middleware and rate-limited per user.
  */
-const AI_URL = (process.env.AI_API_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
-const AI_KEY = process.env.AI_API_KEY;
-const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
-const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-1';
-// Custom OpenAI-compatible endpoints are not assumed to implement audio transcription.
-// Explicitly opt in only when the configured provider supports /audio/transcriptions.
-const AI_STT_ENABLED = Boolean(AI_KEY) && process.env.AI_STT_ENABLED !== 'false';
+const AI_URL = (process.env.AI_API_URL ?? 'http://127.0.0.1:11434/v1').replace(/\/+$/, '');
+const AI_KEY = process.env.AI_API_KEY ?? '';
+const AI_MODEL = process.env.AI_MODEL ?? 'qwen2.5:1.5b';
+const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-large-v3-turbo';
+// Local OpenAI-compatible servers often ship chat only; owners can turn audio
+// off explicitly, or leave it on and expect /audio/transcriptions to exist.
+const AI_CONFIGURED = Boolean(
+  process.env.AI_API_URL || process.env.AI_API_KEY || process.env.AI_MODEL
+);
+const AI_STT_ENABLED = AI_CONFIGURED && process.env.AI_STT_ENABLED !== 'false';
 
 const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
 const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
 
 /** Capability report for the client's status rows — booleans only, no secrets. */
 app.get('/api/ai/status', (c) =>
-  c.json({ chat: Boolean(AI_KEY), stt: Boolean(AI_KEY && AI_STT_ENABLED) })
+  c.json({
+    chat: AI_CONFIGURED,
+    stt: AI_STT_ENABLED,
+    // The client shows this as "App server · <model>" — a name, never a key.
+    model: AI_CONFIGURED ? AI_MODEL : null,
+    /** True when the endpoint needs no credential (a local server). */
+    keyless: AI_CONFIGURED && !AI_KEY,
+  })
 );
 
 app.post('/api/ai/chat', async (c) => {
-  if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
+  if (!AI_CONFIGURED) return c.json({ error: 'ai-not-configured' }, 503);
   const userId = c.get('userId');
   if (!chatLimiter.take(userId)) {
     return c.json(
@@ -396,6 +410,7 @@ app.post('/api/ai/chat', async (c) => {
     level: parsed.request.level ?? 'A2',
     scenarioTitle: parsed.request.scenarioTitle,
     learnerName: parsed.request.learnerName,
+    explanationLanguage: parsed.request.explanationLanguage,
     profile: parsed.request.profile,
   });
 
@@ -404,7 +419,10 @@ app.post('/api/ai/chat', async (c) => {
   try {
     const upstream = await fetch(`${AI_URL}/chat/completions`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${AI_KEY}` },
+      headers: {
+        'content-type': 'application/json',
+        ...(AI_KEY ? { authorization: `Bearer ${AI_KEY}` } : {}),
+      },
       signal: controller.signal,
       body: JSON.stringify({
         model: AI_MODEL,
@@ -441,7 +459,12 @@ app.post('/api/ai/chat', async (c) => {
         502
       );
     }
-    return c.json({ reply: reply.text, translation: reply.translation, tip: reply.tip });
+    return c.json({
+      reply: reply.text,
+      translation: reply.translation,
+      tip: reply.tip,
+      model: AI_MODEL,
+    });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       return c.json(
@@ -459,7 +482,7 @@ app.post('/api/ai/chat', async (c) => {
 });
 
 app.post('/api/ai/stt', async (c) => {
-  if (!AI_KEY) return c.json({ error: 'ai-not-configured' }, 503);
+  if (!AI_CONFIGURED) return c.json({ error: 'ai-not-configured' }, 503);
   if (!AI_STT_ENABLED) return c.json({ error: 'ai-stt-not-configured' }, 503);
   const userId = c.get('userId');
   if (!sttLimiter.take(userId)) {
@@ -509,7 +532,7 @@ app.post('/api/ai/stt', async (c) => {
   try {
     const upstream = await fetch(`${AI_URL}/audio/transcriptions`, {
       method: 'POST',
-      headers: { authorization: `Bearer ${AI_KEY}` },
+      headers: AI_KEY ? { authorization: `Bearer ${AI_KEY}` } : {},
       body: outbound,
       signal: controller.signal,
     });

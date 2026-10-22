@@ -1,5 +1,5 @@
-import type { Chapter, ChapterSource, Exercise, Lesson } from '@/lib/curriculum/types';
-import { LANGUAGES } from '@/data/languages';
+import type { Chapter, ChapterSource, Exercise, Lesson } from '../../lib/curriculum/types';
+import { LANGUAGES } from '../languages';
 import { ch1 as esCh1 } from './es/ch1';
 import { ch2 as esCh2 } from './es/ch2';
 import { ch3 as esCh3 } from './es/ch3';

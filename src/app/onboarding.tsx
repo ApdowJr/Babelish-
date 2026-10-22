@@ -125,7 +125,7 @@ export default function OnboardingScreen() {
 
               <View style={styles.valueList}>
                 <ValueRow icon="infinite" title="Every lesson, free" body="No paywall, no card, no trial timer — ever." />
-                <ValueRow icon="mic-outline" title="Hear it, say it" body="Native text-to-speech and pronunciation scoring on every phrase." />
+                <ValueRow icon="mic-outline" title="Hear it, say it" body="Native text-to-speech, plus word-match feedback on what you say." />
                 <ValueRow icon="download-outline" title="Works offline" body="The whole phrasebook ships inside the app." />
               </View>
             </View>

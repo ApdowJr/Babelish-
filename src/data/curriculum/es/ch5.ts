@@ -1,5 +1,5 @@
-import { choose, typeEx, listen, speak } from '@/data/curriculum/helpers';
-import type { ChapterSource } from '@/lib/curriculum/types';
+import { choose, typeEx, listen, speak } from '../helpers';
+import type { ChapterSource } from '../../../lib/curriculum/types';
 
 export const ch5: ChapterSource = {
   cefr: 'A1',
