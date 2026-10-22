@@ -15,6 +15,26 @@ needed a model at all.
 > 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
 > bundled offline. Every lesson playable on the free plan.
 
+## What's new in 3.4
+
+| Area | 3.4 |
+|---|---|
+| **Dark mode** | System / Light / Dark in Settings → Appearance. A full night palette, every screen, status bar and tab bar included |
+| **Progress** | `/progress` — six-week streak calendar, level progress and an honest per-skill breakdown |
+| **Contrast** | Both palettes are tested against WCAG AA pair by pair; the daylight palette was darkened where it used to fail |
+| **Theming** | `useTheme()` / `useThemedStyles()`; the static `colors` export is gone so a screen cannot silently stay light |
+
+## What's new in 3.3
+
+| Area | 3.3 |
+|---|---|
+| **Your profile** | A real editor — emoji avatar with six colour themes, bio, job, interests and goals, with a live preview of what the tutor sees |
+| **Terms** | `/terms`, linked from Settings and from a consent line in onboarding |
+| **Store readiness** | Bundle ids, version codes, permissions, iOS plist keys, `eas.json`, Play icon + feature graphic, notification icon |
+| **Release gate** | `npm run check:release` blocks the mistakes that cost a build cycle |
+| **First-run profile** | Name, avatar and goal asked during onboarding, before the first lesson |
+| **Start over** | Settings → Reset progress clears learning data but keeps the account |
+
 ## What's new in 3.2
 
 | Area | 3.2 |
@@ -158,7 +178,10 @@ src/
     curriculum/
       es/               # hand-authored CEFR Spanish course (5 chapters)
       samplers.ts       # deterministic 4-chapter starter courses for the other 23
-  theme/tokens.ts       # "warm atlas" design tokens
+  theme/
+    palette.ts          # day + night palettes, mode resolution, contrast rules
+    tokens.ts           # "warm atlas" spacing, type, radii, shadows
+    theme.tsx           # ThemeProvider · useTheme · useThemedStyles
 functions/
   api/index.ts          # Neon Function: state sync · tutor server (model chain) · storage · review
 neon/schema.sql         # Lakebase Postgres schema (app_state)

@@ -1,6 +1,9 @@
+import { useThemedStyles } from '@/theme/theme';
+import type { Palette } from '@/theme/tokens';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function PrivacyRoute() {
+  const styles = useThemedStyles(createStyles);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Babelish — Privacy Policy</Text>
@@ -122,17 +125,17 @@ export default function PrivacyRoute() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+const createStyles = (c: Palette) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   content: { padding: 20, gap: 12 },
-  title: { fontSize: 20, fontWeight: '700' },
-  meta: { color: '#666', fontSize: 12 },
-  h2: { fontSize: 16, fontWeight: '600', marginTop: 8 },
-  p: { lineHeight: 20 },
+  title: { fontSize: 20, fontWeight: '700', color: c.text },
+  meta: { color: c.textMuted, fontSize: 12 },
+  h2: { fontSize: 16, fontWeight: '600', marginTop: 8, color: c.primary },
+  p: { lineHeight: 20, color: c.text },
   ul: { gap: 6 },
-  li: { lineHeight: 20 },
-  table: { borderWidth: 1, borderColor: '#e5e5e5', borderRadius: 8, overflow: 'hidden' },
-  tr: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#e5e5e5' },
-  th: { flex: 1, fontWeight: '600', padding: 8, backgroundColor: '#f5f5f5' },
-  td: { flex: 1, padding: 8 },
+  li: { lineHeight: 20, color: c.text },
+  table: { borderWidth: 1, borderColor: c.border, borderRadius: 8, overflow: 'hidden' },
+  tr: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.border },
+  th: { flex: 1, fontWeight: '600', padding: 8, backgroundColor: c.surfaceHigh, color: c.text },
+  td: { flex: 1, padding: 8, color: c.text },
 });

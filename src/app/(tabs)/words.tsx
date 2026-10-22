@@ -38,7 +38,8 @@ import {
   languagesStartedFromProgress,
   unlockedCount,
 } from '@/lib/achievements';
-import { colors, gradients, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Tab = 'practice' | 'phrasebook' | 'badges';
 
@@ -56,6 +57,8 @@ const CATEGORY_OPTIONS: { value: PhraseCategory | 'all'; label: string }[] = [
 ];
 
 export default function WordsScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ tab?: string }>();
   const requestedTab: Tab =
     params.tab === 'phrasebook' || params.tab === 'badges' ? params.tab : 'practice';
@@ -279,7 +282,7 @@ export default function WordsScreen() {
       {tab === 'badges' ? (
         <View>
           <LinearGradient
-            colors={gradients.hero}
+            colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.levelCard}
@@ -301,7 +304,7 @@ export default function WordsScreen() {
             </View>
             <ProgressBar
               value={level.pct}
-              color={colors.sun}
+              color={colors.sunInk}
               trackColor="rgba(255,255,255,0.16)"
               label={`Level ${level.level} → ${level.level + 1}`}
               showPct
@@ -314,19 +317,19 @@ export default function WordsScreen() {
           </LinearGradient>
 
           <View style={styles.statRow}>
-            <StatTile icon="flame" value={streak} label="DAY STREAK" tint={colors.accent} />
+            <StatTile icon="flame" value={streak} label="DAY STREAK" tint={colors.accentInk} />
             <StatTile
               icon="checkmark-done"
               value={Object.values(progress).filter((p) => p.score >= 70).length}
               label="LESSONS"
-              tint={colors.sky}
+              tint={colors.skyInk}
               tintSoft={colors.skySoft}
             />
             <StatTile
               icon="book"
               value={vocabList.length}
               label="WORDS SAVED"
-              tint={colors.lilac}
+              tint={colors.lilacInk}
               tintSoft={colors.lilacSoft}
             />
           </View>
@@ -431,6 +434,8 @@ function PracticeTab({
   wordsMastered: number;
   ready: boolean;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View>
       <LinearGradient
@@ -442,7 +447,7 @@ function PracticeTab({
         <View style={styles.reviewOrb} />
         <View style={styles.reviewTop}>
           <View style={styles.reviewIcon}>
-            <Ionicons name="refresh" size={22} color={colors.sun} />
+            <Ionicons name="refresh" size={22} color={colors.sunInk} />
           </View>
           <Pill label={dueCount > 0 ? 'DUE NOW' : 'ALL CLEAR'} tone="dark" />
         </View>
@@ -467,10 +472,10 @@ function PracticeTab({
           icon="time"
           value={dueCount}
           label="DUE TODAY"
-          tint={colors.accent}
+          tint={colors.accentInk}
           tintSoft={colors.accentSoft}
         />
-        <StatTile icon="albums" value={vocab.length} label="IN REVIEW" tint={colors.sky} tintSoft={colors.skySoft} />
+        <StatTile icon="albums" value={vocab.length} label="IN REVIEW" tint={colors.skyInk} tintSoft={colors.skySoft} />
         <StatTile
           icon="star"
           value={wordsMastered}
@@ -524,6 +529,8 @@ function PracticeTab({
 }
 
 function WordRow({ item }: { item: VocabItem }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const language = getLanguage(item.languageId);
   const due = new Date(item.dueAt).getTime() <= new Date().getTime();
   return (
@@ -571,6 +578,8 @@ function PhraseRow({
   saved: boolean;
   onSave: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={styles.phraseCard}>
       <View style={styles.flex}>
@@ -619,7 +628,7 @@ function daysUntil(iso: string): number {
   return Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   flex: { flex: 1 },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   header: {
@@ -628,15 +637,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
-  kicker: { ...typography.micro, color: colors.accent },
-  title: { ...typography.title, color: colors.text, marginTop: 4 },
+  kicker: { ...typography.micro, color: c.accent },
+  title: { ...typography.title, color: c.text, marginTop: 4 },
   headerBadge: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.card,
@@ -670,27 +679,27 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     ...typography.title,
-    color: colors.onDark,
+    color: c.onDark,
     marginTop: spacing.md,
     fontSize: 23,
   },
   reviewBody: {
     ...typography.caption,
-    color: colors.onDarkMuted,
+    color: c.onDarkMuted,
     marginTop: spacing.sm,
     lineHeight: 19,
     maxWidth: 360,
   },
   reviewCta: { marginTop: spacing.lg },
-  loadingText: { ...typography.caption, color: colors.textMuted, paddingVertical: spacing.lg },
-  moreText: { ...typography.caption, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md },
+  loadingText: { ...typography.caption, color: c.textMuted, paddingVertical: spacing.lg },
+  moreText: { ...typography.caption, color: c.textFaint, textAlign: 'center', marginTop: spacing.md },
   wordRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -699,12 +708,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wordTarget: { ...typography.heading, color: colors.text, fontSize: 17 },
-  wordTranslation: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
+  wordTarget: { ...typography.heading, color: c.text, fontSize: 17 },
+  wordTranslation: { ...typography.caption, color: c.textMuted, marginTop: 1 },
   wordMeta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -712,49 +721,49 @@ const styles = StyleSheet.create({
     marginTop: 6,
     flexWrap: 'wrap',
   },
-  wordLang: { ...typography.micro, fontSize: 9.5, color: colors.textFaint },
-  wordDue: { ...typography.micro, fontSize: 9.5, color: colors.textFaint },
-  wordDueNow: { color: colors.accent },
+  wordLang: { ...typography.micro, fontSize: 9.5, color: c.textFaint },
+  wordDue: { ...typography.micro, fontSize: 9.5, color: c.textFaint },
+  wordDueNow: { color: c.accent },
   boxCard: {
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.lg,
     marginTop: spacing.lg,
   },
-  boxTitle: { ...typography.bodyStrong, color: colors.text },
-  boxBody: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 19 },
+  boxTitle: { ...typography.bodyStrong, color: c.text },
+  boxBody: { ...typography.caption, color: c.textMuted, marginTop: spacing.xs, lineHeight: 19 },
   boxRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
   boxItem: { flex: 1, alignItems: 'center', gap: 3 },
-  boxDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  boxLabel: { ...typography.micro, fontSize: 9, color: colors.textMuted },
-  boxCount: { ...typography.bodyStrong, color: colors.text, fontSize: 13 },
+  boxDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary },
+  boxLabel: { ...typography.micro, fontSize: 9, color: c.textMuted },
+  boxCount: { ...typography.bodyStrong, color: c.text, fontSize: 13 },
   langRail: { gap: spacing.sm, paddingVertical: spacing.lg, paddingRight: spacing.lg },
   langChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 9,
   },
-  langChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  langChipActive: { backgroundColor: c.primary, borderColor: c.primary },
   langFlag: { fontSize: 14 },
-  langName: { ...typography.caption, color: colors.textMuted },
-  langNameActive: { color: colors.onDark, fontWeight: '700' },
-  mineDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.success },
+  langName: { ...typography.caption, color: c.textMuted },
+  langNameActive: { color: c.onDark, fontWeight: '700' },
+  mineDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.success },
   phraseHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  phraseTitle: { ...typography.heading, color: colors.text },
-  phraseSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  phraseTitle: { ...typography.heading, color: c.text },
+  phraseSub: { ...typography.caption, color: c.textMuted, marginTop: 2 },
   addLang: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -762,48 +771,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
   },
-  addLangText: { ...typography.micro, color: colors.primary, fontSize: 10 },
+  addLangText: { ...typography.micro, color: c.primary, fontSize: 10 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     minHeight: 48,
     marginBottom: spacing.md,
   },
-  searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: spacing.sm },
-  countLine: { ...typography.micro, color: colors.textFaint, marginTop: spacing.md, marginBottom: spacing.sm },
+  searchInput: { flex: 1, ...typography.body, color: c.text, paddingVertical: spacing.sm },
+  countLine: { ...typography.micro, color: c.textFaint, marginTop: spacing.md, marginBottom: spacing.sm },
   phraseCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.lg,
     marginBottom: spacing.sm,
   },
-  phraseTarget: { ...typography.heading, color: colors.text, fontSize: 18 },
-  phraseRoman: { ...typography.caption, color: colors.textFaint, fontStyle: 'italic', marginTop: 2 },
-  phraseEnglish: { ...typography.caption, color: colors.textMuted, marginTop: 3 },
+  phraseTarget: { ...typography.heading, color: c.text, fontSize: 18 },
+  phraseRoman: { ...typography.caption, color: c.textFaint, fontStyle: 'italic', marginTop: 2 },
+  phraseEnglish: { ...typography.caption, color: c.textMuted, marginTop: 3 },
   phraseMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  phraseSource: { ...typography.micro, fontSize: 9, color: colors.textFaint },
+  phraseSource: { ...typography.micro, fontSize: 9, color: c.textFaint },
   phraseActions: { justifyContent: 'center', gap: spacing.sm },
   phraseAction: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  phraseActionSaved: { backgroundColor: colors.successSoft },
+  phraseActionSaved: { backgroundColor: c.successSoft },
   levelCard: {
     borderRadius: radii.lg,
     padding: spacing.lg,
@@ -831,15 +840,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelNumber: { ...typography.title, color: colors.sun },
-  levelTitle: { ...typography.bodyStrong, color: colors.onDark, fontSize: 16 },
-  levelSub: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2 },
+  levelNumber: { ...typography.title, color: c.sun },
+  levelTitle: { ...typography.bodyStrong, color: c.onDark, fontSize: 16 },
+  levelSub: { ...typography.caption, color: c.onDarkMuted, marginTop: 2 },
   levelProgress: { marginTop: spacing.lg },
-  levelNote: { ...typography.micro, color: colors.onDarkFaint, marginTop: spacing.sm, letterSpacing: 0.2, fontWeight: '500' },
+  levelNote: { ...typography.micro, color: c.onDarkFaint, marginTop: spacing.sm, letterSpacing: 0.2, fontWeight: '500' },
   weekCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
   },
@@ -847,38 +856,38 @@ const styles = StyleSheet.create({
   weekCol: { flex: 1, alignItems: 'center' },
   weekTrack: { width: '100%', height: 56, justifyContent: 'flex-end', alignItems: 'center' },
   weekBar: { width: '62%', borderRadius: 99 },
-  weekDay: { ...typography.micro, color: colors.textFaint, marginTop: 6 },
-  weekDayToday: { color: colors.text },
-  weekNote: { ...typography.caption, color: colors.textMuted, marginTop: spacing.md },
+  weekDay: { ...typography.micro, color: c.textFaint, marginTop: 6 },
+  weekDayToday: { color: c.text },
+  weekNote: { ...typography.caption, color: c.textMuted, marginTop: spacing.md },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   badgeCard: {
     width: '48%',
     flexGrow: 1,
     flexBasis: '46%',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
-  badgeCardUnlocked: { borderColor: 'rgba(40,122,85,0.35)', backgroundColor: '#FBFEFC' },
+  badgeCardUnlocked: { borderColor: c.success, backgroundColor: c.successSoft },
   badgeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badgeEmoji: { fontSize: 24 },
   badgeEmojiLocked: { opacity: 0.35 },
-  badgeTitle: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 14 },
-  badgeTitleLocked: { color: colors.textMuted },
-  badgeBody: { ...typography.caption, color: colors.textMuted, marginTop: 2, lineHeight: 17, minHeight: 34 },
+  badgeTitle: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm, fontSize: 14 },
+  badgeTitleLocked: { color: c.textMuted },
+  badgeBody: { ...typography.caption, color: c.textMuted, marginTop: 2, lineHeight: 17, minHeight: 34 },
   badgeProgress: { marginTop: spacing.sm },
-  badgeCount: { ...typography.micro, fontSize: 9, color: colors.textFaint, marginTop: 4 },
+  badgeCount: { ...typography.micro, fontSize: 9, color: c.textFaint, marginTop: 4 },
   xpCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
   },
   xpRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.md },
-  xpDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  xpLabel: { ...typography.caption, color: colors.textMuted },
-  xpValue: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  xpDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
+  xpLabel: { ...typography.caption, color: c.textMuted },
+  xpValue: { ...typography.caption, color: c.primary, fontWeight: '700' },
 });

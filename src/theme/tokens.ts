@@ -1,66 +1,29 @@
 /**
- * Babelish 2.0 design tokens — "warm atlas".
+ * Static, theme-independent tokens — spacing, radii, type, shadows, layout.
  *
- * A travel-journal palette: parchment paper, deep forest ink, tangerine
- * highlights and a few bright accents that only ever mean one thing
- * (sun = streak, sky = reviews, lilac = speaking). Every screen composes
- * from these tokens, so a single change re-skins the whole app.
+ * Colours live in `palette.ts` (both themes) and reach components through
+ * `useTheme()` / `useThemedStyles()` in `theme.tsx`. Only the gradient presets
+ * below are fixed, because a brand gradient is the same brand in both themes.
  */
-export const colors = {
-  // ── Canvas ──────────────────────────────────────────────────────────
-  bg: '#F7F4ED',
-  bgSunken: '#F0ECE2',
-  surface: '#FFFFFF',
-  surfaceHigh: '#EDF1EA',
-  surfaceTint: '#F3F0E7',
-  border: '#E4E4D9',
-  borderStrong: '#D3D6C8',
+import { lightPalette } from './palette';
 
-  // ── Brand ───────────────────────────────────────────────────────────
-  primary: '#0F4C3A',
-  primaryPressed: '#0A382B',
-  primarySoft: 'rgba(15, 76, 58, 0.10)',
-  primaryTint: '#DCEBE3',
-  gradientFrom: '#0B3A2C',
-  gradientMid: '#1C6852',
-  gradientTo: '#2E8B6F',
+export type { Palette } from './palette';
+export { darkPalette, lightPalette, resolvePalette } from './palette';
 
-  // ── Accents (one meaning each, never decorative noise) ──────────────
-  accent: '#E9764F',
-  accentPressed: '#D2613C',
-  accentSoft: 'rgba(233, 118, 79, 0.14)',
-  sun: '#F2C14E',
-  sunSoft: 'rgba(242, 193, 78, 0.20)',
-  sky: '#4E9FC4',
-  skySoft: 'rgba(78, 159, 196, 0.14)',
-  mint: '#2E8B6F',
-  mintSoft: 'rgba(46, 139, 111, 0.14)',
-  lilac: '#8C7BC6',
-  lilacSoft: 'rgba(140, 123, 198, 0.14)',
-
-  // ── Text ────────────────────────────────────────────────────────────
-  text: '#15231D',
-  textMuted: '#5E6B63',
-  textFaint: '#8B968E',
-  onDark: '#F4F8F3',
-  onDarkMuted: 'rgba(244, 248, 243, 0.74)',
-  onDarkFaint: 'rgba(244, 248, 243, 0.52)',
-
-  // ── Semantic ────────────────────────────────────────────────────────
-  danger: '#B84242',
-  dangerSoft: 'rgba(184, 66, 66, 0.12)',
-  success: '#287A55',
-  successSoft: 'rgba(40, 122, 85, 0.12)',
-  warning: '#A66A22',
-  warningSoft: 'rgba(166, 106, 34, 0.12)',
-
-  white: '#FFFFFF',
-  black: '#15231D',
-} as const;
+/**
+ * There is deliberately no `colors` export here.
+ *
+ * It used to be the palette, and every screen imported it — which is exactly
+ * why dark mode was impossible: a StyleSheet built at import time cannot
+ * follow a runtime choice. Components now take colours from `useTheme()` /
+ * `useThemedStyles()`, and the compiler enforces it. The only static palette
+ * left is `lightPalette`, used by the gradients below and by `<View>`s that
+ * render before the provider mounts.
+ */
 
 export const gradients = {
-  hero: [colors.gradientFrom, colors.gradientMid, colors.gradientTo] as const,
-  heroShort: [colors.gradientFrom, colors.gradientTo] as const,
+  hero: [lightPalette.gradientFrom, lightPalette.gradientMid, lightPalette.gradientTo] as const,
+  heroShort: [lightPalette.gradientFrom, lightPalette.gradientTo] as const,
   sunrise: ['#EF8055', '#F5B36A'] as const,
   mint: ['#DCEBE3', '#F7F4ED'] as const,
   night: ['#122C24', '#0B3A2C'] as const,
@@ -114,7 +77,7 @@ export const shadows = {
     elevation: 6,
   },
   hero: {
-    shadowColor: colors.primary,
+    shadowColor: lightPalette.primary,
     shadowOpacity: 0.28,
     shadowRadius: 26,
     shadowOffset: { width: 0, height: 14 },

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 export type SegmentOption<T extends string> = {
   value: T;
@@ -24,6 +25,8 @@ export function SegmentedControl<T extends string>({
   onChange,
   scroll = false,
 }: Props<T>) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const content = options.map((option) => {
     const selected = option.value === value;
     return (
@@ -70,17 +73,17 @@ export function SegmentedControl<T extends string>({
   return <View style={styles.track}>{content}</View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   track: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.md,
     padding: 4,
     gap: 4,
   },
   trackScroll: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     padding: 4,
     gap: 4,
@@ -96,19 +99,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   segmentFixed: { flex: 0, paddingHorizontal: spacing.lg },
-  segmentSelected: { backgroundColor: colors.surface, ...shadows.card },
-  label: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  labelSelected: { color: colors.primary, fontWeight: '800' },
+  segmentSelected: { backgroundColor: c.surface, ...shadows.card },
+  label: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  labelSelected: { color: c.primary, fontWeight: '800' },
   count: {
     minWidth: 18,
     paddingHorizontal: 4,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countSelected: { backgroundColor: colors.primaryTint },
-  countText: { fontSize: 10, fontWeight: '700', color: colors.textMuted },
-  countTextSelected: { color: colors.primary },
+  countSelected: { backgroundColor: c.primaryTint },
+  countText: { fontSize: 10, fontWeight: '700', color: c.textMuted },
+  countTextSelected: { color: c.primary },
 });

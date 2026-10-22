@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type SectionHeaderProps = {
   title: string;
@@ -13,6 +14,8 @@ type SectionHeaderProps = {
 
 /** Small caps label + optional "See all" action. Consistent on every screen. */
 export function SectionHeader({ title, action, onAction, icon, style }: SectionHeaderProps) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={[styles.row, style]}>
       <View style={styles.titleRow}>
@@ -52,6 +55,7 @@ export function Card({
   style,
   accessibilityLabel,
 }: CardProps) {
+  const styles = useThemedStyles(createStyles);
   const toneStyle =
     tone === 'primary'
       ? styles.primary
@@ -76,7 +80,7 @@ export function Card({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -85,19 +89,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { ...typography.micro, color: colors.textFaint },
+  title: { ...typography.micro, color: c.textFaint },
   action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  actionText: { ...typography.caption, color: c.primary, fontWeight: '700' },
   pressed: { opacity: 0.82, transform: [{ scale: 0.994 }] },
   card: {
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     overflow: 'hidden',
   },
-  surface: { backgroundColor: colors.surface, ...shadows.card },
-  tint: { backgroundColor: colors.surfaceTint, borderColor: colors.border },
-  primary: { backgroundColor: colors.primary, borderColor: colors.primary },
-  accent: { backgroundColor: colors.accentSoft, borderColor: 'rgba(233, 118, 79, 0.22)' },
+  surface: { backgroundColor: c.surface, ...shadows.card },
+  tint: { backgroundColor: c.surfaceTint, borderColor: c.border },
+  primary: { backgroundColor: c.primary, borderColor: c.primary },
+  accent: { backgroundColor: c.accentSoft, borderColor: 'rgba(233, 118, 79, 0.22)' },
   padded: { padding: spacing.lg },
 });

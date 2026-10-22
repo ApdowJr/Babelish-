@@ -21,7 +21,8 @@ import { dayKey } from '@/lib/analytics';
 import { lessonXp } from '@/lib/xp';
 import { useLearning } from '@/state/learning';
 import { useAnalytics } from '@/state/analytics';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 /** Lenient matching: accents, case, punctuation, and spacing don't block you. */
 function normalize(text: string): string {
@@ -37,6 +38,8 @@ function normalize(text: string): string {
 type StepResult = { correct: boolean; vocab?: VocabSeed };
 
 export default function LessonScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ id: string; lang: string }>();
   const lessonId = String(params.id);
   const languageId = String(params.lang);
@@ -246,7 +249,7 @@ export default function LessonScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Hear ${entry.vocab!.target}`}
                   >
-                    <Ionicons name="volume-medium-outline" size={20} color={colors.accent} />
+                    <Ionicons name="volume-medium-outline" size={20} color={colors.accentInk} />
                   </Pressable>
                 </View>
               ))}
@@ -447,7 +450,7 @@ export default function LessonScreen() {
 
         {answered !== null && exercise.note ? (
           <View style={styles.noteBox}>
-            <Ionicons name="book-outline" size={16} color={colors.accent} />
+            <Ionicons name="book-outline" size={16} color={colors.accentInk} />
             <Text style={styles.noteText}>{exercise.note}</Text>
           </View>
         ) : null}
@@ -476,18 +479,18 @@ export default function LessonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.xl },
-  missingText: { ...typography.body, color: colors.textMuted },
+  missingText: { ...typography.body, color: c.textMuted },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   speakCard: {
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.xl,
     marginTop: spacing.xl,
@@ -496,21 +499,21 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   speakTarget: {
     ...typography.title,
-    color: colors.text,
+    color: c.text,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 36,
   },
-  speakHint: { ...typography.caption, color: colors.textFaint, fontStyle: 'italic' },
+  speakHint: { ...typography.caption, color: c.textFaint, fontStyle: 'italic' },
   speakText: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     lineHeight: 19,
   },
@@ -518,13 +521,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     marginTop: spacing.xs,
   },
-  speakListenText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  speakListenText: { ...typography.caption, color: c.primary, fontWeight: '700' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -535,34 +538,34 @@ const styles = StyleSheet.create({
   progressTrack: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radii.pill },
+  progressFill: { height: '100%', backgroundColor: c.accentInk, borderRadius: radii.pill },
   scoreChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
-  scoreText: { ...typography.micro, color: colors.success },
+  scoreText: { ...typography.micro, color: c.success },
   body: { padding: spacing.xl, paddingBottom: spacing.xxxl },
-  lessonMeta: { ...typography.micro, color: colors.textFaint, textTransform: 'uppercase' },
-  prompt: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
-  question: { ...typography.heading, color: colors.text, marginTop: spacing.lg, fontSize: 22, lineHeight: 30 },
+  lessonMeta: { ...typography.micro, color: c.textFaint, textTransform: 'uppercase' },
+  prompt: { ...typography.caption, color: c.textMuted, marginTop: spacing.sm },
+  question: { ...typography.heading, color: c.text, marginTop: spacing.lg, fontSize: 22, lineHeight: 30 },
   questionBig: {
     ...typography.title,
-    color: colors.text,
+    color: c.text,
     marginTop: spacing.lg,
     fontSize: 28,
     textAlign: 'center',
     lineHeight: 36,
   },
-  optionsLabel: { ...typography.caption, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
+  optionsLabel: { ...typography.caption, color: c.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   options: { gap: spacing.sm, marginTop: spacing.xl },
   option: {
     flexDirection: 'row',
@@ -574,19 +577,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  optionIdle: { backgroundColor: colors.surface, borderColor: colors.border },
-  optionCorrect: { backgroundColor: colors.successSoft, borderColor: colors.success },
-  optionWrong: { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
-  optionDim: { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.5 },
-  optionText: { ...typography.body, color: colors.text, flex: 1 },
-  optionTextCorrect: { color: colors.success, fontWeight: '600' },
-  optionTextWrong: { color: colors.danger, fontWeight: '600' },
+  optionIdle: { backgroundColor: c.surface, borderColor: c.border },
+  optionCorrect: { backgroundColor: c.successSoft, borderColor: c.success },
+  optionWrong: { backgroundColor: c.dangerSoft, borderColor: c.danger },
+  optionDim: { backgroundColor: c.surface, borderColor: c.border, opacity: 0.5 },
+  optionText: { ...typography.body, color: c.text, flex: 1 },
+  optionTextCorrect: { color: c.success, fontWeight: '600' },
+  optionTextWrong: { color: c.danger, fontWeight: '600' },
   typeInput: {
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    color: c.text,
+    backgroundColor: c.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     minHeight: 54,
@@ -600,13 +603,13 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.4,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-  listenHint: { ...typography.caption, color: colors.textMuted },
+  listenHint: { ...typography.caption, color: c.textMuted },
   feedback: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,8 +618,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginTop: spacing.xl,
   },
-  feedbackGood: { backgroundColor: colors.successSoft },
-  feedbackBad: { backgroundColor: colors.dangerSoft },
+  feedbackGood: { backgroundColor: c.successSoft },
+  feedbackBad: { backgroundColor: c.dangerSoft },
   feedbackTitle: { ...typography.bodyStrong },
   hintBox: {
     flexDirection: 'row',
@@ -626,26 +629,26 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginTop: spacing.md,
   },
-  hintText: { ...typography.caption, color: colors.warning, flex: 1, lineHeight: 18 },
+  hintText: { ...typography.caption, color: c.warning, flex: 1, lineHeight: 18 },
   noteBox: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: c.accentSoft,
     borderRadius: radii.md,
     padding: spacing.md,
     marginTop: spacing.md,
   },
-  noteText: { ...typography.caption, color: colors.text, flex: 1, lineHeight: 18 },
+  noteText: { ...typography.caption, color: c.text, flex: 1, lineHeight: 18 },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.bg,
+    borderTopColor: c.border,
+    backgroundColor: c.bg,
   },
   completeWrap: { padding: spacing.xl, alignItems: 'center', paddingTop: spacing.xxxl },
   completeEmoji: { fontSize: 64 },
-  completeTitle: { ...typography.display, color: colors.text, marginTop: spacing.lg },
-  completeScore: { ...typography.heading, color: colors.textMuted, marginTop: spacing.sm },
+  completeTitle: { ...typography.display, color: c.text, marginTop: spacing.lg },
+  completeScore: { ...typography.heading, color: c.textMuted, marginTop: spacing.sm },
   xpBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -655,27 +658,27 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginTop: spacing.lg,
   },
-  xpText: { ...typography.bodyStrong, color: colors.white },
+  xpText: { ...typography.bodyStrong, color: c.white },
   missedCard: {
     alignSelf: 'stretch',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginTop: spacing.xl,
   },
-  missedTitle: { ...typography.bodyStrong, color: colors.text, marginBottom: spacing.md },
+  missedTitle: { ...typography.bodyStrong, color: c.text, marginBottom: spacing.md },
   missedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
     gap: spacing.md,
   },
-  missedTarget: { ...typography.bodyStrong, color: colors.text },
-  missedTranslation: { ...typography.caption, color: colors.textMuted },
-  perfectText: { ...typography.caption, color: colors.success, marginTop: spacing.xl },
-  missingTextStyle: { ...typography.body, color: colors.textMuted },
+  missedTarget: { ...typography.bodyStrong, color: c.text },
+  missedTranslation: { ...typography.caption, color: c.textMuted },
+  perfectText: { ...typography.caption, color: c.success, marginTop: spacing.xl },
+  missingTextStyle: { ...typography.body, color: c.textMuted },
 });

@@ -1,89 +1,56 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_PROFILE, normalizeLearnerProfile, type LearnerProfile } from '@/lib/learnerProfile';
 
-/**
- * Learner profile — who they are, what they're into, why they're learning.
- * Fed into every AI tutor prompt so examples come from their real life.
- * Stored on this device; the account name itself lives in auth.
- */
-export type LearnerProfile = {
-  /** Optional display-name override (falls back to the account name). */
-  displayName: string;
-  /** Job or role, e.g. "a nurse", "a university student". */
-  job: string;
-  /** Interest chips, e.g. ["cooking", "football"]. */
-  interests: string[];
-  /** Goal chips, e.g. ["travel", "work"]. */
-  goals: string[];
-};
+// Re-exported so screens keep importing from one place.
+export { DEFAULT_PROFILE, GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip } from '@/lib/learnerProfile';
+export type { AvatarColor, LearnerProfile } from '@/lib/learnerProfile';
 
 type ProfileValue = {
   profile: LearnerProfile;
+  /** True once the stored profile has been read (avoids a flash of defaults). */
+  ready: boolean;
   updateProfile: (patch: Partial<LearnerProfile>) => void;
+  /** Replaces the whole profile — used by the editor's Save button. */
+  saveProfile: (next: LearnerProfile) => void;
 };
 
 const STORAGE_KEY = 'zelvoca:profile';
-
-export const DEFAULT_PROFILE: LearnerProfile = {
-  displayName: '',
-  job: '',
-  interests: [],
-  goals: [],
-};
-
-export const INTEREST_OPTIONS = [
-  'Cooking',
-  'Football',
-  'Music',
-  'Travel',
-  'Movies',
-  'Technology',
-  'Fashion',
-  'Gaming',
-  'Nature',
-  'Photography',
-] as const;
-
-export const GOAL_OPTIONS = [
-  'Travel',
-  'Work & career',
-  'Family & friends',
-  'Exams',
-  'Moving abroad',
-] as const;
 
 const ProfileContext = createContext<ProfileValue | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<LearnerProfile>(DEFAULT_PROFILE);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
         if (!raw) return;
-        const parsed = JSON.parse(raw) as Partial<LearnerProfile>;
-        setProfile({
-          displayName: typeof parsed.displayName === 'string' ? parsed.displayName : '',
-          job: typeof parsed.job === 'string' ? parsed.job : '',
-          interests: Array.isArray(parsed.interests) ? parsed.interests.filter((x) => typeof x === 'string') : [],
-          goals: Array.isArray(parsed.goals) ? parsed.goals.filter((x) => typeof x === 'string') : [],
-        });
+        // One validator for stored data: a 3.1 blob has no avatar/bio, and a
+        // hand-edited one could contain anything.
+        setProfile(normalizeLearnerProfile(JSON.parse(raw)));
       })
       .catch(() => {
-        // keep defaults
-      });
+        // Unreadable storage keeps the defaults — the tutor still works.
+      })
+      .finally(() => setReady(true));
   }, []);
 
-  function updateProfile(patch: Partial<LearnerProfile>) {
-    setProfile((prev) => {
-      const next = { ...prev, ...patch };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+  function write(next: LearnerProfile) {
+    setProfile(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
   }
 
   return (
-    <ProfileContext.Provider value={{ profile, updateProfile }}>
+    <ProfileContext.Provider
+      value={{
+        profile,
+        ready,
+        updateProfile: (patch) => write(normalizeLearnerProfile({ ...profile, ...patch })),
+        saveProfile: (next) => write(normalizeLearnerProfile(next)),
+      }}
+    >
       {children}
     </ProfileContext.Provider>
   );
@@ -93,9 +60,4 @@ export function useProfile(): ProfileValue {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error('useProfile must be used inside <ProfileProvider>');
   return ctx;
-}
-
-/** Toggles one chip in a list (add when absent, remove when present). */
-export function toggleChip(list: string[], chip: string): string[] {
-  return list.includes(chip) ? list.filter((item) => item !== chip) : [...list, chip];
 }

@@ -21,6 +21,9 @@ Outputs (all committed, because stores need them):
     assets/android-icon-monochrome.png 1024  themed icons (silhouette)
     assets/splash-icon.png              512  native splash, transparent
     assets/favicon.png                   96  web
+    assets/store/play-icon-512.png      512  Play Console app icon (32-bit PNG)
+    assets/store/feature-graphic.png 1024x500 Play Store feature graphic
+    assets/notification-icon.png         96  Android notification small icon (white)
 
 Requires Pillow (`pip install pillow`). No network, no fonts, no external SVG.
 """
@@ -213,7 +216,78 @@ def main() -> None:
     # Favicon: the full icon, small.
     save(icon.convert("RGB").resize((96, 96), Image.LANCZOS), "favicon.png")
 
+    # Android draws notification icons as a white silhouette on the status bar;
+    # colour in this file would be flattened to grey, so generate it white.
+    save(scaled(monochrome(96), 0.92), "notification-icon.png")
+
+    # ── Play Console artwork ────────────────────────────────────────────────
+    # Play wants a 512×512 32-bit PNG icon with no transparency, and a
+    # 1024×500 feature graphic that has to survive being cropped to 16:9 in
+    # some placements, so the mark stays safely inside the middle.
+    os.makedirs(os.path.join(OUT, "store"), exist_ok=True)
+    save(icon.convert("RGB").resize((512, 512), Image.LANCZOS), "store/play-icon-512.png")
+    save(feature_graphic(), "store/feature-graphic.png")
+
     print("done")
+
+
+def feature_graphic() -> Image.Image:
+    """
+    1024×500 marketing banner: forest field, the mark on the left, and three
+    abstract "course card" shapes on the right. No text — store graphics are
+    translated by the listing, not baked into a picture, and Play overlays the
+    app name and screenshots anyway.
+    """
+    w, h = 1024 * 2, 500 * 2  # draw at 2x for smooth edges
+    canvas = Image.new("RGB", (w, h), FOREST_DARK)
+    px = canvas.load()
+    for y in range(h):
+        for x in range(w):
+            t = (x / (w - 1)) * 0.75 + (y / (h - 1)) * 0.25
+            colour = lerp(FOREST_DARK, FOREST_MID, t / 0.6) if t < 0.6 else lerp(
+                FOREST_MID, FOREST_LIGHT, (t - 0.6) / 0.4
+            )
+            px[x, y] = colour
+
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    # Soft light behind the mark, so the bubbles read as floating.
+    draw.ellipse((60 * 2, 60 * 2, 460 * 2, 460 * 2), fill=(255, 255, 255, 14))
+
+    mark = compose_mark(760)
+    canvas.paste(mark, (110, int((h - 760) / 2)), mark)
+
+    # Course cards: rounded rectangles with a header bar and progress lines.
+    # Evenly spaced and offset, so they read as a stack of lessons rather than
+    # one overlapping blob (the first draft did exactly that).
+    cards = [
+        (596, 58, 336, 116, (255, 255, 255, 28)),
+        (648, 192, 300, 112, (255, 255, 255, 22)),
+        (596, 322, 356, 108, (255, 255, 255, 16)),
+    ]
+    for (cx, cy, cw, ch, tint) in cards:
+        draw.rounded_rectangle(
+            (cx * 2, cy * 2, (cx + cw) * 2, (cy + ch) * 2), radius=28, fill=tint
+        )
+        draw.rounded_rectangle(
+            ((cx + 24) * 2, (cy + 24) * 2, (cx + 140) * 2, (cy + 40) * 2),
+            radius=8,
+            fill=(247, 244, 237, 66),
+        )
+        draw.rounded_rectangle(
+            ((cx + 24) * 2, (cy + 56) * 2, (cx + cw - 40) * 2, (cy + 68) * 2),
+            radius=6,
+            fill=(242, 193, 78, 160),
+        )
+        draw.rounded_rectangle(
+            ((cx + 24) * 2, (cy + 82) * 2, (cx + cw - 110) * 2, (cy + 92) * 2),
+            radius=5,
+            fill=(247, 244, 237, 38),
+        )
+
+    # Tangerine accent bar along the bottom edge — the same colour as "your turn".
+    draw.rounded_rectangle((0, (500 - 14) * 2, w, h), radius=0, fill=TANGERINE + (255,))
+
+    return canvas.resize((1024, 500), Image.LANCZOS)
 
 
 if __name__ == "__main__":

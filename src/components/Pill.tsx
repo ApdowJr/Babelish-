@@ -1,19 +1,20 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, typography } from '@/theme/tokens';
+import { radii, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 export type PillTone = 'free' | 'beta' | 'new' | 'muted' | 'accent' | 'sky' | 'lilac' | 'dark';
 
-const TONES: Record<PillTone, { bg: string; fg: string }> = {
-  free: { bg: colors.successSoft, fg: colors.success },
-  beta: { bg: colors.accentSoft, fg: colors.accent },
-  new: { bg: colors.sunSoft, fg: colors.warning },
-  muted: { bg: colors.surfaceHigh, fg: colors.textMuted },
-  accent: { bg: colors.accentSoft, fg: colors.accent },
-  sky: { bg: colors.skySoft, fg: colors.sky },
-  lilac: { bg: colors.lilacSoft, fg: colors.lilac },
-  dark: { bg: 'rgba(255,255,255,0.14)', fg: colors.onDark },
-};
+const tones = (c: Palette): Record<PillTone, { bg: string; fg: string }> => ({
+  free: { bg: c.successSoft, fg: c.success },
+  beta: { bg: c.accentSoft, fg: c.accentInk },
+  new: { bg: c.sunSoft, fg: c.sunInk },
+  muted: { bg: c.surfaceHigh, fg: c.textMuted },
+  accent: { bg: c.accentSoft, fg: c.accentInk },
+  sky: { bg: c.skySoft, fg: c.skyInk },
+  lilac: { bg: c.lilacSoft, fg: c.lilacInk },
+  dark: { bg: 'rgba(255,255,255,0.14)', fg: c.onDark },
+});
 
 type Props = {
   label: string;
@@ -23,7 +24,8 @@ type Props = {
 };
 
 export function Pill({ label, tone = 'muted', icon, style }: Props) {
-  const palette = TONES[tone];
+  const styles = useThemedStyles(createStyles);
+  const palette = tones(useTheme().colors)[tone];
   return (
     <View style={[styles.pill, { backgroundColor: palette.bg }, style]}>
       {icon ? <Ionicons name={icon} size={11} color={palette.fg} /> : null}
@@ -32,7 +34,7 @@ export function Pill({ label, tone = 'muted', icon, style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

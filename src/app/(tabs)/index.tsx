@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
+import { Avatar } from '@/components/Avatar';
 import { SectionHeader } from '@/components/SectionHeader';
 import { ProgressBar } from '@/components/ProgressBar';
 import { StatTile } from '@/components/StatTile';
@@ -26,9 +27,12 @@ import { loadCurriculum } from '@/lib/curriculum/store';
 import { wordOfTheDay } from '@/lib/phrasebook';
 import { speakNative } from '@/lib/ai';
 import type { Chapter, Lesson } from '@/lib/curriculum/types';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 export default function HomeScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { user, isDemo, getAccessToken } = useAuth();
   const {
     targetLanguageId,
@@ -142,13 +146,6 @@ export default function HomeScreen() {
   const greeting =
     hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const firstName = (profile.displayName || user?.displayName || 'friend').split(' ')[0];
-  const initials = (profile.displayName || user?.displayName || 'B')
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   const myLanguages = activeLanguageIds.filter((id) => LANGUAGES.some((l) => l.id === id));
 
@@ -177,11 +174,17 @@ export default function HomeScreen() {
             </View>
             <Pressable
               onPress={() => router.push('/profile')}
-              style={styles.avatar}
               accessibilityRole="button"
               accessibilityLabel="Open your profile"
+              hitSlop={6}
             >
-              <Text style={styles.avatarText}>{initials}</Text>
+              <Avatar
+                name={profile.displayName || user?.displayName}
+                emoji={profile.avatar}
+                color={profile.avatarColor}
+                size={38}
+                onDark
+              />
             </Pressable>
           </View>
         </View>
@@ -277,15 +280,15 @@ export default function HomeScreen() {
             icon="flame"
             value={streak}
             label="DAY STREAK"
-            tint={colors.accent}
+            tint={colors.accentInk}
             tintSoft={colors.accentSoft}
           />
-          <StatTile icon="sparkles" value={dailyNow} label="XP TODAY" tint={colors.sun} tintSoft={colors.sunSoft} />
+          <StatTile icon="sparkles" value={dailyNow} label="XP TODAY" tint={colors.sunInk} tintSoft={colors.sunSoft} />
           <StatTile
             icon="book"
             value={Object.keys(vocab).length}
             label="WORDS SAVED"
-            tint={colors.lilac}
+            tint={colors.lilacInk}
             tintSoft={colors.lilacSoft}
           />
         </View>
@@ -568,7 +571,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   flex: { flex: 1 },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   pressed: { opacity: 0.86 },
@@ -579,42 +582,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.md,
   },
-  greeting: { ...typography.caption, color: colors.textMuted },
-  name: { ...typography.title, color: colors.text, marginTop: 1 },
+  greeting: { ...typography.caption, color: c.textMuted },
+  name: { ...typography.title, color: c.text, marginTop: 1 },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   freeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radii.pill,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  freeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.success },
-  freeText: { ...typography.micro, fontSize: 9.5, color: colors.primary },
+  freeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.success },
+  freeText: { ...typography.micro, fontSize: 9.5, color: c.primary },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.surface,
+    borderColor: c.surface,
     ...shadows.card,
   },
-  avatarText: { ...typography.bodyStrong, color: colors.onDark, fontSize: 14 },
+  avatarText: { ...typography.bodyStrong, color: c.onDark, fontSize: 14 },
   demoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.warningSoft,
+    backgroundColor: c.warningSoft,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  demoBannerText: { ...typography.caption, color: colors.warning, flex: 1, lineHeight: 18 },
+  demoBannerText: { ...typography.caption, color: c.warning, flex: 1, lineHeight: 18 },
   hero: {
     borderRadius: radii.xl,
     padding: spacing.xl,
@@ -651,9 +654,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.16)',
   },
   heroFlag: { fontSize: 30 },
-  heroKicker: { ...typography.micro, color: colors.onDarkFaint, fontSize: 9.5 },
-  heroTitle: { ...typography.heading, color: colors.onDark, fontSize: 21, marginTop: 2 },
-  heroNative: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2, fontSize: 12 },
+  heroKicker: { ...typography.micro, color: c.onDarkFaint, fontSize: 9.5 },
+  heroTitle: { ...typography.heading, color: c.onDark, fontSize: 21, marginTop: 2 },
+  heroNative: { ...typography.caption, color: c.onDarkMuted, marginTop: 2, fontSize: 12 },
   heroArrow: {
     width: 38,
     height: 38,
@@ -664,15 +667,15 @@ const styles = StyleSheet.create({
   },
   heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.16)', marginVertical: spacing.lg },
   heroBottom: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  heroChapter: { ...typography.micro, color: colors.onDarkMuted, letterSpacing: 0.5 },
-  heroLesson: { ...typography.bodyStrong, color: colors.onDark, marginTop: 3, fontSize: 16 },
+  heroChapter: { ...typography.micro, color: c.onDarkMuted, letterSpacing: 0.5 },
+  heroLesson: { ...typography.bodyStrong, color: c.onDark, marginTop: 3, fontSize: 16 },
   heroScore: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
   },
-  heroScoreText: { ...typography.micro, color: colors.onDark, fontSize: 10 },
+  heroScoreText: { ...typography.micro, color: c.onDark, fontSize: 10 },
   heroProgressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -686,25 +689,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
     overflow: 'hidden',
   },
-  heroFill: { height: '100%', borderRadius: 3, backgroundColor: colors.sun },
-  heroProgressText: { ...typography.micro, fontSize: 9, color: colors.onDarkMuted },
+  heroFill: { height: '100%', borderRadius: 3, backgroundColor: c.sun },
+  heroProgressText: { ...typography.micro, fontSize: 9, color: c.onDarkMuted },
   heroCta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: colors.sun,
+    backgroundColor: c.sun,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: 9,
     marginTop: spacing.lg,
   },
-  heroCtaText: { ...typography.caption, color: colors.gradientFrom, fontWeight: '800', fontSize: 12 },
+  heroCtaText: { ...typography.caption, color: c.gradientFrom, fontWeight: '800', fontSize: 12 },
   statRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   goalCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginTop: spacing.md,
@@ -715,59 +718,59 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  goalTitle: { ...typography.bodyStrong, color: colors.text },
-  goalSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
-  goalPct: { ...typography.heading, color: colors.primary, fontSize: 17 },
+  goalTitle: { ...typography.bodyStrong, color: c.text },
+  goalSub: { ...typography.caption, color: c.textMuted, marginTop: 2 },
+  goalPct: { ...typography.heading, color: c.primary, fontSize: 17 },
   goalBar: { marginTop: spacing.md },
   goalEdit: { alignSelf: 'flex-end', marginTop: spacing.sm },
-  goalEditText: { ...typography.micro, color: colors.textFaint, fontSize: 9.5 },
+  goalEditText: { ...typography.micro, color: c.textFaint, fontSize: 9.5 },
   planCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     ...shadows.card,
   },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  planDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  planDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
   planNumber: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  planNumberText: { ...typography.bodyStrong, color: colors.primary, fontSize: 13 },
-  planTitle: { ...typography.bodyStrong, color: colors.text, fontSize: 14 },
-  planSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: 2, fontSize: 12 },
+  planNumberText: { ...typography.bodyStrong, color: c.primary, fontSize: 13 },
+  planTitle: { ...typography.bodyStrong, color: c.text, fontSize: 14 },
+  planSubtitle: { ...typography.caption, color: c.textMuted, marginTop: 2, fontSize: 12 },
   langRail: { gap: spacing.sm, paddingVertical: 2, paddingRight: spacing.lg },
   langCard: {
     width: 150,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
-  langCardActive: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: '#FBFDFB' },
+  langCardActive: { borderColor: c.primary, borderWidth: 1.5, backgroundColor: c.surfaceHigh },
   langTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   langFlag: { fontSize: 24 },
-  langName: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 14 },
-  langMeta: { ...typography.caption, color: colors.textMuted, marginTop: 1, fontSize: 11 },
+  langName: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm, fontSize: 14 },
+  langMeta: { ...typography.caption, color: c.textMuted, marginTop: 1, fontSize: 11 },
   langProgress: { marginTop: spacing.sm },
   langAdd: {
     width: 108,
     borderRadius: radii.md,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfaceTint,
+    borderColor: c.borderStrong,
+    backgroundColor: c.surfaceTint,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
@@ -777,40 +780,40 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  langAddText: { ...typography.caption, color: colors.primary, textAlign: 'center', fontSize: 11, fontWeight: '600' },
+  langAddText: { ...typography.caption, color: c.primary, textAlign: 'center', fontSize: 11, fontWeight: '600' },
   wordCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     ...shadows.card,
   },
   wordMain: { flex: 1 },
-  wordTarget: { ...typography.title, color: colors.text, fontSize: 24 },
-  wordRoman: { ...typography.caption, color: colors.textFaint, fontStyle: 'italic', marginTop: 2 },
-  wordEnglish: { ...typography.body, color: colors.textMuted, marginTop: 4 },
+  wordTarget: { ...typography.title, color: c.text, fontSize: 24 },
+  wordRoman: { ...typography.caption, color: c.textFaint, fontStyle: 'italic', marginTop: 2 },
+  wordEnglish: { ...typography.body, color: c.textMuted, marginTop: 4 },
   wordTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.md },
   wordActions: { justifyContent: 'center', gap: spacing.sm },
   wordAction: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wordActionSaved: { backgroundColor: colors.successSoft },
+  wordActionSaved: { backgroundColor: c.successSoft },
   rhythmCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     ...shadows.card,
@@ -821,57 +824,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  rhythmTitle: { ...typography.bodyStrong, color: colors.text },
-  rhythmSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  rhythmTitle: { ...typography.bodyStrong, color: c.text },
+  rhythmSub: { ...typography.caption, color: c.textMuted, marginTop: 2 },
   levelChip: {
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  levelChipText: { ...typography.micro, color: colors.primary, fontSize: 10 },
-  rhythmNote: { ...typography.micro, color: colors.textFaint, marginTop: spacing.md, letterSpacing: 0.2, lineHeight: 15, fontWeight: '500' },
+  levelChipText: { ...typography.micro, color: c.primary, fontSize: 10 },
+  rhythmNote: { ...typography.micro, color: c.textFaint, marginTop: spacing.md, letterSpacing: 0.2, lineHeight: 15, fontWeight: '500' },
   exploreRail: { gap: spacing.sm, paddingVertical: 2, paddingRight: spacing.lg },
   exploreCard: {
     width: 138,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
   exploreFlag: { fontSize: 24 },
-  exploreName: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 13 },
-  exploreHello: { ...typography.caption, color: colors.primary, marginTop: 3, fontSize: 12, fontWeight: '600' },
-  exploreMeaning: { ...typography.micro, color: colors.textFaint, marginTop: 1, fontSize: 9, letterSpacing: 0.2, fontWeight: '500' },
+  exploreName: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm, fontSize: 13 },
+  exploreHello: { ...typography.caption, color: c.primary, marginTop: 3, fontSize: 12, fontWeight: '600' },
+  exploreMeaning: { ...typography.micro, color: c.textFaint, marginTop: 1, fontSize: 9, letterSpacing: 0.2, fontWeight: '500' },
   exploreAll: {
     width: 108,
     borderRadius: radii.md,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     padding: spacing.md,
   },
-  exploreAllText: { ...typography.caption, color: colors.primary, textAlign: 'center', fontWeight: '700', fontSize: 12 },
+  exploreAllText: { ...typography.caption, color: c.primary, textAlign: 'center', fontWeight: '700', fontSize: 12 },
   freeCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginTop: spacing.xl,
   },
   freeEmoji: { fontSize: 26 },
-  freeTitle: { ...typography.bodyStrong, color: colors.text },
-  freeBody: { ...typography.caption, color: colors.textMuted, marginTop: 3, lineHeight: 18 },
+  freeTitle: { ...typography.bodyStrong, color: c.text },
+  freeBody: { ...typography.caption, color: c.textMuted, marginTop: 3, lineHeight: 18 },
   freePerks: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
-  freePerk: { ...typography.micro, color: colors.success, fontSize: 9.5, letterSpacing: 0.2 },
+  freePerk: { ...typography.micro, color: c.success, fontSize: 9.5, letterSpacing: 0.2 },
   footerNote: {
     ...typography.caption,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.xl,
     lineHeight: 18,

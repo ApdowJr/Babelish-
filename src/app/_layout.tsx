@@ -12,8 +12,9 @@ import { SubscriptionProvider } from '@/state/subscription';
 import { AlertProvider } from '@/components/AlertProvider';
 import { CrashScreen, ErrorBoundary as ScreenBoundary } from '@/components/ErrorBoundary';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
-import { colors } from '@/theme/tokens';
+import { type Palette } from '@/theme/tokens';
 import { validateConfigurationAtStartup } from '@/lib/config';
+import { ThemeProvider, useTheme, useThemedStyles } from '@/theme/theme';
 
 // Keep the native splash up until our own animated one has painted: the two
 // use the same mark on the same forest plate, so the hand-off is invisible.
@@ -21,6 +22,12 @@ import { validateConfigurationAtStartup } from '@/lib/config';
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
   SplashScreen.setOptions({ duration: 220, fade: true });
+}
+
+/** Light glyphs on the night palette, dark glyphs on parchment. */
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }
 
 export default function RootLayout() {
@@ -33,22 +40,26 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PreferencesProvider>
-        <LearningProvider>
-          <ProfileProvider>
-            <AnalyticsProvider>
-              <SubscriptionProvider>
-                <AlertProvider>
-                  <StatusBar style="dark" />
-                  {/* Keeps a render error on one screen instead of a blank app.
-                      Nothing here touches storage or auth: progress survives. */}
-                  <ScreenBoundary onHome={() => router.replace('/')}>
-                    <RootNavigator />
-                  </ScreenBoundary>
-                </AlertProvider>
-              </SubscriptionProvider>
-            </AnalyticsProvider>
-          </ProfileProvider>
-        </LearningProvider>
+        {/* Inside preferences (it reads `themeMode`) and outside everything
+            visual, so every screen below can resolve the palette. */}
+        <ThemeProvider>
+          <LearningProvider>
+            <ProfileProvider>
+              <AnalyticsProvider>
+                <SubscriptionProvider>
+                  <AlertProvider>
+                    <ThemedStatusBar />
+                    {/* Keeps a render error on one screen instead of a blank app.
+                        Nothing here touches storage or auth: progress survives. */}
+                    <ScreenBoundary onHome={() => router.replace('/')}>
+                      <RootNavigator />
+                    </ScreenBoundary>
+                  </AlertProvider>
+                </SubscriptionProvider>
+              </AnalyticsProvider>
+            </ProfileProvider>
+          </LearningProvider>
+        </ThemeProvider>
       </PreferencesProvider>
     </AuthProvider>
   );
@@ -59,6 +70,8 @@ export default function RootLayout() {
  * everyone else gets the auth stack. Guards redirect automatically.
  */
 function RootNavigator() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { user, loading } = useAuth();
   const { ready: prefsReady, onboarded, reduceMotion } = usePreferences();
   const [splashDone, setSplashDone] = useState(false);
@@ -104,7 +117,28 @@ function RootNavigator() {
             <Stack.Protected guard={signedIn}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="terms"
+          options={{
+            headerShown: true,
+            title: 'Terms',
+            headerStyle: { backgroundColor: colors.bg },
+            headerTintColor: colors.text,
+            headerShadowVisible: false,
+          }}
+        />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="progress"
+                options={{
+                  headerShown: true,
+                  title: 'Progress',
+                  headerStyle: { backgroundColor: colors.bg },
+                  headerTintColor: colors.text,
+                  headerShadowVisible: false,
+                }}
+              />
               <Stack.Screen
                 name="language/[id]"
                 options={{
@@ -143,8 +177,8 @@ function RootNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bg },
   fill: { flex: 1 },
 });
 

@@ -16,9 +16,12 @@ import { isChapterUnlocked, loadCurriculum } from '@/lib/curriculum/store';
 import { courseStatus } from '@/lib/curriculum/status';
 import { speakNative } from '@/lib/ai';
 import type { Chapter, Lesson } from '@/lib/curriculum/types';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 export default function LanguageDetailScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const language = getLanguage(String(id));
   const {
@@ -305,7 +308,7 @@ export default function LanguageDetailScreen() {
                             </Text>
                           ) : (
                             <View style={styles.playDot}>
-                              <Ionicons name="play" size={12} color={colors.accent} />
+                              <Ionicons name="play" size={12} color={colors.accentInk} />
                             </View>
                           )}
                         </Pressable>
@@ -418,6 +421,8 @@ export default function LanguageDetailScreen() {
 }
 
 function Meta({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={styles.metaPill}>
       <Ionicons name={icon} size={11} color={colors.onDarkMuted} />
@@ -429,6 +434,7 @@ function Meta({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: st
 }
 
 function ProgressStat({ value, label }: { value: number | string; label: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.progressStat}>
       <Text style={styles.progressStatValue}>{value}</Text>
@@ -437,7 +443,7 @@ function ProgressStat({ value, label }: { value: number | string; label: string 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   flex: { flex: 1 },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   pressed: { opacity: 0.85 },
@@ -474,10 +480,10 @@ const styles = StyleSheet.create({
   },
   flag: { fontSize: 56 },
   heroPills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 },
-  name: { ...typography.display, color: colors.onDark, marginTop: spacing.md },
-  native: { ...typography.body, color: colors.onDarkMuted, marginTop: 2 },
-  hello: { ...typography.title, color: colors.sun, marginTop: spacing.lg, fontSize: 22 },
-  helloMeaning: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2 },
+  name: { ...typography.display, color: c.onDark, marginTop: spacing.md },
+  native: { ...typography.body, color: c.onDarkMuted, marginTop: 2 },
+  hello: { ...typography.title, color: c.sun, marginTop: spacing.lg, fontSize: 22 },
+  helloMeaning: { ...typography.caption, color: c.onDarkMuted, marginTop: 2 },
   heroMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.lg },
   metaPill: {
     flexDirection: 'row',
@@ -489,7 +495,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     maxWidth: '100%',
   },
-  metaText: { ...typography.micro, color: colors.onDarkMuted, fontSize: 9.5, letterSpacing: 0.3 },
+  metaText: { ...typography.micro, color: c.onDarkMuted, fontSize: 9.5, letterSpacing: 0.3 },
   heroCta: { marginTop: spacing.lg },
   addToggle: {
     flexDirection: 'row',
@@ -499,61 +505,61 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingVertical: spacing.xs,
   },
-  addToggleText: { ...typography.caption, color: colors.onDark, fontWeight: '600' },
+  addToggleText: { ...typography.caption, color: c.onDark, fontWeight: '600' },
   progressCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginTop: spacing.md,
     ...shadows.card,
   },
   progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
-  progressTitle: { ...typography.bodyStrong, color: colors.text },
-  progressSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
-  progressPct: { ...typography.title, color: colors.primary, fontSize: 22 },
+  progressTitle: { ...typography.bodyStrong, color: c.text },
+  progressSub: { ...typography.caption, color: c.textMuted, marginTop: 2 },
+  progressPct: { ...typography.title, color: c.primary, fontSize: 22 },
   progressBar: { marginTop: spacing.md },
   progressStats: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.lg,
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.sm,
     paddingVertical: spacing.md,
   },
   progressStat: { flex: 1, alignItems: 'center' },
-  progressStatValue: { ...typography.heading, color: colors.text, fontSize: 17 },
-  progressStatLabel: { ...typography.micro, color: colors.textFaint, fontSize: 8.5, marginTop: 2 },
-  progressDivider: { width: 1, height: 24, backgroundColor: colors.border },
+  progressStatValue: { ...typography.heading, color: c.text, fontSize: 17 },
+  progressStatLabel: { ...typography.micro, color: c.textFaint, fontSize: 8.5, marginTop: 2 },
+  progressDivider: { width: 1, height: 24, backgroundColor: c.border },
   courseCard: {
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   courseTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  courseMeta: { ...typography.micro, color: colors.textFaint, flexShrink: 1, textAlign: 'right' },
-  courseNote: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 18 },
-  blurb: { ...typography.body, color: colors.text, lineHeight: 23, marginTop: spacing.xl },
+  courseMeta: { ...typography.micro, color: c.textFaint, flexShrink: 1, textAlign: 'right' },
+  courseNote: { ...typography.caption, color: c.textMuted, marginTop: spacing.sm, lineHeight: 18 },
+  blurb: { ...typography.body, color: c.text, lineHeight: 23, marginTop: spacing.xl },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   dialectChip: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
   },
-  dialectText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
+  dialectText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
   loading: { paddingVertical: spacing.xl, alignItems: 'center' },
-  comingSoon: { ...typography.caption, color: colors.textFaint, lineHeight: 18 },
+  comingSoon: { ...typography.caption, color: c.textFaint, lineHeight: 18 },
   chapterCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     marginBottom: spacing.sm,
     overflow: 'hidden',
@@ -564,57 +570,57 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chapterBadgeLocked: { backgroundColor: colors.surfaceHigh },
-  chapterNum: { ...typography.bodyStrong, color: colors.primary, fontSize: 14 },
+  chapterBadgeLocked: { backgroundColor: c.surfaceHigh },
+  chapterNum: { ...typography.bodyStrong, color: c.primary, fontSize: 14 },
   chapterTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  chapterTitle: { ...typography.bodyStrong, color: colors.text, flexShrink: 1 },
-  chapterTitleLocked: { color: colors.textFaint },
-  chapterDesc: { ...typography.caption, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
+  chapterTitle: { ...typography.bodyStrong, color: c.text, flexShrink: 1 },
+  chapterTitleLocked: { color: c.textFaint },
+  chapterDesc: { ...typography.caption, color: c.textMuted, marginTop: 2, lineHeight: 17 },
   chapterProgressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   chapterProgressTrack: {
     flex: 1,
     height: 5,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     overflow: 'hidden',
   },
-  chapterProgressFill: { height: '100%', backgroundColor: colors.success, borderRadius: radii.pill },
-  chapterProgressText: { ...typography.micro, color: colors.success, fontSize: 9 },
-  lessonList: { borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: spacing.lg },
+  chapterProgressFill: { height: '100%', backgroundColor: c.success, borderRadius: radii.pill },
+  chapterProgressText: { ...typography.micro, color: c.success, fontSize: 9 },
+  lessonList: { borderTopWidth: 1, borderTopColor: c.border, paddingHorizontal: spacing.lg },
   lessonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 60, paddingVertical: spacing.md },
-  rowDivider: { height: 1, backgroundColor: colors.border },
+  rowDivider: { height: 1, backgroundColor: c.border },
   lessonDot: {
     width: 30,
     height: 30,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceHigh,
+    borderColor: c.border,
+    backgroundColor: c.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lessonDotDone: { backgroundColor: colors.successSoft, borderColor: colors.success },
-  lessonDotText: { ...typography.micro, color: colors.textMuted, fontSize: 10 },
-  lessonTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
-  lessonGoal: { ...typography.micro, color: colors.textFaint, marginTop: 2, fontSize: 9, letterSpacing: 0.2, fontWeight: '500', lineHeight: 14 },
-  lessonScore: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  lessonScoreDone: { color: colors.success, fontWeight: '800' },
+  lessonDotDone: { backgroundColor: c.successSoft, borderColor: c.success },
+  lessonDotText: { ...typography.micro, color: c.textMuted, fontSize: 10 },
+  lessonTitle: { ...typography.body, color: c.text, fontWeight: '600' },
+  lessonGoal: { ...typography.micro, color: c.textFaint, marginTop: 2, fontSize: 9, letterSpacing: 0.2, fontWeight: '500', lineHeight: 14 },
+  lessonScore: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  lessonScoreDone: { color: c.success, fontWeight: '800' },
   playDot: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: c.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   phraseList: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     ...shadows.card,
@@ -624,27 +630,27 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  phraseTarget: { ...typography.bodyStrong, color: colors.text, fontSize: 15 },
-  phraseEnglish: { ...typography.caption, color: colors.textMuted, marginTop: 1, fontSize: 12 },
+  phraseTarget: { ...typography.bodyStrong, color: c.text, fontSize: 15 },
+  phraseEnglish: { ...typography.caption, color: c.textMuted, marginTop: 1, fontSize: 12 },
   scenarioRail: { gap: spacing.sm, paddingVertical: 2, paddingRight: spacing.lg },
   scenarioCard: {
     width: 160,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
   scenarioEmoji: { fontSize: 24 },
-  scenarioTitle: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 13 },
-  scenarioMeta: { ...typography.micro, color: colors.accent, marginTop: 4, fontSize: 9 },
+  scenarioTitle: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm, fontSize: 13 },
+  scenarioMeta: { ...typography.micro, color: c.accent, marginTop: 4, fontSize: 9 },
   footerNote: {
     ...typography.caption,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
     lineHeight: 18,

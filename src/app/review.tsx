@@ -21,7 +21,8 @@ import {
   summarizeSession,
 } from '@/lib/review';
 import type { VocabItem } from '@/lib/curriculum/types';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Mode = 'flashcards' | 'quiz';
 
@@ -38,6 +39,8 @@ const SKILL_LABEL: Record<Skill, string> = {
 };
 
 export default function ReviewScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { vocab, ready, reviewWord, wordsMastered } = useLearning();
   const { state: analytics } = useAnalytics();
   const { targetLanguageId } = usePreferences();
@@ -136,9 +139,9 @@ export default function ReviewScreen() {
               icon="refresh"
               value={summary.incorrect}
               label="TO REVISIT"
-              tint={colors.accent}
+              tint={colors.accentInk}
             />
-            <StatTile icon="book" value={wordsMastered} label="MASTERED" tint={colors.lilac} />
+            <StatTile icon="book" value={wordsMastered} label="MASTERED" tint={colors.lilacInk} />
           </View>
 
           {weakLabel ? (
@@ -242,7 +245,7 @@ export default function ReviewScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Hear the answer"
               >
-                <Ionicons name="volume-medium-outline" size={17} color={colors.accent} />
+                <Ionicons name="volume-medium-outline" size={17} color={colors.accentInk} />
                 <Text style={styles.listenLabel}>Hear it</Text>
               </Pressable>
             </>
@@ -295,7 +298,7 @@ export default function ReviewScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Hear ${item.target}`}
               >
-                <Ionicons name="volume-medium-outline" size={24} color={colors.accent} />
+                <Ionicons name="volume-medium-outline" size={24} color={colors.accentInk} />
               </Pressable>
             </View>
           ) : null}
@@ -359,15 +362,15 @@ export default function ReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateWrap: { alignItems: 'center', paddingTop: spacing.xxxl, paddingHorizontal: spacing.sm },
   stateEmoji: { fontSize: 64 },
-  stateTitle: { ...typography.title, color: colors.text, marginTop: spacing.lg },
+  stateTitle: { ...typography.title, color: c.text, marginTop: spacing.lg },
   stateBody: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginTop: spacing.sm,
@@ -377,24 +380,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'flex-start',
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radii.md,
     padding: spacing.md,
     marginTop: spacing.xl,
     alignSelf: 'stretch',
   },
-  recommendTitle: { ...typography.bodyStrong, color: colors.text, textTransform: 'capitalize' },
-  recommendBody: { ...typography.caption, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
+  recommendTitle: { ...typography.bodyStrong, color: c.text, textTransform: 'capitalize' },
+  recommendBody: { ...typography.caption, color: c.textMuted, marginTop: 2, lineHeight: 18 },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
   progressTrack: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radii.pill },
-  progressLabel: { ...typography.micro, color: colors.textFaint },
+  progressFill: { height: '100%', backgroundColor: c.accentInk, borderRadius: radii.pill },
+  progressLabel: { ...typography.micro, color: c.textFaint },
   summaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -403,26 +406,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.xl,
     marginTop: spacing.md,
   },
-  cardLabel: { ...typography.micro, color: colors.textFaint },
-  translation: { ...typography.display, color: colors.text, marginTop: spacing.md },
-  cardHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
-  flashTarget: { ...typography.title, color: colors.primary },
+  cardLabel: { ...typography.micro, color: c.textFaint },
+  translation: { ...typography.display, color: c.text, marginTop: spacing.md },
+  cardHint: { ...typography.caption, color: c.textMuted, marginTop: spacing.xs },
+  divider: { height: 1, backgroundColor: c.border, marginVertical: spacing.lg },
+  flashTarget: { ...typography.title, color: c.primary },
   listenRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
-  listenLabel: { ...typography.caption, color: colors.accent, fontWeight: '600' },
+  listenLabel: { ...typography.caption, color: c.accent, fontWeight: '600' },
   input: {
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceHigh,
+    color: c.text,
+    backgroundColor: c.surfaceHigh,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     minHeight: 54,
@@ -437,31 +440,31 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginTop: spacing.lg,
   },
-  resultGood: { backgroundColor: colors.successSoft },
-  resultBad: { backgroundColor: colors.dangerSoft },
+  resultGood: { backgroundColor: c.successSoft },
+  resultBad: { backgroundColor: c.dangerSoft },
   resultText: { ...typography.bodyStrong },
-  resultSub: { ...typography.micro, color: colors.textMuted, marginTop: 2 },
+  resultSub: { ...typography.micro, color: c.textMuted, marginTop: 2 },
   gradeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   gradeButton: { flex: 1 },
   slowRow: { alignSelf: 'center', marginTop: spacing.md },
-  slowText: { ...typography.caption, color: colors.textMuted },
+  slowText: { ...typography.caption, color: c.textMuted },
   boxRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
     paddingTop: spacing.lg,
   },
   boxDot: { width: 10, height: 10, borderRadius: 5 },
-  boxDotOn: { backgroundColor: colors.primary },
-  boxDotOff: { backgroundColor: colors.surfaceHigh },
-  boxLabel: { ...typography.micro, color: colors.textFaint, marginLeft: spacing.xs },
+  boxDotOn: { backgroundColor: c.primary },
+  boxDotOff: { backgroundColor: c.surfaceHigh },
+  boxLabel: { ...typography.micro, color: c.textFaint, marginLeft: spacing.xs },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   focusHint: {
     ...typography.caption,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
     marginBottom: spacing.xxl,

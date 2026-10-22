@@ -52,7 +52,8 @@ import { NEON_API_URL } from '@/lib/neon';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
 import { flushReportQueue, sendReport } from '@/lib/reports';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type ChatMessage = TutorMessage & {
   fromVoice?: boolean;
@@ -68,21 +69,23 @@ type PracticeState =
   | { phraseId: string; phase: 'done'; transcript: string; score: ReturnType<typeof scorePronunciation> };
 
 /** Ink colours that stay readable on the soft chip backgrounds. */
-const BAND_INK = {
-  success: colors.success,
-  warning: '#B07A00',
-  danger: colors.danger,
-} as const;
+const bandInk = (c: Palette) => ({
+  success: c.success,
+  warning: c.warning,
+  danger: c.danger,
+});
 
-const BAND_SOFT_BG = {
-  success: colors.successSoft,
-  warning: 'rgba(241, 196, 15, 0.18)',
-  danger: colors.dangerSoft,
-} as const;
+const bandSoftBg = (c: Palette) => ({
+  success: c.successSoft,
+  warning: c.warningSoft,
+  danger: c.dangerSoft,
+});
 
 const SLOW_RATE = 0.55;
 
 export default function SpeakScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { user, getAccessToken } = useAuth();
   const {
     targetLanguageId,
@@ -705,7 +708,7 @@ export default function SpeakScreen() {
             <Ionicons
               name={speakingKey === `phrase-${phrase.id}` ? 'stop' : 'volume-medium-outline'}
               size={15}
-              color={colors.accent}
+              color={colors.accentInk}
             />
             <Text style={styles.phraseActionLabel}>
               {speakingKey === `phrase-${phrase.id}` ? 'Stop' : 'Listen'}
@@ -754,7 +757,7 @@ export default function SpeakScreen() {
               accessibilityRole="button"
               accessibilityLabel="Practice by typing this phrase"
             >
-              <Ionicons name="create-outline" size={15} color={colors.accent} />
+              <Ionicons name="create-outline" size={15} color={colors.accentInk} />
               <Text style={styles.phraseActionLabel}>Type</Text>
             </Pressable>
           ) : null}
@@ -812,7 +815,7 @@ export default function SpeakScreen() {
               <Text
                 style={[
                   styles.scorePercent,
-                  { color: BAND_INK[scoreBand(active.score.percent)] },
+                  { color: bandInk(colors)[scoreBand(active.score.percent)] },
                 ]}
               >
                 {active.score.percent}%
@@ -827,9 +830,9 @@ export default function SpeakScreen() {
                 return (
                   <View
                     key={`${token.text}-${i}`}
-                    style={[styles.wordChip, { backgroundColor: BAND_SOFT_BG[band] }]}
+                    style={[styles.wordChip, { backgroundColor: bandSoftBg(colors)[band] }]}
                   >
-                    <Text style={[styles.wordChipText, { color: BAND_INK[band] }]}>
+                    <Text style={[styles.wordChipText, { color: bandInk(colors)[band] }]}>
                       {token.text}
                     </Text>
                   </View>
@@ -853,7 +856,7 @@ export default function SpeakScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Try saying it again"
                 >
-                  <Ionicons name="refresh" size={15} color={colors.accent} />
+                  <Ionicons name="refresh" size={15} color={colors.accentInk} />
                   <Text style={styles.phraseActionLabel}>Try again</Text>
                 </Pressable>
               ) : null}
@@ -864,7 +867,7 @@ export default function SpeakScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Try again by typing"
               >
-                <Ionicons name="create-outline" size={15} color={colors.accent} />
+                <Ionicons name="create-outline" size={15} color={colors.accentInk} />
                 <Text style={styles.phraseActionLabel}>Type</Text>
               </Pressable>
               <Pressable
@@ -876,7 +879,7 @@ export default function SpeakScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Hear the reference audio slowly"
               >
-                <Ionicons name="volume-medium-outline" size={15} color={colors.accent} />
+                <Ionicons name="volume-medium-outline" size={15} color={colors.accentInk} />
                 <Text style={styles.phraseActionLabel}>Reference</Text>
               </Pressable>
               <Pressable
@@ -1020,7 +1023,7 @@ export default function SpeakScreen() {
             {phrases.length > 0 ? (
               <View style={styles.practiceCard}>
                 <View style={styles.practiceHeaderRow}>
-                  <Ionicons name="mic-circle-outline" size={18} color={colors.accent} />
+                  <Ionicons name="mic-circle-outline" size={18} color={colors.accentInk} />
                   <Text style={styles.practiceTitle}>Say it out loud</Text>
                 </View>
                 <Text style={styles.practiceSubtitle}>
@@ -1067,7 +1070,7 @@ export default function SpeakScreen() {
                   <Ionicons
                     name={speakingKey === `msg-${index}` ? 'stop' : 'volume-medium-outline'}
                     size={15}
-                    color={colors.accent}
+                    color={colors.accentInk}
                   />
                   <Text style={styles.listenLabel}>
                     {speakingKey === `msg-${index}` ? 'Stop' : 'Listen'}
@@ -1091,7 +1094,7 @@ export default function SpeakScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Show translation for this message"
                 >
-                  <Ionicons name="eye-outline" size={15} color={colors.accent} />
+                  <Ionicons name="eye-outline" size={15} color={colors.accentInk} />
                   <Text style={styles.listenLabel}>
                     {revealed.includes(index) ? 'Hide' : 'Translate'}
                   </Text>
@@ -1159,7 +1162,7 @@ export default function SpeakScreen() {
         ) : null}
         {voiceHelp ? (
           <View style={styles.voiceHelpBox}>
-            <Ionicons name="mic-outline" size={17} color={colors.accent} />
+            <Ionicons name="mic-outline" size={17} color={colors.accentInk} />
             <View style={styles.offlineBody}>
               <Text style={styles.offlineText}>{voiceHelp.message}</Text>
               {voiceHelp.action === 'browser-stt' ? (
@@ -1329,8 +1332,8 @@ export default function SpeakScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1338,7 +1341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: c.border,
   },
   headerLanguage: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -1348,27 +1351,27 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
   },
   headerFlag: { fontSize: 28 },
-  headerTitle: { ...typography.bodyStrong, color: colors.text },
-  headerSubtitle: { ...typography.caption, color: colors.textMuted },
+  headerTitle: { ...typography.bodyStrong, color: c.text },
+  headerSubtitle: { ...typography.caption, color: c.textMuted },
   translateToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
-  translateLabel: { ...typography.micro, color: colors.textFaint },
+  translateLabel: { ...typography.micro, color: c.textFaint },
   levelCard: { marginBottom: spacing.md },
   levelTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  levelLabel: { ...typography.micro, color: colors.textFaint },
-  levelExplain: { ...typography.caption, color: colors.textMuted, flexShrink: 1 },
+  levelLabel: { ...typography.micro, color: c.textFaint },
+  levelExplain: { ...typography.caption, color: c.textMuted, flexShrink: 1 },
   levelRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
   selectorRow: {
     flexDirection: 'row',
@@ -1381,14 +1384,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
   },
-  selectorText: { ...typography.micro, color: colors.text },
+  selectorText: { ...typography.micro, color: c.text },
   pickerBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(20, 24, 33, 0.45)',
@@ -1396,15 +1399,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   pickerCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     padding: spacing.lg,
     maxHeight: '80%',
   },
-  pickerTitle: { ...typography.title, color: colors.text },
+  pickerTitle: { ...typography.title, color: c.text },
   pickerHint: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: spacing.xs,
     lineHeight: 18,
   },
@@ -1418,26 +1421,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
   },
-  pickerRowOn: { backgroundColor: colors.surfaceTint },
+  pickerRowOn: { backgroundColor: c.surfaceTint },
   pickerFlag: { fontSize: 20 },
-  pickerName: { ...typography.body, color: colors.text, flex: 1 },
-  pickerNative: { ...typography.caption, color: colors.textFaint },
+  pickerName: { ...typography.body, color: c.text, flex: 1 },
+  pickerNative: { ...typography.caption, color: c.textFaint },
   pickerClose: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  pickerCloseText: { ...typography.bodyStrong, color: colors.primary },
+  pickerCloseText: { ...typography.bodyStrong, color: c.primary },
   levelChip: {
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
-  levelChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  levelChipText: { ...typography.micro, color: colors.textMuted },
-  levelChipTextOn: { color: colors.onDark },
+  levelChipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  levelChipText: { ...typography.micro, color: c.textMuted },
+  levelChipTextOn: { color: c.onDark },
   tipText: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     fontStyle: 'italic',
     marginTop: spacing.xs,
     lineHeight: 18,
@@ -1449,8 +1452,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 6,
   },
-  coachStripText: { ...typography.micro, color: colors.textMuted, flex: 1, lineHeight: 14 },
-  coachRetry: { ...typography.micro, color: colors.primary },
+  coachStripText: { ...typography.micro, color: c.textMuted, flex: 1, lineHeight: 14 },
+  coachRetry: { ...typography.micro, color: c.primary },
   quotaStrip: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1460,71 +1463,71 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
-    backgroundColor: colors.warningSoft,
+    backgroundColor: c.warningSoft,
   },
-  quotaStripText: { ...typography.micro, color: colors.text, flex: 1, lineHeight: 16 },
+  quotaStripText: { ...typography.micro, color: c.text, flex: 1, lineHeight: 16 },
   offlineBody: { flex: 1 },
-  offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
+  offlineText: { ...typography.caption, color: c.textMuted, marginTop: 1 },
   voiceHelpBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.sm,
     marginHorizontal: spacing.md,
     marginBottom: spacing.xs,
   },
   voiceHelpAction: { alignSelf: 'flex-start', marginTop: 6 },
-  voiceHelpActionText: { ...typography.micro, color: colors.primary },
-  translateLabelOn: { color: colors.accent },
+  voiceHelpActionText: { ...typography.micro, color: c.primary },
+  translateLabelOn: { color: c.accent },
   listContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   scenarios: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   practiceCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.md,
   },
   practiceHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  practiceTitle: { ...typography.bodyStrong, color: colors.text },
-  practiceSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: -spacing.sm },
+  practiceTitle: { ...typography.bodyStrong, color: c.text },
+  practiceSubtitle: { ...typography.caption, color: c.textMuted, marginTop: -spacing.sm },
   phraseRow: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
     paddingTop: spacing.md,
     gap: spacing.xs,
   },
-  phraseTarget: { ...typography.body, color: colors.text },
+  phraseTarget: { ...typography.body, color: c.text },
   phraseTranslation: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     fontStyle: 'italic',
   },
   phraseActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
   phraseAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   phraseActionRecording: {
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: c.dangerSoft,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  phraseActionLabel: { ...typography.micro, color: colors.accent },
-  phraseBest: { ...typography.micro, color: colors.textFaint, marginTop: spacing.xs },
+  phraseActionLabel: { ...typography.micro, color: c.accent },
+  phraseBest: { ...typography.micro, color: c.textFaint, marginTop: spacing.xs },
   practiceStatusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  practiceStatus: { ...typography.caption, color: colors.textMuted },
-  recDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.danger },
+  practiceStatus: { ...typography.caption, color: c.textMuted },
+  recDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: c.danger },
   typingPracticeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   typingPracticeInput: {
     flex: 1,
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceHigh,
+    color: c.text,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     minHeight: 40,
@@ -1534,12 +1537,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scoreCard: {
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.md,
     padding: spacing.md,
     marginTop: spacing.sm,
@@ -1549,39 +1552,39 @@ const styles = StyleSheet.create({
   scorePercent: { fontSize: 30, fontWeight: '800' },
   scoreDisclaimer: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     lineHeight: 15,
     marginTop: spacing.xs,
   },
-  scoreCaption: { ...typography.caption, color: colors.textMuted },
+  scoreCaption: { ...typography.caption, color: c.textMuted },
   wordChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   wordChip: { borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   wordChipText: { ...typography.caption, fontWeight: '600' },
-  scoreExtra: { ...typography.micro, color: colors.textMuted },
-  scoreHeard: { ...typography.micro, color: colors.textFaint, fontStyle: 'italic' },
+  scoreExtra: { ...typography.micro, color: c.textMuted },
+  scoreHeard: { ...typography.micro, color: c.textFaint, fontStyle: 'italic' },
   scoreActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.xs },
   scoreAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   bubble: { maxWidth: '86%', borderRadius: radii.lg, padding: spacing.lg },
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderTopLeftRadius: spacing.xs,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: c.primary,
     borderTopRightRadius: spacing.xs,
   },
-  aiText: { ...typography.body, color: colors.text, lineHeight: 23 },
-  aiTranslation: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic' },
+  aiText: { ...typography.body, color: c.text, lineHeight: 23 },
+  aiTranslation: { ...typography.caption, color: c.textMuted, marginTop: spacing.sm, fontStyle: 'italic' },
   aiActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.md },
   listenRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  listenLabel: { ...typography.micro, color: colors.accent },
+  listenLabel: { ...typography.micro, color: c.accent },
   // Dark green bubble: the text must be light, not the body ink — this was the
   // "Hi" that looked like it floated outside its own bubble.
-  userText: { ...typography.body, color: colors.onDark, lineHeight: 23 },
+  userText: { ...typography.body, color: c.onDark, lineHeight: 23 },
   userMetaRow: { flexDirection: 'row', marginTop: spacing.sm },
   voiceChip: {
     flexDirection: 'row',
@@ -1592,12 +1595,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  voiceChipText: { ...typography.micro, color: colors.onDark },
+  voiceChipText: { ...typography.micro, color: c.onDark },
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  typingText: { ...typography.caption, color: colors.textMuted },
+  typingText: { ...typography.caption, color: c.textMuted },
   voiceError: {
     ...typography.caption,
-    color: colors.danger,
+    color: c.danger,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
@@ -1610,23 +1613,23 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: 92,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.bg,
+    borderTopColor: c.border,
+    backgroundColor: c.bg,
   },
   micButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  micButtonRecording: { backgroundColor: colors.danger },
+  micButtonRecording: { backgroundColor: c.danger },
   input: {
     flex: 1,
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceHigh,
+    color: c.text,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
     minHeight: 46,
@@ -1639,7 +1642,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.text,
+    backgroundColor: c.text,
   },
   sendButton: {
     width: 46,
@@ -1650,9 +1653,9 @@ const styles = StyleSheet.create({
   },
   demoNote: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     paddingBottom: spacing.sm,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
   },
 });

@@ -26,11 +26,18 @@ import {
   type Language,
 } from '@/data/languages';
 import { DAILY_GOALS, dailyGoalXp, usePreferences } from '@/state/preferences';
-import { colors, layout, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { useProfile } from '@/state/profile';
+import { useAuth } from '@/context/AuthContext';
+import { Avatar } from '@/components/Avatar';
+import { AVATAR_EMOJIS, GOAL_OPTIONS, LIMITS, toggleChip } from '@/lib/learnerProfile';
+import { layout, radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
-const STEPS = 3;
+const STEPS = 4;
 
 export default function OnboardingScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const {
     targetLanguageId,
     setTargetLanguage,
@@ -40,6 +47,9 @@ export default function OnboardingScreen() {
     setDailyGoal,
     completeOnboarding,
   } = usePreferences();
+
+  const { user } = useAuth();
+  const { profile, updateProfile } = useProfile();
 
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState('');
@@ -178,6 +188,87 @@ export default function OnboardingScreen() {
 
           {step === 2 ? (
             <View>
+              <Text style={styles.kicker}>SAY HELLO</Text>
+              <Text style={styles.title}>What should your tutor call you?</Text>
+              <Text style={styles.subtitle}>
+                A name and a face make the first conversation feel like yours. You can change both
+                any time in your profile.
+              </Text>
+
+              <View style={styles.identityRow}>
+                <Avatar
+                  name={profile.displayName || user?.displayName}
+                  emoji={profile.avatar}
+                  color={profile.avatarColor}
+                  size={64}
+                />
+                <View style={styles.flex}>
+                  <TextInput
+                    value={profile.displayName}
+                    onChangeText={(text) => updateProfile({ displayName: text })}
+                    placeholder={user?.displayName ?? 'Your name'}
+                    placeholderTextColor={colors.textFaint}
+                    maxLength={LIMITS.displayName}
+                    autoCapitalize="words"
+                    style={styles.nameInput}
+                    accessibilityLabel="Your name"
+                  />
+                  <Text style={styles.hint}>Used in greetings, never shown publicly.</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.fieldLabel, styles.nativeLabel]}>PICK AN AVATAR</Text>
+              <View style={styles.avatarGrid}>
+                <Pressable
+                  onPress={() => updateProfile({ avatar: '' })}
+                  style={[styles.avatarCell, profile.avatar === '' && styles.avatarCellOn]}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Use my initials"
+                  accessibilityState={{ selected: profile.avatar === '' }}
+                >
+                  <Text style={styles.avatarInitials}>
+                    {(profile.displayName || user?.displayName || 'B').slice(0, 1).toUpperCase()}
+                  </Text>
+                </Pressable>
+                {AVATAR_EMOJIS.map((emoji) => (
+                  <Pressable
+                    key={emoji}
+                    onPress={() => updateProfile({ avatar: emoji })}
+                    style={[styles.avatarCell, profile.avatar === emoji && styles.avatarCellOn]}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Avatar ${emoji}`}
+                    accessibilityState={{ selected: profile.avatar === emoji }}
+                  >
+                    <Text style={styles.avatarEmoji}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={[styles.fieldLabel, styles.nativeLabel]}>I’M LEARNING FOR…</Text>
+              <View style={styles.goalChips}>
+                {GOAL_OPTIONS.map((goal) => {
+                  const on = profile.goals.includes(goal);
+                  return (
+                    <Pressable
+                      key={goal}
+                      onPress={() => updateProfile({ goals: toggleChip(profile.goals, goal) })}
+                      style={[styles.goalChip, on && styles.goalChipOn]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                    >
+                      <Text style={[styles.goalChipText, on && styles.goalChipTextOn]}>{goal}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.hint}>
+                This is how the tutor decides which examples to use — a trip, a job, an exam.
+              </Text>
+            </View>
+          ) : null}
+
+          {step === 3 ? (
+            <View>
               <Text style={styles.kicker}>MAKE IT YOURS</Text>
               <Text style={styles.title}>A habit that fits your day.</Text>
               <Text style={styles.subtitle}>
@@ -274,11 +365,41 @@ export default function OnboardingScreen() {
           </Pressable>
         ) : null}
         <Button
-          label={step === 0 ? 'Let’s go' : step === STEPS - 1 ? `Start learning ${selected.name}` : 'Continue'}
+          label={
+            step === 0
+              ? 'Let’s go'
+              : step === STEPS - 1
+                ? `Start learning ${selected.name}`
+                : 'Continue'
+          }
           onPress={next}
           style={styles.cta}
         />
       </View>
+
+      {/* Consent, stated before the account is used — the same sentence the
+          stores and the privacy policy use. Links open the real pages. */}
+      <Text style={styles.consent}>
+        By continuing you agree to the{' '}
+        <Text
+          style={styles.consentLink}
+          onPress={() => router.push('/terms')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Terms of Service"
+        >
+          Terms of Service
+        </Text>{' '}
+        and the{' '}
+        <Text
+          style={styles.consentLink}
+          onPress={() => router.push('/privacy')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Privacy Policy"
+        >
+          Privacy Policy
+        </Text>
+        . Your practice stays on this device.
+      </Text>
     </SafeAreaView>
   );
 }
@@ -292,6 +413,8 @@ function ValueRow({
   title: string;
   body: string;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={styles.valueRow}>
       <View style={styles.valueIcon}>
@@ -314,6 +437,8 @@ function LanguageChoice({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -345,8 +470,8 @@ function LanguageChoice({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   top: {
     width: '100%',
@@ -356,8 +481,54 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  skip: { ...typography.bodyStrong, color: colors.textMuted },
-  stepLabel: { ...typography.micro, color: colors.textFaint, marginTop: spacing.sm },
+  skip: { ...typography.bodyStrong, color: c.textMuted },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xl },
+  nameInput: {
+    backgroundColor: c.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    ...typography.heading,
+    color: c.text,
+  },
+  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  avatarCell: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  avatarCellOn: { borderWidth: 2, borderColor: c.primary, backgroundColor: c.primaryTint },
+  avatarEmoji: { fontSize: 22 },
+  avatarInitials: { ...typography.bodyStrong, color: c.textMuted },
+  goalChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  goalChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+    backgroundColor: c.surface,
+  },
+  goalChipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  goalChipText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  goalChipTextOn: { color: c.onDark },
+  consent: {
+    ...typography.caption,
+    color: c.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    lineHeight: 18,
+  },
+  consentLink: { color: c.primary, fontWeight: '700', textDecorationLine: 'underline' },
+  stepLabel: { ...typography.micro, color: c.textFaint, marginTop: spacing.sm },
   scroll: {
     width: '100%',
     maxWidth: layout.maxContentWidth,
@@ -392,13 +563,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     ...typography.display,
-    color: colors.onDark,
+    color: c.onDark,
     marginTop: spacing.lg,
     lineHeight: 40,
   },
   heroBody: {
     ...typography.body,
-    color: colors.onDarkMuted,
+    color: c.onDarkMuted,
     marginTop: spacing.md,
     lineHeight: 22,
     maxWidth: 420,
@@ -419,14 +590,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroFlagText: { fontSize: 20 },
-  heroMore: { ...typography.caption, color: colors.onDarkMuted, marginLeft: 2 },
+  heroMore: { ...typography.caption, color: c.onDarkMuted, marginLeft: 2 },
   valueList: { marginTop: spacing.xl, gap: spacing.md },
   valueRow: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.lg,
     ...shadows.card,
@@ -435,17 +606,17 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  valueTitle: { ...typography.bodyStrong, color: colors.text },
-  valueBody: { ...typography.caption, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
-  kicker: { ...typography.micro, color: colors.accent },
-  title: { ...typography.display, color: colors.text, marginTop: spacing.sm, lineHeight: 38 },
+  valueTitle: { ...typography.bodyStrong, color: c.text },
+  valueBody: { ...typography.caption, color: c.textMuted, marginTop: 2, lineHeight: 18 },
+  kicker: { ...typography.micro, color: c.accent },
+  title: { ...typography.display, color: c.text, marginTop: spacing.sm, lineHeight: 38 },
   subtitle: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: spacing.sm,
     lineHeight: 22,
     marginBottom: spacing.lg,
@@ -454,27 +625,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     minHeight: 52,
     marginBottom: spacing.lg,
   },
-  searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: spacing.md },
+  searchInput: { flex: 1, ...typography.body, color: c.text, paddingVertical: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   languageChoice: {
     width: '48%',
     flexGrow: 1,
     flexBasis: '46%',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
-  languageChoiceSelected: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  languageChoiceSelected: { borderColor: c.primary, backgroundColor: c.primaryTint },
   pressed: { opacity: 0.85 },
   languageTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   languageFlag: { fontSize: 26 },
@@ -482,28 +653,28 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  languageName: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm },
-  languageNative: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
-  languageMeta: { ...typography.micro, fontSize: 9.5, color: colors.textFaint, marginTop: 6 },
-  empty: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl },
+  languageName: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm },
+  languageNative: { ...typography.caption, color: c.textMuted, marginTop: 1 },
+  languageMeta: { ...typography.micro, fontSize: 9.5, color: c.textFaint, marginTop: 6 },
+  empty: { ...typography.caption, color: c.textMuted, textAlign: 'center', marginTop: spacing.xl },
   selectionCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.lg,
     marginBottom: spacing.xl,
     ...shadows.card,
   },
-  fieldLabel: { ...typography.micro, color: colors.textFaint, marginBottom: spacing.sm },
+  fieldLabel: { ...typography.micro, color: c.textFaint, marginBottom: spacing.sm },
   selectionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   selectionFlag: { fontSize: 32 },
-  selectionTitle: { ...typography.heading, color: colors.text },
-  selectionSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  selectionTitle: { ...typography.heading, color: c.text },
+  selectionSub: { ...typography.caption, color: c.textMuted, marginTop: 2 },
   goalRow: { flexDirection: 'row', gap: spacing.sm },
   goal: {
     flex: 1,
@@ -511,44 +682,44 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radii.sm,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: c.border,
+    backgroundColor: c.surface,
   },
-  goalActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  goalValue: { ...typography.title, color: colors.text, fontSize: 22 },
-  goalValueActive: { color: colors.onDark },
-  goalUnit: { ...typography.micro, color: colors.textFaint, marginTop: 1 },
-  goalUnitActive: { color: colors.onDarkMuted },
-  hint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
+  goalActive: { backgroundColor: c.primary, borderColor: c.primary },
+  goalValue: { ...typography.title, color: c.text, fontSize: 22 },
+  goalValueActive: { color: c.onDark },
+  goalUnit: { ...typography.micro, color: c.textFaint, marginTop: 1 },
+  goalUnitActive: { color: c.onDarkMuted },
+  hint: { ...typography.caption, color: c.textMuted, marginTop: spacing.sm },
   nativeLabel: { marginTop: spacing.xl },
   nativeRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   nativeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  nativeChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  nativeChipActive: { borderColor: c.primary, backgroundColor: c.primaryTint },
   nativeFlag: { fontSize: 15 },
-  nativeText: { ...typography.caption, color: colors.textMuted },
-  nativeTextActive: { color: colors.primary, fontWeight: '700' },
+  nativeText: { ...typography.caption, color: c.textMuted },
+  nativeTextActive: { color: c.primary, fontWeight: '700' },
   readyCard: {
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'center',
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     borderRadius: radii.md,
     padding: spacing.lg,
     marginTop: spacing.xl,
   },
   readyEmoji: { fontSize: 30 },
-  readyTitle: { ...typography.bodyStrong, color: colors.primary },
-  readyBody: { ...typography.caption, color: colors.primary, marginTop: 2, lineHeight: 18 },
+  readyTitle: { ...typography.bodyStrong, color: c.primary },
+  readyBody: { ...typography.caption, color: c.primary, marginTop: 2, lineHeight: 18 },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -559,17 +730,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
   },
   back: {
     width: 54,
     height: 54,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: c.border,
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

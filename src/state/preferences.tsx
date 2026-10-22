@@ -10,10 +10,12 @@ import {
   type Preferences,
   type VoiceSpeed,
 } from '@/lib/preferenceRules';
+import type { ThemeMode } from '@/theme/palette';
 
 // Re-exported so screens keep importing from one place (`@/state/preferences`).
 export { DAILY_GOALS, dailyGoalXp } from '@/lib/preferenceRules';
 export type { DailyGoalMinutes, VoiceSpeed } from '@/lib/preferenceRules';
+export type { ThemeMode } from '@/theme/palette';
 
 type PreferencesValue = Preferences & {
   /** True once the stored preferences have been read from the device. */
@@ -30,6 +32,7 @@ type PreferencesValue = Preferences & {
   setVoiceSpeed: (speed: VoiceSpeed) => void;
   setAutoSpeak: (value: boolean) => void;
   setReduceMotion: (value: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
 };
 
 const STORAGE_KEY = 'zelvoca:preferences';
@@ -116,6 +119,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setVoiceSpeed: (speed) => update({ voiceSpeed: speed }),
         setAutoSpeak: (value) => update({ autoSpeak: value }),
         setReduceMotion: (value) => update({ reduceMotion: value }),
+        setThemeMode: (mode) => update({ themeMode: mode }),
       }}
     >
       {children}

@@ -13,7 +13,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { describeCrash } from '@/lib/errors';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Props = {
   children: ReactNode;
@@ -33,6 +34,8 @@ export function CrashScreen({
   onRetry: () => void;
   onHome?: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const copy = describeCrash(error);
   return (
     <View
@@ -121,10 +124,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
@@ -134,15 +137,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.warningSoft,
+    backgroundColor: c.warningSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  title: { ...typography.title, color: colors.text, textAlign: 'center' },
+  title: { ...typography.title, color: c.text, textAlign: 'center' },
   body: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     lineHeight: 21,
     maxWidth: 420,
@@ -151,20 +154,20 @@ const styles = StyleSheet.create({
     maxHeight: 64,
     maxWidth: 420,
     width: '100%',
-    backgroundColor: colors.surfaceHigh,
+    backgroundColor: c.surfaceHigh,
     borderRadius: radii.sm,
     marginTop: spacing.xs,
   },
   detailInner: { padding: spacing.sm },
-  detail: { ...typography.micro, color: colors.textMuted },
+  detail: { ...typography.micro, color: c.textMuted },
   actions: { marginTop: spacing.md, gap: spacing.sm, alignItems: 'center' },
   primary: {
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.pill,
   },
-  primaryLabel: { ...typography.bodyStrong, color: colors.white },
+  primaryLabel: { ...typography.bodyStrong, color: c.white },
   secondary: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
-  secondaryLabel: { ...typography.body, color: colors.primary },
+  secondaryLabel: { ...typography.body, color: c.primary },
 });

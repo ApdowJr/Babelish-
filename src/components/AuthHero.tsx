@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Logo } from '@/components/Logo';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Props = {
   eyebrow: string;
@@ -13,6 +14,8 @@ type Props = {
 
 /** Branded gradient header shared by sign-in and sign-up. */
 export function AuthHero({ eyebrow, title, subtitle, perks }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <LinearGradient
       colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
@@ -30,7 +33,7 @@ export function AuthHero({ eyebrow, title, subtitle, perks }: Props) {
         <View style={styles.perks}>
           {perks.map((perk) => (
             <View key={perk} style={styles.perk}>
-              <Ionicons name="checkmark-circle" size={13} color={colors.sun} />
+              <Ionicons name="checkmark-circle" size={13} color={colors.sunInk} />
               <Text style={styles.perkText}>{perk}</Text>
             </View>
           ))}
@@ -40,7 +43,7 @@ export function AuthHero({ eyebrow, title, subtitle, perks }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   hero: {
     borderRadius: radii.xl,
     padding: spacing.xl,
@@ -67,15 +70,15 @@ const styles = StyleSheet.create({
     bottom: -60,
     left: -20,
   },
-  eyebrow: { ...typography.micro, color: colors.sun, marginTop: spacing.xl },
-  title: { ...typography.display, color: colors.onDark, marginTop: spacing.sm, lineHeight: 38 },
+  eyebrow: { ...typography.micro, color: c.sun, marginTop: spacing.xl },
+  title: { ...typography.display, color: c.onDark, marginTop: spacing.sm, lineHeight: 38 },
   subtitle: {
     ...typography.body,
-    color: colors.onDarkMuted,
+    color: c.onDarkMuted,
     marginTop: spacing.sm,
     lineHeight: 22,
   },
   perks: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.lg },
   perk: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  perkText: { ...typography.micro, color: colors.onDarkMuted, letterSpacing: 0.3 },
+  perkText: { ...typography.micro, color: c.onDarkMuted, letterSpacing: 0.3 },
 });

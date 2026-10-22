@@ -27,16 +27,18 @@ import { DAILY_GOALS, VOICE_SPEEDS } from '@/lib/preferenceRules';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { filterSettings } from '@/lib/settingsSearch';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
-import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
+import { cancelDailyReminder, scheduleDailyReminder, sendTestReminder } from '@/lib/notifications';
 import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
 import { clearConversations } from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
 import { deleteAccount } from '@/lib/neonApi';
 import { buildPack, formatPackSize } from '@/lib/offline';
-import { loadCurriculum } from '@/lib/curriculum/store';
+import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
 import { fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { NEON_API_URL } from '@/lib/neon';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
+import { THEME_MODES, type ThemeMode } from '@/theme/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -60,6 +62,12 @@ type Row =
 
 type Group = { id: string; title: string; rows: Row[] };
 
+const THEME_LABELS: Record<ThemeMode, string> = {
+  system: 'System',
+  light: 'Light',
+  dark: 'Dark',
+};
+
 const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
   slow: 'Slow',
   normal: 'Normal',
@@ -67,13 +75,23 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 };
 
 export default function SettingsScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors, isDark } = useTheme();
   const { user, signOut, isNeon, getAccessToken } = useAuth();
   const prefs = usePreferences();
-  const { setDailyGoal, setNativeLanguage, setReminderKey, setShowTranslation, setVoiceSpeed, setAutoSpeak, setReduceMotion } =
-    prefs;
-  const { progress, vocab } = useLearning();
+  const {
+    setDailyGoal,
+    setNativeLanguage,
+    setReminderKey,
+    setShowTranslation,
+    setVoiceSpeed,
+    setAutoSpeak,
+    setReduceMotion,
+    setThemeMode,
+  } = prefs;
+  const { progress, vocab, resetLearning } = useLearning();
   const { profile } = useProfile();
-  const { state: analytics } = useAnalytics();
+  const { state: analytics, resetAnalytics } = useAnalytics();
 
   const [query, setQuery] = useState('');
   const [languagePicker, setLanguagePicker] = useState(false);
@@ -226,6 +244,70 @@ export default function SettingsScreen() {
     );
   }
 
+  async function testReminder() {
+    const result = await sendTestReminder();
+    if (result === 'scheduled') {
+      showAlert(
+        'Test reminder sent',
+        'It arrives in about five seconds. If you do not see it, notifications are probably switched off for Babelish in your system settings.'
+      );
+    } else if (result === 'denied') {
+      showAlert(
+        'Notifications are off',
+        'Allow notifications for Babelish in your system settings, then try again.'
+      );
+    } else {
+      showAlert('Could not send a test', 'This device refused to schedule a local notification.');
+    }
+  }
+
+  function sendFeedback() {
+    // Version, platform and the course being studied — enough to reproduce a
+    // bug, and nothing that identifies the learner.
+    const body = [
+      '',
+      '',
+      '---',
+      `App: Babelish ${version}`,
+      `Platform: ${Platform.OS} ${Platform.Version}`,
+      `Learning: ${target.name} (${prefs.targetLanguageId})`,
+    ].join('\n');
+    const url = `mailto:support@zelvoca.app?subject=${encodeURIComponent(
+      `Babelish ${version} feedback`
+    )}&body=${encodeURIComponent(body)}`;
+    Linking.openURL(url).catch(() =>
+      showAlert('No email app found', 'Write to support@zelvoca.app from any email app.')
+    );
+  }
+
+  function confirmResetProgress() {
+    showAlert(
+      'Reset all progress?',
+      'Lessons, saved words, XP and your streak will be cleared on this device and in your account. Your profile, settings and account stay. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              // Raw stores first (speaking stats and the report queue are not
+              // owned by a provider), then the providers, which also push the
+              // empty state to the server so a sync cannot restore it.
+              await clearLearningStorage();
+              await resetLearning();
+              await resetAnalytics();
+              showAlert(
+                'Progress reset',
+                'You are starting from the first lesson. Your account and profile are unchanged.'
+              );
+            })();
+          },
+        },
+      ]
+    );
+  }
+
   const groups: Group[] = (() => {
     const reminderOptions = REMINDER_SLOTS.map((slot) => {
       const key = slotKey(slot.hour, slot.minute);
@@ -257,6 +339,28 @@ export default function SettingsScreen() {
             hint: 'Progress stays on this device',
             keywords: 'logout leave account',
             onPress: confirmSignOut,
+          },
+        ],
+      },
+      {
+        id: 'appearance',
+        title: 'Appearance',
+        rows: [
+          {
+            id: 'theme',
+            kind: 'chips',
+            icon: 'contrast-outline',
+            label: 'Theme',
+            hint:
+              prefs.themeMode === 'system'
+                ? `Following this device — ${isDark ? 'dark' : 'light'} right now`
+                : `${THEME_LABELS[prefs.themeMode]} palette in every screen`,
+            keywords: 'dark light night mode appearance colour color',
+            options: THEME_MODES.map((mode) => ({
+              label: THEME_LABELS[mode],
+              active: prefs.themeMode === mode,
+              onPress: () => setThemeMode(mode),
+            })),
           },
         ],
       },
@@ -297,6 +401,15 @@ export default function SettingsScreen() {
               : 'Off — pick a time for one calm reminder.',
             keywords: 'notification alarm time nudge',
             options: reminderOptions,
+          },
+          {
+            id: 'test-reminder',
+            kind: 'nav',
+            icon: 'notifications-circle-outline',
+            label: 'Send a test reminder',
+            hint: 'Checks the permission without waiting for your reminder time',
+            keywords: 'notification test try check',
+            onPress: () => void testReminder(),
           },
           {
             id: 'translation',
@@ -429,6 +542,16 @@ export default function SettingsScreen() {
             onPress: exportMyData,
           },
           {
+            id: 'reset-progress',
+            kind: 'nav',
+            icon: 'refresh-outline',
+            label: 'Reset progress',
+            hint: 'Start from lesson one — keeps your account and profile',
+            keywords: 'start over clear xp streak lessons restart',
+            danger: true,
+            onPress: confirmResetProgress,
+          },
+          {
             id: 'clear-chats',
             kind: 'nav',
             icon: 'trash-outline',
@@ -470,12 +593,30 @@ export default function SettingsScreen() {
               ),
           },
           {
+            id: 'feedback',
+            kind: 'nav',
+            icon: 'mail-outline',
+            label: 'Send feedback',
+            hint: 'Opens your email app — no in-app tracking',
+            keywords: 'contact support help bug report email',
+            onPress: sendFeedback,
+          },
+          {
             id: 'privacy',
             kind: 'nav',
             icon: 'document-text-outline',
             label: 'Privacy policy',
             keywords: 'legal terms data',
             onPress: () => router.push('/privacy'),
+          },
+          {
+            id: 'terms',
+            kind: 'nav',
+            icon: 'reader-outline',
+            label: 'Terms of Service',
+            hint: 'How the app can be used',
+            keywords: 'legal terms license eula',
+            onPress: () => router.push('/terms'),
           },
           {
             id: 'version',
@@ -592,6 +733,8 @@ export default function SettingsScreen() {
 }
 
 function RowView({ row }: { row: Row }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const danger = row.kind === 'nav' && row.danger === true;
   const tint = danger ? colors.danger : (row.tint ?? colors.primary);
   const tileBg = danger ? colors.dangerSoft : colors.primarySoft;
@@ -693,6 +836,8 @@ function LanguageModal({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close language picker" accessibilityRole="button" />
@@ -735,7 +880,7 @@ function LanguageModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -744,29 +889,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.title, color: colors.text },
+  title: { ...typography.title, color: c.text },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     height: 44,
   },
-  searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: 0 },
+  searchInput: { flex: 1, ...typography.body, color: c.text, paddingVertical: 0 },
   empty: { paddingVertical: spacing.xxl, alignItems: 'center', gap: spacing.xs },
-  emptyTitle: { ...typography.bodyStrong, color: colors.text },
-  emptyBody: { ...typography.caption, color: colors.textMuted },
+  emptyTitle: { ...typography.bodyStrong, color: c.text },
+  emptyBody: { ...typography.caption, color: c.textMuted },
   group: { marginTop: spacing.xl },
-  groupTitle: { ...typography.micro, color: colors.textMuted, marginBottom: spacing.sm, marginLeft: spacing.xs },
+  groupTitle: { ...typography.micro, color: c.textMuted, marginBottom: spacing.sm, marginLeft: spacing.xs },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     overflow: 'hidden',
     ...shadows.card,
   },
@@ -778,14 +923,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 58,
   },
-  rowPressed: { backgroundColor: colors.surfaceTint },
+  rowPressed: { backgroundColor: c.surfaceTint },
   iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
-  rowLabel: { ...typography.bodyStrong, color: colors.text },
-  rowHint: { ...typography.caption, color: colors.textMuted, lineHeight: 17 },
+  rowLabel: { ...typography.bodyStrong, color: c.text },
+  rowHint: { ...typography.caption, color: c.textMuted, lineHeight: 17 },
   rowEnd: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rowDetail: { ...typography.caption, color: colors.textMuted, maxWidth: 160, textAlign: 'right' },
-  divider: { height: 1, backgroundColor: colors.border, marginLeft: spacing.md + 32 + spacing.md },
+  rowDetail: { ...typography.caption, color: c.textMuted, maxWidth: 160, textAlign: 'right' },
+  divider: { height: 1, backgroundColor: c.border, marginLeft: spacing.md + 32 + spacing.md },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -798,13 +943,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.bg,
+    borderColor: c.borderStrong,
+    backgroundColor: c.bg,
   },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  chipTextOn: { color: colors.onDark },
-  footer: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+  chipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  chipTextOn: { color: c.onDark },
+  footer: { ...typography.caption, color: c.textMuted, textAlign: 'center', marginTop: spacing.xxl },
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -819,7 +964,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     maxHeight: '82%',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     paddingTop: spacing.sm,
@@ -830,11 +975,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.borderStrong,
+    backgroundColor: c.borderStrong,
     marginBottom: spacing.md,
   },
-  sheetTitle: { ...typography.heading, color: colors.text },
-  sheetBody: { ...typography.caption, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
+  sheetTitle: { ...typography.heading, color: c.text },
+  sheetBody: { ...typography.caption, color: c.textMuted, marginTop: 2, marginBottom: spacing.md },
   sheetList: { marginBottom: spacing.md },
   langRow: {
     flexDirection: 'row',
@@ -844,7 +989,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
   },
-  langRowOn: { backgroundColor: colors.surfaceHigh },
+  langRowOn: { backgroundColor: c.surfaceHigh },
   langFlag: { fontSize: 20 },
-  langName: { ...typography.body, color: colors.text, flex: 1 },
+  langName: { ...typography.body, color: c.text, flex: 1 },
 });

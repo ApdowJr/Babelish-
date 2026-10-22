@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/Button';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Props = {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export function EmptyState({ icon, emoji, title, body, actionLabel, onAction }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <View style={styles.wrap}>
       <View style={styles.icon}>
@@ -36,7 +39,7 @@ export function EmptyState({ icon, emoji, title, body, actionLabel, onAction }: 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   wrap: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
@@ -44,23 +47,23 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfaceTint,
+    borderColor: c.borderStrong,
+    backgroundColor: c.surfaceTint,
   },
   icon: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: c.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   emoji: { fontSize: 26 },
-  title: { ...typography.heading, color: colors.text, textAlign: 'center' },
+  title: { ...typography.heading, color: c.text, textAlign: 'center' },
   body: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     lineHeight: 19,
     marginTop: spacing.sm,

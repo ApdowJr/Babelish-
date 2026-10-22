@@ -150,6 +150,29 @@ export function isChapterUnlocked(
 
 /* ── Progress persistence (local always, remote when available) ─────────── */
 
+/**
+ * Empties both local learning stores.
+ *
+ * Used by "Reset progress". Writes `{}` rather than removing the keys, so a
+ * half-finished read can never resurrect a stale blob from a different
+ * version's migration path.
+ */
+export async function clearLearningStorage(): Promise<void> {
+  // Also clears the stores that are not part of the progress map, so a reset
+  // cannot leave a stale speaking score or a queued report behind.
+  await AsyncStorage.multiRemove(['zelvoca:analytics', 'zelvoca:speaking-stats', 'zelvoca:report-queue']).catch(
+    () => {}
+  );
+  try {
+    await AsyncStorage.multiSet([
+      [PROGRESS_KEY, '{}'],
+      [VOCAB_KEY, '{}'],
+    ]);
+  } catch {
+    // Storage unavailable: the in-memory reset already happened.
+  }
+}
+
 export async function loadProgress(): Promise<Record<string, { score: number; completedAt: string }>> {
   if (supabase) {
     try {

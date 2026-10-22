@@ -2,25 +2,41 @@
   "expo": {
     "name": "Babelish",
     "slug": "babelish",
-    "version": "3.2.0",
+    "version": "3.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": [
       "babelish",
       "zelvoca"
     ],
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.zelvoca.babelish",
+      "buildNumber": "3.4.0",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Babelish uses your microphone so you can practise speaking with your AI tutor.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "app.zelvoca.babelish",
+      "versionCode": 30400,
       "adaptiveIcon": {
         "backgroundColor": "#0B3A2C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -47,10 +63,21 @@
             "image": "./assets/splash-icon.png"
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0F4C3A",
+          "defaultChannel": "daily-reminder"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

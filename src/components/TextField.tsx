@@ -11,7 +11,8 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { radii, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 type Props = {
   label: string;
@@ -43,6 +44,8 @@ export function TextField({
   returnKeyType,
   onSubmitEditing,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const [hidden, setHidden] = useState(Boolean(secureTextEntry));
   const [focused, setFocused] = useState(false);
 
@@ -93,26 +96,26 @@ export function TextField({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   wrap: { marginBottom: spacing.lg },
-  label: { ...typography.micro, color: colors.textFaint, marginBottom: spacing.sm },
+  label: { ...typography.micro, color: c.textFaint, marginBottom: spacing.sm },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.lg,
     minHeight: 54,
   },
-  fieldFocused: { borderColor: colors.primary },
-  fieldError: { borderColor: colors.danger },
+  fieldFocused: { borderColor: c.primary },
+  fieldError: { borderColor: c.danger },
   input: {
     flex: 1,
     ...typography.body,
-    color: colors.text,
+    color: c.text,
     paddingVertical: spacing.md,
   },
-  error: { ...typography.caption, color: colors.danger, marginTop: spacing.xs },
+  error: { ...typography.caption, color: c.danger, marginTop: spacing.xs },
 });

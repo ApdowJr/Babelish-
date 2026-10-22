@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,7 +12,9 @@ import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
 import { DAILY_GOALS, dailyGoalXp, usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
-import { GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip, useProfile } from '@/state/profile';
+import { useProfile } from '@/state/profile';
+import { Avatar } from '@/components/Avatar';
+import { profileCompleteness, profileSummary } from '@/lib/learnerProfile';
 import { useAnalytics } from '@/state/analytics';
 import { useSubscription } from '@/state/subscription';
 import { LANGUAGES, getLanguage } from '@/data/languages';
@@ -21,31 +23,24 @@ import { computeStreak } from '@/lib/analytics';
 import { levelForXp, todayXp } from '@/lib/xp';
 import { tierForXp } from '@/lib/league';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 /** English + every language in the 2.0 atlas. */
-const NATIVE_CHOICES = ['en', ...LANGUAGES.map((language) => language.id)];
-
-function nativeLabel(id: string): string {
-  if (id === 'en') return 'English';
-  const language = getLanguage(id);
-  return `${language.flag} ${language.name}`;
-}
-
 export default function ProfileScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const { user, signOut, isDemo, isNeon } = useAuth();
 
   const {
     targetLanguageId,
-    nativeLanguageId,
-    setNativeLanguage,
     dailyGoalMinutes,
     setDailyGoal,
     activeLanguageIds,
     setTargetLanguage,
   } = usePreferences();
   const { wordsMastered, progress } = useLearning();
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useProfile();
   const { state: analytics } = useAnalytics();
   const { plan, redeem, resetToFree } = useSubscription();
   const target = getLanguage(targetLanguageId);
@@ -65,13 +60,12 @@ export default function ProfileScreen() {
     });
   }
 
-  const initials = (user?.displayName ?? 'L')
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const accountName = user?.displayName ?? 'Learner';
+  // The avatar and the name the tutor uses come from the profile, falling back
+  // to the account, so both surfaces always agree.
+  const shownName = profile.displayName || accountName;
+  const summary = profileSummary(profile);
+  const completeness = profileCompleteness(profile);
 
   return (
     <Screen scroll tabBarSpace>
@@ -99,11 +93,16 @@ export default function ProfileScreen() {
         style={styles.profileCard}
       >
         <View style={styles.profileOrb} />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <Avatar
+          name={shownName}
+          emoji={profile.avatar}
+          color={profile.avatarColor}
+          size={62}
+          onDark
+          ring
+        />
         <View style={styles.flex}>
-          <Text style={styles.name}>{user?.displayName ?? 'Learner'}</Text>
+          <Text style={styles.name}>{shownName}</Text>
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Pill
@@ -115,11 +114,22 @@ export default function ProfileScreen() {
         </View>
       </LinearGradient>
 
-      <View style={styles.quickRow}>
-        <QuickStat icon="flame" value={`${streak}`} label="DAY STREAK" tint={colors.accent} />
-        <QuickStat icon="sparkles" value={`${today}`} label="XP TODAY" tint={colors.sun} />
-        <QuickStat icon="star" value={`${wordsMastered}`} label="MASTERED" tint={colors.lilac} />
-      </View>
+      <SectionHeader
+        title="Momentum"
+        icon="pulse-outline"
+        action="Details"
+        onAction={() => router.push('/progress')}
+      />
+      <Pressable
+        onPress={() => router.push('/progress')}
+        accessibilityRole="button"
+        accessibilityLabel="Open detailed progress — streak calendar and skill breakdown"
+        style={({ pressed }) => [styles.quickRow, pressed && { opacity: 0.85 }]}
+      >
+        <QuickStat icon="flame" value={`${streak}`} label="DAY STREAK" tint={colors.accentInk} />
+        <QuickStat icon="sparkles" value={`${today}`} label="XP TODAY" tint={colors.sunInk} />
+        <QuickStat icon="star" value={`${wordsMastered}`} label="MASTERED" tint={colors.lilacInk} />
+      </Pressable>
 
       <SectionHeader title="Daily goal" icon="flag-outline" />
       <View style={styles.card}>
@@ -196,98 +206,32 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <SectionHeader title="Learning profile" icon="person-outline" />
-      <View style={styles.card}>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>What should your tutor call you?</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={profile.displayName}
-            onChangeText={(text) => updateProfile({ displayName: text })}
-            placeholder={user?.displayName ?? 'Your name'}
-            placeholderTextColor={colors.textFaint}
-            autoCapitalize="words"
-            accessibilityLabel="Display name for your tutor"
-          />
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>What do you do?</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={profile.job}
-            onChangeText={(text) => updateProfile({ job: text })}
-            placeholder="e.g. a nurse, a student, a chef"
-            placeholderTextColor={colors.textFaint}
-            accessibilityLabel="Your job or studies"
-          />
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You’re into…</Text>
-          <View style={styles.chipWrap}>
-            {INTEREST_OPTIONS.map((interest) => {
-              const on = profile.interests.includes(interest);
-              return (
-                <Pressable
-                  key={interest}
-                  onPress={() => updateProfile({ interests: toggleChip(profile.interests, interest) })}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{interest}</Text>
-                </Pressable>
-              );
-            })}
+      <SectionHeader
+        title="Learning profile"
+        icon="person-outline"
+        action={completeness === 1 ? 'Edit' : 'Finish'}
+        onAction={() => router.push('/profile/edit')}
+      />
+      <Pressable
+        onPress={() => router.push('/profile/edit')}
+        accessibilityRole="button"
+        accessibilityLabel="Edit your learning profile"
+        accessibilityHint="Name, avatar, bio, interests and goals for your tutor"
+        style={({ pressed }) => [styles.card, styles.profileRow, pressed && styles.profileRowPressed]}
+      >
+        <Avatar name={shownName} emoji={profile.avatar} color={profile.avatarColor} size={46} />
+        <View style={styles.flex}>
+          <Text style={styles.settingsTitle}>{shownName}</Text>
+          <Text style={styles.hint}>
+            {summary ??
+              'Add a few details and your tutor will use your own examples — job, interests, why you are learning.'}
+          </Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.round(completeness * 100)}%` }]} />
           </View>
         </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You’re learning for…</Text>
-          <View style={styles.chipWrap}>
-            {GOAL_OPTIONS.map((goalOption) => {
-              const on = profile.goals.includes(goalOption);
-              return (
-                <Pressable
-                  key={goalOption}
-                  onPress={() => updateProfile({ goals: toggleChip(profile.goals, goalOption) })}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{goalOption}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You already speak…</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.nativeRail}
-          >
-            {NATIVE_CHOICES.filter((id) => id !== targetLanguageId).map((id) => {
-              const on = nativeLanguageId === id;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => setNativeLanguage(id)}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>
-                    {nativeLabel(id)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-        <Text style={styles.hint}>
-          Your tutor uses this to pick examples from your real life. Saved on this device.
-        </Text>
-      </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
 
       <SectionHeader title="Plan" icon="pricetag-outline" />
       <View style={styles.freeCard}>
@@ -410,6 +354,7 @@ function QuickStat({
   label: string;
   tint: string;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.quickStat}>
       <Ionicons name={icon} size={15} color={tint} />
@@ -419,7 +364,7 @@ function QuickStat({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   flex: { flex: 1 },
   headerRow: {
     flexDirection: 'row',
@@ -428,16 +373,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.md,
   },
-  kicker: { ...typography.micro, color: colors.accent },
+  kicker: { ...typography.micro, color: c.accent },
   gear: {
     width: 38,
     height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   settingsCard: {
     flexDirection: 'row',
@@ -445,17 +390,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
   },
-  settingsCardPressed: { backgroundColor: colors.surfaceTint },
+  settingsCardPressed: { backgroundColor: c.surfaceTint },
   settingsIcon: {
     width: 38,
     height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: c.primarySoft,
   },
-  settingsTitle: { ...typography.bodyStrong, color: colors.text },
-  title: { ...typography.display, color: colors.text, marginTop: 2 },
+  settingsTitle: { ...typography.bodyStrong, color: c.text },
+  title: { ...typography.display, color: c.text, marginTop: 2 },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -474,7 +419,7 @@ const styles = StyleSheet.create({
     top: -80,
     right: -50,
   },
-  avatar: {
+  avatarLegacy: {
     width: 62,
     height: 62,
     borderRadius: 31,
@@ -484,27 +429,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { ...typography.heading, color: colors.onDark, fontSize: 22 },
-  name: { ...typography.heading, color: colors.onDark },
-  email: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2 },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
+  profileRowPressed: { backgroundColor: c.surfaceTint },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: c.border,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  progressFill: { height: 4, borderRadius: 2, backgroundColor: c.primary },
+  name: { ...typography.heading, color: c.onDark },
+  email: { ...typography.caption, color: c.onDarkMuted, marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 6, marginTop: spacing.sm, flexWrap: 'wrap' },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   quickStat: {
     flex: 1,
     alignItems: 'center',
     gap: 3,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingVertical: spacing.md,
   },
-  quickValue: { ...typography.heading, color: colors.text, fontSize: 18 },
-  quickLabel: { ...typography.micro, color: colors.textFaint, fontSize: 8.5 },
+  quickValue: { ...typography.heading, color: c.text, fontSize: 18 },
+  quickLabel: { ...typography.micro, color: c.textFaint, fontSize: 8.5 },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
@@ -513,14 +472,14 @@ const styles = StyleSheet.create({
   field: { paddingTop: spacing.md, paddingBottom: spacing.xs },
   fieldLabel: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginBottom: spacing.sm,
     lineHeight: 19,
   },
   fieldInput: {
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceTint,
+    color: c.text,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     minHeight: 46,
@@ -531,17 +490,17 @@ const styles = StyleSheet.create({
   choiceChip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceTint,
+    borderColor: c.border,
+    backgroundColor: c.surfaceTint,
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
   },
-  choiceChipOn: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
-  choiceText: { ...typography.caption, color: colors.textMuted, fontSize: 12 },
-  choiceTextOn: { color: colors.primary, fontWeight: '700' },
+  choiceChipOn: { backgroundColor: c.primaryTint, borderColor: c.primary },
+  choiceText: { ...typography.caption, color: c.textMuted, fontSize: 12 },
+  choiceTextOn: { color: c.primary, fontWeight: '700' },
   hint: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     paddingVertical: spacing.md,
     lineHeight: 16,
     letterSpacing: 0.2,
@@ -550,8 +509,8 @@ const styles = StyleSheet.create({
   langRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   langFlag: { fontSize: 26 },
   langTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  langName: { ...typography.bodyStrong, color: colors.text },
-  langMeta: { ...typography.caption, color: colors.textMuted, marginTop: 1, fontSize: 11 },
+  langName: { ...typography.bodyStrong, color: c.text },
+  langMeta: { ...typography.caption, color: c.textMuted, marginTop: 1, fontSize: 11 },
   langBar: { marginTop: 5 },
   addLanguageRow: {
     flexDirection: 'row',
@@ -559,9 +518,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
   },
-  addLanguageText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
+  addLanguageText: { ...typography.caption, color: c.primary, fontWeight: '600' },
   freeCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: 'rgba(40, 122, 85, 0.25)',
     borderRadius: radii.lg,
@@ -569,15 +528,15 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   freeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  freeTier: { ...typography.micro, color: colors.textFaint, fontSize: 9 },
-  freeTitle: { ...typography.heading, color: colors.text, marginTop: spacing.md },
-  freeBody: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 19 },
+  freeTier: { ...typography.micro, color: c.textFaint, fontSize: 9 },
+  freeTitle: { ...typography.heading, color: c.text, marginTop: spacing.md },
+  freeBody: { ...typography.caption, color: c.textMuted, marginTop: spacing.xs, lineHeight: 19 },
   perks: { marginTop: spacing.md, gap: 6 },
   perk: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  perkText: { ...typography.caption, color: colors.text, fontSize: 12 },
+  perkText: { ...typography.caption, color: c.text, fontSize: 12 },
   supporterNote: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     letterSpacing: 0.2,
     fontWeight: '500',
     lineHeight: 16,
@@ -588,15 +547,15 @@ const styles = StyleSheet.create({
   referralRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
   referralCodeBox: {
     flex: 1,
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
     minHeight: 46,
     justifyContent: 'center',
   },
-  referralCode: { ...typography.bodyStrong, color: colors.accent, letterSpacing: 1.5 },
+  referralCode: { ...typography.bodyStrong, color: c.accent, letterSpacing: 1.5 },
   referralShare: { minWidth: 96 },
   row: {
     flexDirection: 'row',
@@ -607,9 +566,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   rowLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  rowLabel: { ...typography.body, color: colors.textMuted },
-  rowValue: { ...typography.bodyStrong, color: colors.text, fontSize: 14 },
-  rowDivider: { height: 1, backgroundColor: colors.border },
+  rowLabel: { ...typography.body, color: c.textMuted },
+  rowValue: { ...typography.bodyStrong, color: c.text, fontSize: 14 },
+  rowDivider: { height: 1, backgroundColor: c.border },
   dot: { width: 8, height: 8, borderRadius: 4 },
   footer: {
     flexDirection: 'row',
@@ -618,10 +577,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xxl,
   },
-  footerText: { ...typography.micro, color: colors.textFaint },
+  footerText: { ...typography.micro, color: c.textFaint },
   footerSub: {
     ...typography.micro,
-    color: colors.textFaint,
+    color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.lg,

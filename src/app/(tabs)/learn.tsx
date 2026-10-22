@@ -22,9 +22,12 @@ import {
 import { catalogueStats, progressForLanguage, starterWordCount } from '@/lib/catalog';
 import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
-import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
+import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
+import { useTheme, useThemedStyles } from '@/theme/theme';
 
 export default function ExploreScreen() {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<RegionId | 'all'>('all');
   const { targetLanguageId, activeLanguageIds } = usePreferences();
@@ -228,6 +231,8 @@ function LanguageCard({
   pct: number;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -296,13 +301,13 @@ function LanguageCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   pressed: { opacity: 0.85 },
   header: { marginTop: spacing.md },
-  kicker: { ...typography.micro, color: colors.accent },
-  title: { ...typography.display, color: colors.text, marginTop: spacing.sm, lineHeight: 38 },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
+  kicker: { ...typography.micro, color: c.accent },
+  title: { ...typography.display, color: c.text, marginTop: spacing.sm, lineHeight: 38 },
+  subtitle: { ...typography.body, color: c.textMuted, marginTop: spacing.sm, lineHeight: 22 },
   statStrip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -311,78 +316,78 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     flexWrap: 'wrap',
   },
-  statText: { ...typography.caption, color: colors.textFaint },
+  statText: { ...typography.caption, color: c.textFaint },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     minHeight: 52,
     marginTop: spacing.lg,
     ...shadows.card,
   },
-  searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: spacing.md },
+  searchInput: { flex: 1, ...typography.body, color: c.text, paddingVertical: spacing.md },
   regionRail: { gap: spacing.sm, paddingVertical: spacing.md, paddingRight: spacing.lg },
   regionChip: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.pill,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  regionChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  regionText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
-  regionTextActive: { color: colors.onDark },
+  regionChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  regionText: { ...typography.caption, color: c.textMuted, fontWeight: '600' },
+  regionTextActive: { color: c.onDark },
   mineRail: { gap: spacing.sm, paddingVertical: 2, paddingRight: spacing.lg },
   mineCard: {
     width: 170,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.md,
     padding: spacing.md,
   },
-  mineCardActive: { borderColor: colors.primary, borderWidth: 1.5 },
+  mineCardActive: { borderColor: c.primary, borderWidth: 1.5 },
   mineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mineFlag: { fontSize: 26 },
-  mineName: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 14 },
-  mineMeta: { ...typography.caption, color: colors.textMuted, marginTop: 1, fontSize: 11 },
+  mineName: { ...typography.bodyStrong, color: c.text, marginTop: spacing.sm, fontSize: 14 },
+  mineMeta: { ...typography.caption, color: c.textMuted, marginTop: 1, fontSize: 11 },
   mineBar: { marginTop: spacing.sm },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     ...shadows.card,
   },
-  cardActive: { borderColor: colors.primary, borderWidth: 1.5 },
+  cardActive: { borderColor: c.primary, borderWidth: 1.5 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flagTile: {
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: c.surfaceTint,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   flag: { fontSize: 28 },
   cardBody: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  cardTitle: { ...typography.heading, color: colors.text, fontSize: 17 },
-  cardNative: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
+  cardTitle: { ...typography.heading, color: c.text, fontSize: 17 },
+  cardNative: { ...typography.caption, color: c.textMuted, marginTop: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  metaText: { ...typography.micro, fontSize: 9, color: colors.textFaint, letterSpacing: 0.2, fontWeight: '500' },
-  metaDot: { width: 2, height: 2, borderRadius: 1, backgroundColor: colors.borderStrong },
+  metaText: { ...typography.micro, fontSize: 9, color: c.textFaint, letterSpacing: 0.2, fontWeight: '500' },
+  metaDot: { width: 2, height: 2, borderRadius: 1, backgroundColor: c.borderStrong },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -390,12 +395,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: c.border,
   },
-  greetingText: { ...typography.bodyStrong, color: colors.primary, fontSize: 14, flexShrink: 1 },
-  greetingMeaning: { ...typography.caption, color: colors.textFaint, fontSize: 11, flexShrink: 1 },
+  greetingText: { ...typography.bodyStrong, color: c.primary, fontSize: 14, flexShrink: 1 },
+  greetingMeaning: { ...typography.caption, color: c.textFaint, fontSize: 11, flexShrink: 1 },
   cardProgress: { marginTop: spacing.md },
-  cardProgressText: { ...typography.micro, color: colors.textFaint, marginTop: 4, fontSize: 9 },
+  cardProgressText: { ...typography.micro, color: c.textFaint, marginTop: 4, fontSize: 9 },
   footerCard: {
     borderRadius: radii.lg,
     padding: spacing.xl,
@@ -413,7 +418,7 @@ const styles = StyleSheet.create({
     right: -60,
   },
   footerEmoji: { fontSize: 30 },
-  footerTitle: { ...typography.heading, color: colors.onDark, marginTop: spacing.sm },
-  footerBody: { ...typography.caption, color: colors.onDarkMuted, marginTop: spacing.sm, lineHeight: 19 },
+  footerTitle: { ...typography.heading, color: c.onDark, marginTop: spacing.sm },
+  footerBody: { ...typography.caption, color: c.onDarkMuted, marginTop: spacing.sm, lineHeight: 19 },
   footerPills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
 });
