@@ -1,6 +1,6 @@
 # Babelish 3.0 — AI architecture
 
-Babelish teaches 24 languages. **The learner never configures a model.** They
+Babelish teaches 25 languages. **The learner never configures a model.** They
 open Speak and the tutor answers; the only configuration lives on the server
 that the app owner runs.
 
@@ -20,7 +20,7 @@ what is **not** finished.
 
 | Plane | What it is | Runs on | Needs a server? | Cost to you |
 |---|---|---|---|---|
-| **On-device content** | 97 chapters · 204 lessons · 1,678 exercises · 528 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
+| **On-device content** | 101 chapters · 212 lessons · 1,744 exercises · 550 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
 | **Tutor server** | Babelish's `api` Function → OpenRouter free Qwen3 endpoints (default) or any OpenAI-compatible server you host | A machine you rent or own | Yes | Free-tier requests are $0; self-hosting costs electricity and hardware |
 | **On-device model** | Transformers.js Whisper (`whisper-base`) for voice input in the browser | The learner's browser | No (one ~150 MB download) | Free (bandwidth + battery) |
 | **External provider** | Optional. Any OpenAI-compatible endpoint, including paid ones | Someone else's servers | Yes | Whatever that provider charges |

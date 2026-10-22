@@ -1,6 +1,6 @@
 # Babelish 3.0 🌍
 
-**Learn any of 24 languages free — with an open-source tutor you can host yourself.**
+**Learn any of 25 languages free — with an open-source tutor you can host yourself.**
 
 Babelish is an AI language tutor that talks to you *only* in your target
 language. **You do not configure a model, download weights or paste a key** —
@@ -12,7 +12,7 @@ the browser for free, and a labelled coach keeps every screen usable when the
 server is unreachable. Courses, review, the phrasebook and device audio never
 needed a model at all.
 
-> 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
+> 25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550 starter words
 > bundled offline. Every lesson playable on the free plan.
 
 ## What's new in 3.4

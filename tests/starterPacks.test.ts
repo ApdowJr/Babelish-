@@ -14,7 +14,7 @@ import {
 import { STARTERS, starterWords } from '../src/data/starters';
 
 test('the atlas has 24 unique, well-formed languages', () => {
-  assert.equal(LANGUAGE_COUNT, 24);
+  assert.equal(LANGUAGE_COUNT, 25);
   assert.equal(new Set(LANGUAGES.map((language) => language.id)).size, LANGUAGES.length);
   for (const language of LANGUAGES) {
     assert.ok(language.name.length > 0, `${language.id}: name`);
@@ -81,9 +81,12 @@ test('starterWords returns essentials first, then numbers', () => {
 test('search finds native names, scripts and regions', () => {
   assert.ok(searchLanguages('日本語').some((language) => language.id === 'ja'));
   assert.ok(searchLanguages('arabic').some((language) => language.id === 'ar'));
+  assert.ok(searchLanguages('somali').some((language) => language.id === 'so'));
+  assert.ok(searchLanguages('Soomaali').some((language) => language.id === 'so'));
   assert.ok(searchLanguages('hangul').some((language) => language.id === 'ko'));
   assert.ok(searchLanguages('', 'africa').every((language) => language.regions.includes('africa')));
   assert.ok(searchLanguages('', 'africa').some((language) => language.id === 'sw'));
+  assert.ok(searchLanguages('', 'africa').some((language) => language.id === 'so'));
   assert.equal(searchLanguages('definitely-not-a-language').length, 0);
 });
 
