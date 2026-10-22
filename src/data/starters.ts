@@ -664,6 +664,35 @@ export const STARTERS: Record<string, StarterPack> = {
       'tisa',
       'kumi',
     ]),
+  },,
+
+  so: {
+    essentials: [
+      { target: 'salaan', english: 'hello' },
+      { target: 'mahadsanid', english: 'thank you' },
+      { target: 'fadlan', english: 'please' },
+      { target: 'haa', english: 'yes' },
+      { target: 'maya', english: 'no' },
+      { target: 'nabad gelyo', english: 'goodbye' },
+      { target: 'subax wanaagsan', english: 'good morning' },
+      { target: 'habeen wanaagsan', english: 'good evening' },
+      { target: 'sidee tahay?', english: 'how are you?' },
+      { target: 'waan fiicanahay', english: "I'm fine" },
+      { target: 'iga raalli noqo', english: 'excuse me / sorry' },
+      { target: 'biyo', english: 'water' },
+    ],
+    numbers: numbers([
+      'kow',
+      'laba',
+      'saddex',
+      'afar',
+      'shan',
+      'lix',
+      'toddoba',
+      'siddeed',
+      'sagaal',
+      'toban',
+    ]),
   },
 };
 
