@@ -79,8 +79,8 @@ tests/{courses,modelConfig,modelAdapters,offlineTutor,review}.test.ts
 
 ## Known limitations
 
-1. Somali is **not** in the atlas; no course was invented for it.
-2. Qwen2.5 documents 15 of the 24 languages; the other nine need the explicit
+1. Somali now has a curated 22-word starter pack and generated A1–A2 vocabulary drills. Its starter content still needs review by native speakers; it is not a complete CEFR course.
+2. Qwen2.5 documents 15 of the 25 languages; the other ten need the explicit
    unverified opt-in or a different server model.
 3. Starter courses are A1–A2 vocabulary drills, not complete CEFR paths, and
    have no native-reviewed grammar notes.
@@ -91,8 +91,8 @@ tests/{courses,modelConfig,modelAdapters,offlineTutor,review}.test.ts
 
 ## Suggested next steps
 
-- Run a native-speaker review for the 23 starter courses and add grammar notes.
-- Add a Somali starter pack from a reviewed source (would extend the atlas to 25).
+- Run a native-speaker review for the 24 starter courses and add grammar notes.
+- Have Somali starter vocabulary and transliterations reviewed by native speakers before expanding the course.
 - Wire a Kokoro/Piper HTTP adapter and a TTS model picker with real playback.
 - Add an end-to-end test against a containerised Ollama in CI.
 - Consider a small speech model per language once coverage tables are reviewed.
