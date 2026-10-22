@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
+import { Avatar } from '@/components/Avatar';
 import { SectionHeader } from '@/components/SectionHeader';
 import { ProgressBar } from '@/components/ProgressBar';
 import { StatTile } from '@/components/StatTile';
@@ -142,13 +143,6 @@ export default function HomeScreen() {
   const greeting =
     hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const firstName = (profile.displayName || user?.displayName || 'friend').split(' ')[0];
-  const initials = (profile.displayName || user?.displayName || 'B')
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   const myLanguages = activeLanguageIds.filter((id) => LANGUAGES.some((l) => l.id === id));
 
@@ -177,11 +171,17 @@ export default function HomeScreen() {
             </View>
             <Pressable
               onPress={() => router.push('/profile')}
-              style={styles.avatar}
               accessibilityRole="button"
               accessibilityLabel="Open your profile"
+              hitSlop={6}
             >
-              <Text style={styles.avatarText}>{initials}</Text>
+              <Avatar
+                name={profile.displayName || user?.displayName}
+                emoji={profile.avatar}
+                color={profile.avatarColor}
+                size={38}
+                onDark
+              />
             </Pressable>
           </View>
         </View>

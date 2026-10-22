@@ -104,6 +104,17 @@ function RootNavigator() {
             <Stack.Protected guard={signedIn}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="terms"
+          options={{
+            headerShown: true,
+            title: 'Terms',
+            headerStyle: { backgroundColor: colors.bg },
+            headerTintColor: colors.text,
+            headerShadowVisible: false,
+          }}
+        />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen
                 name="language/[id]"

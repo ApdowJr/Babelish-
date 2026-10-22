@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,7 +12,9 @@ import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
 import { DAILY_GOALS, dailyGoalXp, usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
-import { GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip, useProfile } from '@/state/profile';
+import { useProfile } from '@/state/profile';
+import { Avatar } from '@/components/Avatar';
+import { profileCompleteness, profileSummary } from '@/lib/learnerProfile';
 import { useAnalytics } from '@/state/analytics';
 import { useSubscription } from '@/state/subscription';
 import { LANGUAGES, getLanguage } from '@/data/languages';
@@ -24,28 +26,18 @@ import { FAMILY_SEATS, referralCode } from '@/lib/plans';
 import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
 
 /** English + every language in the 2.0 atlas. */
-const NATIVE_CHOICES = ['en', ...LANGUAGES.map((language) => language.id)];
-
-function nativeLabel(id: string): string {
-  if (id === 'en') return 'English';
-  const language = getLanguage(id);
-  return `${language.flag} ${language.name}`;
-}
-
 export default function ProfileScreen() {
   const { user, signOut, isDemo, isNeon } = useAuth();
 
   const {
     targetLanguageId,
-    nativeLanguageId,
-    setNativeLanguage,
     dailyGoalMinutes,
     setDailyGoal,
     activeLanguageIds,
     setTargetLanguage,
   } = usePreferences();
   const { wordsMastered, progress } = useLearning();
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useProfile();
   const { state: analytics } = useAnalytics();
   const { plan, redeem, resetToFree } = useSubscription();
   const target = getLanguage(targetLanguageId);
@@ -65,13 +57,12 @@ export default function ProfileScreen() {
     });
   }
 
-  const initials = (user?.displayName ?? 'L')
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const accountName = user?.displayName ?? 'Learner';
+  // The avatar and the name the tutor uses come from the profile, falling back
+  // to the account, so both surfaces always agree.
+  const shownName = profile.displayName || accountName;
+  const summary = profileSummary(profile);
+  const completeness = profileCompleteness(profile);
 
   return (
     <Screen scroll tabBarSpace>
@@ -99,11 +90,16 @@ export default function ProfileScreen() {
         style={styles.profileCard}
       >
         <View style={styles.profileOrb} />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <Avatar
+          name={shownName}
+          emoji={profile.avatar}
+          color={profile.avatarColor}
+          size={62}
+          onDark
+          ring
+        />
         <View style={styles.flex}>
-          <Text style={styles.name}>{user?.displayName ?? 'Learner'}</Text>
+          <Text style={styles.name}>{shownName}</Text>
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Pill
@@ -196,98 +192,32 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <SectionHeader title="Learning profile" icon="person-outline" />
-      <View style={styles.card}>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>What should your tutor call you?</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={profile.displayName}
-            onChangeText={(text) => updateProfile({ displayName: text })}
-            placeholder={user?.displayName ?? 'Your name'}
-            placeholderTextColor={colors.textFaint}
-            autoCapitalize="words"
-            accessibilityLabel="Display name for your tutor"
-          />
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>What do you do?</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={profile.job}
-            onChangeText={(text) => updateProfile({ job: text })}
-            placeholder="e.g. a nurse, a student, a chef"
-            placeholderTextColor={colors.textFaint}
-            accessibilityLabel="Your job or studies"
-          />
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You’re into…</Text>
-          <View style={styles.chipWrap}>
-            {INTEREST_OPTIONS.map((interest) => {
-              const on = profile.interests.includes(interest);
-              return (
-                <Pressable
-                  key={interest}
-                  onPress={() => updateProfile({ interests: toggleChip(profile.interests, interest) })}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{interest}</Text>
-                </Pressable>
-              );
-            })}
+      <SectionHeader
+        title="Learning profile"
+        icon="person-outline"
+        action={completeness === 1 ? 'Edit' : 'Finish'}
+        onAction={() => router.push('/profile/edit')}
+      />
+      <Pressable
+        onPress={() => router.push('/profile/edit')}
+        accessibilityRole="button"
+        accessibilityLabel="Edit your learning profile"
+        accessibilityHint="Name, avatar, bio, interests and goals for your tutor"
+        style={({ pressed }) => [styles.card, styles.profileRow, pressed && styles.profileRowPressed]}
+      >
+        <Avatar name={shownName} emoji={profile.avatar} color={profile.avatarColor} size={46} />
+        <View style={styles.flex}>
+          <Text style={styles.settingsTitle}>{shownName}</Text>
+          <Text style={styles.hint}>
+            {summary ??
+              'Add a few details and your tutor will use your own examples — job, interests, why you are learning.'}
+          </Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.round(completeness * 100)}%` }]} />
           </View>
         </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You’re learning for…</Text>
-          <View style={styles.chipWrap}>
-            {GOAL_OPTIONS.map((goalOption) => {
-              const on = profile.goals.includes(goalOption);
-              return (
-                <Pressable
-                  key={goalOption}
-                  onPress={() => updateProfile({ goals: toggleChip(profile.goals, goalOption) })}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{goalOption}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>You already speak…</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.nativeRail}
-          >
-            {NATIVE_CHOICES.filter((id) => id !== targetLanguageId).map((id) => {
-              const on = nativeLanguageId === id;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => setNativeLanguage(id)}
-                  style={[styles.choiceChip, on && styles.choiceChipOn]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: on }}
-                >
-                  <Text style={[styles.choiceText, on && styles.choiceTextOn]}>
-                    {nativeLabel(id)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-        <Text style={styles.hint}>
-          Your tutor uses this to pick examples from your real life. Saved on this device.
-        </Text>
-      </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
 
       <SectionHeader title="Plan" icon="pricetag-outline" />
       <View style={styles.freeCard}>
@@ -474,7 +404,7 @@ const styles = StyleSheet.create({
     top: -80,
     right: -50,
   },
-  avatar: {
+  avatarLegacy: {
     width: 62,
     height: 62,
     borderRadius: 31,
@@ -484,7 +414,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { ...typography.heading, color: colors.onDark, fontSize: 22 },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
+  profileRowPressed: { backgroundColor: colors.surfaceTint },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  progressFill: { height: 4, borderRadius: 2, backgroundColor: colors.primary },
   name: { ...typography.heading, color: colors.onDark },
   email: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 6, marginTop: spacing.sm, flexWrap: 'wrap' },
