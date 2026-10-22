@@ -127,7 +127,7 @@ export function ResetPasswordForm() {
         hitSlop={8}
         accessibilityRole="link"
       >
-        <Ionicons name="chevron-back" size={16} color={colors.primarySoft} />
+        <Ionicons name="chevron-back" size={16} color={colors.primary} />
         <Text style={styles.backText}>Request a new link</Text>
       </Pressable>
     </Screen>
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xxl,
   },
-  backText: { ...typography.bodyStrong, color: colors.primarySoft },
+  backText: { ...typography.bodyStrong, color: colors.primary },
   doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl },
   doneIcon: {
     width: 72,

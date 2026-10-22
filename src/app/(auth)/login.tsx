@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
-import { Logo } from '@/components/Logo';
+import { AuthHero } from '@/components/AuthHero';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,18 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  async function handleDemo() {
+    setError(null);
+    setBusy(true);
+    try {
+      await signIn('explorer@babelish.app', 'babelish-demo');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not start the demo.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleSignIn() {
     if (!EMAIL_RE.test(email.trim())) {
@@ -41,13 +53,12 @@ export default function LoginScreen() {
 
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <Logo size={34} />
-        <Text style={styles.title}>Speak like a native.</Text>
-        <Text style={styles.subtitle}>
-          Real conversations, real pronunciation, and an AI tutor that never switches to your language.
-        </Text>
-      </View>
+      <AuthHero
+        eyebrow="WELCOME BACK"
+        title="Speak like a native."
+        subtitle="Real conversations, real pronunciation, and a tutor that never switches to your language."
+        perks={['24 languages', 'Every lesson free', 'Works offline']}
+      />
 
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
@@ -89,9 +100,19 @@ export default function LoginScreen() {
       <Button label="Sign in" onPress={handleSignIn} loading={busy} />
 
       {isDemo ? (
-        <Text style={styles.demoNote}>
-          Demo mode — accounts stay on this device. Add the Neon backend URL to use real accounts.
-        </Text>
+        <>
+          <Button
+            label="Explore the demo — no email"
+            variant="secondary"
+            onPress={handleDemo}
+            disabled={busy}
+            style={styles.demoButton}
+          />
+          <Text style={styles.demoNote}>
+            Demo build: accounts, progress and the phrasebook stay on this device. No email is
+            sent and nothing leaves your phone. Any email + 8-character password also works.
+          </Text>
+        </>
       ) : null}
 
       <View style={styles.footer}>
@@ -105,9 +126,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { marginTop: spacing.xxl, marginBottom: spacing.xl },
-  title: { ...typography.display, color: colors.text, marginTop: spacing.xxl },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -119,7 +137,8 @@ const styles = StyleSheet.create({
   },
   errorText: { ...typography.caption, color: colors.danger, flex: 1 },
   forgot: { alignSelf: 'flex-end', marginBottom: spacing.xl },
-  forgotText: { ...typography.caption, color: colors.primarySoft },
+  forgotText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
+  demoButton: { marginTop: spacing.md },
   demoNote: {
     ...typography.micro,
     color: colors.textFaint,
@@ -132,5 +151,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
   },
   footerText: { ...typography.body, color: colors.textMuted },
-  footerLink: { ...typography.bodyStrong, color: colors.primarySoft },
+  footerLink: { ...typography.bodyStrong, color: colors.primary },
 });

@@ -1,36 +1,28 @@
 import type { Chapter, ChapterSource, Exercise, Lesson } from '@/lib/curriculum/types';
+import { LANGUAGES } from '@/data/languages';
 import { ch1 as esCh1 } from './es/ch1';
 import { ch2 as esCh2 } from './es/ch2';
 import { ch3 as esCh3 } from './es/ch3';
 import { ch4 as esCh4 } from './es/ch4';
 import { ch5 as esCh5 } from './es/ch5';
-import {
-  AR_SAMPLER,
-  DE_SAMPLER,
-  FR_SAMPLER,
-  HI_SAMPLER,
-  JA_SAMPLER,
-  PT_SAMPLER,
-  RU_SAMPLER,
-  SW_SAMPLER,
-  ZH_SAMPLER,
-} from './samplers';
+import { samplerChapters } from './samplers';
 
 /**
  * Bundled curriculum — the offline/demo source of truth. Supabase-approved
  * content overrides this at runtime when configured (see curriculum/store).
+ *
+ * Spanish carries the hand-authored CEFR course. Every other language ships
+ * the generated starter pack (First words + Numbers), so the catalogue has no
+ * dead ends: every flag on the Learn screen opens real, playable lessons.
  */
 const REGISTRY: Record<string, ChapterSource[]> = {
   es: [esCh1, esCh2, esCh3, esCh4, esCh5],
-  ar: [AR_SAMPLER],
-  zh: [ZH_SAMPLER],
-  fr: [FR_SAMPLER],
-  hi: [HI_SAMPLER],
-  ja: [JA_SAMPLER],
-  de: [DE_SAMPLER],
-  pt: [PT_SAMPLER],
-  ru: [RU_SAMPLER],
-  sw: [SW_SAMPLER],
+  ...Object.fromEntries(
+    LANGUAGES.filter((language) => language.id !== 'es').map((language) => [
+      language.id,
+      samplerChapters(language.id),
+    ])
+  ),
 };
 
 /** Hydrates authoring sources with stable, deterministic ids. */

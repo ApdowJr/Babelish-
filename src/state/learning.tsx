@@ -43,6 +43,8 @@ type LearningValue = {
     completedToday: boolean;
   }) => Promise<{ score: number; xpEarned: number }>;
   reviewWord: (itemKey: string, correct: boolean) => Promise<void>;
+  /** Saves a phrase from the phrasebook into the review queue (due now). */
+  addWord: (seed: { languageId: string; target: string; translation: string }) => Promise<boolean>;
 };
 
 const LearningContext = createContext<LearningValue | undefined>(undefined);
@@ -211,6 +213,30 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     [vocab, pushState]
   );
 
+  const addWord = useCallback<LearningValue['addWord']>(
+    async ({ languageId, target, translation }) => {
+      const itemKey = `${languageId}:${normalizeKey(target)}`;
+      if (vocab[itemKey]) return false;
+      const nextVocab = {
+        ...vocab,
+        [itemKey]: {
+          itemKey,
+          languageId,
+          target,
+          translation,
+          box: 1,
+          dueAt: new Date().toISOString(),
+        },
+      };
+      setVocab(nextVocab);
+      setDueCount(countDue(nextVocab));
+      await saveVocab(nextVocab);
+      await pushState(progress, nextVocab);
+      return true;
+    },
+    [vocab, progress, pushState]
+  );
+
   const reviewWord = useCallback<LearningValue['reviewWord']>(
     async (itemKey, correct) => {
       const item = vocab[itemKey];
@@ -246,8 +272,9 @@ export function LearningProvider({ children }: { children: ReactNode }) {
       wordsMastered: vocabList.filter((item) => item.box >= 4).length,
       recordLesson,
       reviewWord,
+      addWord,
     };
-  }, [ready, progress, vocab, dueCount, lastSyncedAt, recordLesson, reviewWord]);
+  }, [ready, progress, vocab, dueCount, lastSyncedAt, recordLesson, reviewWord, addWord]);
 
   return <LearningContext.Provider value={value}>{children}</LearningContext.Provider>;
 }

@@ -61,6 +61,8 @@ function sanitize(raw: string | null): AnalyticsState {
               lifetime: Math.max(0, Number(parsed.xp.lifetime) || 0),
               week: typeof parsed.xp.week === 'string' ? parsed.xp.week : EMPTY_XP.week,
               weekly: Math.max(0, Number(parsed.xp.weekly) || 0),
+              day: typeof parsed.xp.day === 'string' ? parsed.xp.day : EMPTY_XP.day,
+              daily: Math.max(0, Number(parsed.xp.daily) || 0),
             }
           : { ...EMPTY_XP },
       events: Array.isArray(parsed.events)

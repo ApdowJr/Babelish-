@@ -480,7 +480,7 @@ export default function SpeakScreen() {
         ) : null}
         {active?.phase === 'scoring' ? (
           <View style={styles.practiceStatusRow}>
-            <ActivityIndicator size="small" color={colors.primarySoft} />
+            <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.practiceStatus}>Transcribing…</Text>
           </View>
         ) : null}
@@ -671,7 +671,7 @@ export default function SpeakScreen() {
         ListFooterComponent={
           busy ? (
             <View style={styles.typingRow}>
-              <ActivityIndicator size="small" color={colors.primarySoft} />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.typingText}>{language.name} is thinking…</Text>
             </View>
           ) : undefined
@@ -747,6 +747,12 @@ export default function SpeakScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
+        {!tutorLive ? (
+          <Text style={styles.demoNote}>
+            Demo tutor — live AI is off on this deployment. Set AI_API_KEY on the api Function, or
+            EXPO_PUBLIC_AI_API_URL + EXPO_PUBLIC_AI_API_KEY in .env for development.
+          </Text>
+        ) : null}
         <View style={styles.inputBar}>
           <Pressable
             style={[styles.micButton, chatRecording && styles.micButtonRecording]}
@@ -793,12 +799,6 @@ export default function SpeakScreen() {
             </LinearGradient>
           </Pressable>
         </View>
-        {!tutorLive ? (
-          <Text style={styles.demoNote}>
-            Demo tutor — live AI is off on this deployment. Set AI_API_KEY on the api Function, or
-            EXPO_PUBLIC_AI_API_URL + EXPO_PUBLIC_AI_API_KEY in .env for development.
-          </Text>
-        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.primary,
     borderWidth: 1,
     borderColor: colors.primary,
     borderTopRightRadius: spacing.xs,
@@ -951,7 +951,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: 92,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.bg,

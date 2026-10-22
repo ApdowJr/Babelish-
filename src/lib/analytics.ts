@@ -3,7 +3,7 @@
  * State storage lives in `@/state/analytics`; everything here is
  * dependency-free so it can be tested directly under node.
  */
-import { EMPTY_XP, type XpState } from '@/lib/xp';
+import { EMPTY_XP, type XpState } from './xp';
 
 export type Skill = 'read' | 'listen' | 'write' | 'speak';
 
@@ -128,4 +128,43 @@ export function computeStreak(events: AnalyticsEvent[], now = new Date()): numbe
 export function activeToday(events: AnalyticsEvent[], now = new Date()): boolean {
   const key = dayKey(now);
   return events.some((e) => dayKey(new Date(e.at)) === key);
+}
+
+
+/**
+ * Activity counts for the last `days` local days, oldest → newest.
+ * Used by the home weekly chart — real data only, zero bars when quiet.
+ */
+export function activityByDay(
+  events: AnalyticsEvent[],
+  days = 7,
+  now = new Date()
+): number[] {
+  const buckets = new Map<string, number>();
+  for (const event of events) {
+    const key = dayKey(new Date(event.at));
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+  const out: number[] = [];
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+    out.push(buckets.get(dayKey(date)) ?? 0);
+  }
+  return out;
+}
+
+/** Day-of-week initials for the chart labels, Monday-first optional. */
+export function weekdayLabels(now = new Date(), days = 7): string[] {
+  const names = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const out: string[] = [];
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+    out.push(names[date.getDay()]);
+  }
+  return out;
+}
+
+/** How many times a named event occurred in the whole ring buffer. */
+export function countEvents(events: AnalyticsEvent[], name: string): number {
+  return events.filter((event) => event.name === name).length;
 }

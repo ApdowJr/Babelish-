@@ -66,7 +66,7 @@ export function listen(question: string, options: string[], opts: Opts = {}): Ex
   };
 }
 
-/** Speaking exercise — locked until Phase 2 (speech recognition). */
+/** Speaking exercise — ungraded in the player, with native reference audio. */
 export function speak(question: string, opts: Opts = {}): ExerciseSource {
   return {
     type: 'speak',

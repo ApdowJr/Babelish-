@@ -9,8 +9,8 @@ _shipped 2026-10-18 · retention & scale_
 | Leagues — lifetime tiers that **never demote** (no loss-aversion loops) | ✅ `src/lib/league.ts` (pure) |
 | Weekly leaderboard on the backend, privacy-first | ✅ `weekly_xp` table + `GET/POST /api/league` |
 | Rank shown is only "you + field size" — never another learner's identity | ✅ `rankLabel()`; null when absent (no fake rank) |
-| Free tier = 1 **new** scenario/day; replays of today always free | ✅ `src/lib/plans.ts` (pure) + subscription state |
-| Premium until billing lands | ✅ `BABELISH-BETA` code; upgrade sheet on the locked lesson |
+| ~~Free tier = 1 new scenario/day~~ **superseded in 2.0** — all learning is unlimited and free | ✅ `src/lib/plans.ts` returns no limit |
+| Supporter tier until billing lands | ✅ `BABELISH-BETA` code; no lesson is locked |
 | Referral + family plan | ✅ stable `NV……` code + share sheet; family = 6 seats (doc'd) |
 | Daily reminder at the learner's chosen time | ✅ `expo-notifications`, one DAILY trigger, local-only |
 | Reminder copy is honest | ✅ streak-free at schedule time (a daily repeat must stay true) |

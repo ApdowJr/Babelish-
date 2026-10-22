@@ -95,16 +95,16 @@ export function TextField({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.lg },
-  label: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm },
+  label: { ...typography.micro, color: colors.textFaint, marginBottom: spacing.sm },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
-    minHeight: 52,
+    minHeight: 54,
   },
   fieldFocused: { borderColor: colors.primary },
   fieldError: { borderColor: colors.danger },

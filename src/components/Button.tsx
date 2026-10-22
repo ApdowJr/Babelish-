@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type Vi
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'light';
 
 type Props = {
   label: string;
@@ -48,10 +48,12 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
 
   const tone =
     variant === 'secondary'
-      ? { bg: colors.surfaceHigh, border: colors.border, text: colors.text }
+      ? { bg: colors.surfaceHigh, border: colors.border, text: colors.primary }
       : variant === 'danger'
         ? { bg: colors.dangerSoft, border: 'transparent', text: colors.danger }
-        : { bg: 'transparent', border: 'transparent', text: colors.primarySoft };
+        : variant === 'light'
+          ? { bg: colors.onDark, border: 'transparent', text: colors.primary }
+          : { bg: 'transparent', border: 'transparent', text: colors.primary };
 
   return (
     <Pressable
@@ -72,7 +74,7 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
       {loading ? (
         <ActivityIndicator color={tone.text} />
       ) : (
-        <Text style={[styles.label, { color: variant === 'ghost' ? colors.primarySoft : tone.text }]}>
+        <Text style={[styles.label, { color: variant === 'ghost' ? colors.primary : tone.text }]}>
           {label}
         </Text>
       )}
@@ -82,7 +84,7 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 52,
+    minHeight: 54,
     borderRadius: radii.md,
     borderWidth: 1,
     overflow: 'hidden',
@@ -90,9 +92,9 @@ const styles = StyleSheet.create({
   },
   primaryShadow: {
     shadowColor: colors.primary,
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 9 },
     elevation: 6,
   },
   gradient: {
@@ -101,6 +103,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
-  label: { ...typography.bodyStrong, textAlign: 'center' },
+  label: { ...typography.bodyStrong, fontSize: 15.5, textAlign: 'center', letterSpacing: 0.1 },
   primaryLabel: { color: colors.white },
 });

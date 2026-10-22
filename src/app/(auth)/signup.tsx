@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
-import { Logo } from '@/components/Logo';
+import { AuthHero } from '@/components/AuthHero';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -75,11 +75,12 @@ export default function SignupScreen() {
 
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <Logo size={34} />
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>Two minutes now. Fluency later. 🌍</Text>
-      </View>
+      <AuthHero
+        eyebrow="JOIN BABELISH"
+        title="Your first hello starts here."
+        subtitle="Two minutes now, fluency later. Every language and every lesson is free — no card, no trial timer."
+        perks={['24 languages', 'Free forever', 'No ads']}
+      />
 
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xxl },
   footerText: { ...typography.body, color: colors.textMuted },
-  footerLink: { ...typography.bodyStrong, color: colors.primarySoft },
+  footerLink: { ...typography.bodyStrong, color: colors.primary },
   doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl },
   doneIcon: {
     width: 72,

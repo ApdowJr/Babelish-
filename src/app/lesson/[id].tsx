@@ -18,11 +18,9 @@ import type { Exercise, Lesson, VocabSeed } from '@/lib/curriculum/types';
 import { getLanguage } from '@/data/languages';
 import { speakNative, stopSpeaking } from '@/lib/ai';
 import { dayKey } from '@/lib/analytics';
-import { showAlert } from '@/lib/alert';
 import { lessonXp } from '@/lib/xp';
 import { useLearning } from '@/state/learning';
 import { useAnalytics } from '@/state/analytics';
-import { useSubscription } from '@/state/subscription';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
 /** Lenient matching: accents, case, punctuation, and spacing don't block you. */
@@ -46,7 +44,6 @@ export default function LessonScreen() {
 
   const { progress, recordLesson } = useLearning();
   const { logSkillResult, logLessonCompleted } = useAnalytics();
-  const { canStart, consume, redeem } = useSubscription();
 
   const [data, setData] = useState<{
     key: string;
@@ -100,8 +97,6 @@ export default function LessonScreen() {
 
   const exercise: Exercise | undefined = lesson?.exercises[step];
   const isLast = lesson ? step >= lesson.exercises.length - 1 : false;
-  /** Free tier: 1 new scenario/day — replays of today's lesson stay open. */
-  const gate = canStart(lessonId);
 
   // Native voice reads listen-exercises aloud, automatically.
   useEffect(() => {
@@ -165,8 +160,6 @@ export default function LessonScreen() {
     const completedToday = prior
       ? dayKey(new Date(prior.completedAt)) === dayKey(new Date())
       : false;
-    // The scenario is used the moment the run finishes (sync outcome aside).
-    consume(lesson.id);
     try {
       const result = await recordLesson({
         lessonId: lesson.id,
@@ -198,7 +191,7 @@ export default function LessonScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.primarySoft} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -210,36 +203,6 @@ export default function LessonScreen() {
         <View style={styles.center}>
           <Text style={styles.missingText}>Lesson not found.</Text>
           <Button label="Go back" variant="secondary" onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  /* ── Free-tier gate (before completion so today's runs stay visible) ── */
-
-  if (!gate.allowed) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <Ionicons name="lock-closed-outline" size={36} color={colors.accent} />
-          <Text style={styles.missingText}>One scenario a day on Free</Text>
-          <Text style={styles.gateBody}>
-            You&apos;ve used today&apos;s free scenario — your allowance resets at midnight.
-            Premium opens unlimited scenarios, and replays of scenarios you started
-            today stay free either way.
-          </Text>
-          <Button
-            label="Start premium (beta)"
-            onPress={() => {
-              const label = redeem('BABELISH-BETA');
-              if (label) {
-                showAlert('Premium active', `${label} — unlimited scenarios are unlocked on this device.`);
-              } else {
-                showAlert('Code not accepted', 'Ask support for a valid beta code.');
-              }
-            }}
-          />
-          <Button label="Not now" variant="secondary" style={{ marginTop: spacing.xs }} onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
@@ -339,15 +302,26 @@ export default function LessonScreen() {
         <Text style={styles.prompt}>{exercise.prompt}</Text>
 
         {exercise.type === 'speak' ? (
-          <View style={styles.lockedCard}>
-            <View style={styles.lockedIcon}>
-              <Ionicons name="mic-off-outline" size={28} color={colors.warning} />
+          <View style={styles.speakCard}>
+            <View style={styles.speakIcon}>
+              <Ionicons name="mic" size={26} color={colors.onDark} />
             </View>
-            <Text style={styles.lockedTitle}>Speaking practice</Text>
-            <Text style={styles.lockedText}>
-              “{exercise.question}” — pronunciation scoring arrives in Phase 2 with speech
-              recognition. For now, say it out loud on your own!
+            <Text style={[styles.speakTarget, language.direction === 'rtl' && styles.rtl]}>
+              {exercise.question}
             </Text>
+            {exercise.hint ? <Text style={styles.speakHint}>{exercise.hint}</Text> : null}
+            <Text style={styles.speakText}>
+              {exercise.note ? `${exercise.note} — ` : ''}Say it out loud, then tap to hear the
+              native voice and compare.
+            </Text>
+            <Pressable
+              onPress={() => speakNative(exercise.question, language.ttsLocale)}
+              style={styles.speakListen}
+              accessibilityRole="button"
+            >
+              <Ionicons name="volume-high" size={18} color={colors.primary} />
+              <Text style={styles.speakListenText}>Hear it</Text>
+            </Pressable>
           </View>
         ) : exercise.type === 'type' ? (
           <View>
@@ -481,7 +455,7 @@ export default function LessonScreen() {
 
       <View style={styles.footer}>
         {finishing ? (
-          <ActivityIndicator color={colors.primarySoft} />
+          <ActivityIndicator color={colors.primary} />
         ) : answered === null && exercise.type !== 'speak' ? (
           <Button
             label="Check"
@@ -507,13 +481,50 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.xl },
   missingText: { ...typography.body, color: colors.textMuted },
-  gateBody: {
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
+  speakCard: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    marginTop: spacing.xl,
+  },
+  speakIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speakTarget: {
+    ...typography.title,
+    color: colors.text,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 36,
+  },
+  speakHint: { ...typography.caption, color: colors.textFaint, fontStyle: 'italic' },
+  speakText: {
     ...typography.caption,
     color: colors.textMuted,
     textAlign: 'center',
-    paddingHorizontal: spacing.lg,
-    marginTop: -spacing.sm,
+    lineHeight: 19,
   },
+  speakListen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryTint,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  speakListenText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,26 +636,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   noteText: { ...typography.caption, color: colors.text, flex: 1, lineHeight: 18 },
-  lockedCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  lockedIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 197, 66, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockedTitle: { ...typography.heading, color: colors.text },
-  lockedText: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,

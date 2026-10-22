@@ -4,9 +4,27 @@
  * state storage lives in `@/state/analytics`.
  */
 
-export type XpState = { lifetime: number; week: string; weekly: number };
+export type XpState = {
+  lifetime: number;
+  /** ISO week key for `weekly`. */
+  week: string;
+  /** XP earned in the current week. */
+  weekly: number;
+  /** Local calendar day key for `daily`. */
+  day: string;
+  /** XP earned today — powers the daily goal bar. */
+  daily: number;
+};
 
-export const EMPTY_XP: XpState = { lifetime: 0, week: '', weekly: 0 };
+export const EMPTY_XP: XpState = { lifetime: 0, week: '', weekly: 0, day: '', daily: 0 };
+
+/** Local calendar day key (YYYY-MM-DD), independent of the analytics module. */
+export function localDayKey(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 /** Published rules — the learner can always see why they earned XP. */
 export const XP_RULES = {
@@ -64,15 +82,22 @@ export function weeklyXp(state: XpState, now = new Date()): number {
   return state.week === weekKey(now) ? state.weekly : 0;
 }
 
-/** Adds XP, rolling the weekly counter over when the week changes. */
+/** XP earned TODAY — 0 after midnight until new awards land. */
+export function todayXp(state: XpState, now = new Date()): number {
+  return state.day === localDayKey(now) ? state.daily : 0;
+}
+
+/** Adds XP, rolling the weekly + daily counters over when they change. */
 export function addXp(state: XpState, amount: number, now = new Date()): XpState {
   if (amount <= 0) return state;
-  const key = weekKey(now);
-  const sameWeek = state.week === key;
+  const week = weekKey(now);
+  const day = localDayKey(now);
   return {
     lifetime: state.lifetime + amount,
-    week: key,
-    weekly: (sameWeek ? state.weekly : 0) + amount,
+    week,
+    weekly: (state.week === week ? state.weekly : 0) + amount,
+    day,
+    daily: (state.day === day ? state.daily : 0) + amount,
   };
 }
 

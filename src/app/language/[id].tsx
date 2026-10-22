@@ -1,37 +1,46 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
+import { ProgressBar } from '@/components/ProgressBar';
+import { Pill } from '@/components/Pill';
 import { Button } from '@/components/Button';
-import { Chip } from '@/components/Chip';
-import { getLanguage, languageStatus } from '@/data/languages';
+import { DIFFICULTY_LABEL, getLanguage, languageStatus } from '@/data/languages';
+import { starterPhrasebook } from '@/lib/phrasebook';
 import { usePreferences } from '@/state/preferences';
-import { useLearning } from '@/state/learning';
+import { normalizeKey, useLearning } from '@/state/learning';
 import { isChapterUnlocked, loadCurriculum } from '@/lib/curriculum/store';
-import type { Chapter } from '@/lib/curriculum/types';
-import { colors, radii, spacing, typography } from '@/theme/tokens';
+import { speakNative } from '@/lib/ai';
+import type { Chapter, Lesson } from '@/lib/curriculum/types';
+import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
 
 export default function LanguageDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const language = getLanguage(String(id));
-  const { targetLanguageId, setTargetLanguage } = usePreferences();
+  const {
+    targetLanguageId,
+    setTargetLanguage,
+    activeLanguageIds,
+    toggleMyLanguage,
+  } = usePreferences();
   const isCurrent = language.id === targetLanguageId;
+  const inMyLanguages = activeLanguageIds.includes(language.id);
 
-  const { progress } = useLearning();
+  const { progress, addWord, vocab } = useLearning();
   const [data, setData] = useState<{ languageId: string; chapters: Chapter[] } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    // Result is keyed by language — the render pass derives "loaded" from the
-    // key, so the effect body never sets state synchronously.
     loadCurriculum(language.id)
       .then((loaded) => {
         if (!cancelled) setData({ languageId: language.id, chapters: loaded });
       })
       .catch(() => {
-        // stays null → rendered as "no chapters yet"
+        if (!cancelled) setData({ languageId: language.id, chapters: [] });
       });
     return () => {
       cancelled = true;
@@ -39,9 +48,10 @@ export default function LanguageDetailScreen() {
   }, [language.id]);
 
   const chaptersLoaded = data?.languageId === language.id;
-  const chapters = chaptersLoaded ? data.chapters : [];
-  // Collapse is stored as '' so the first chapter can be collapsed too;
-  // stale ids from another language simply fall back to the first chapter.
+  const chapters = useMemo(
+    () => (data?.languageId === language.id ? data.chapters : []),
+    [data, language.id]
+  );
   const expandedIdEffective =
     expandedId === ''
       ? null
@@ -49,44 +59,140 @@ export default function LanguageDetailScreen() {
         ? expandedId
         : (chapters[0]?.id ?? null);
 
+  const totalLessons = chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0);
+  const completedLessons = chapters.reduce(
+    (sum, chapter) =>
+      sum + chapter.lessons.filter((lesson) => (progress[lesson.id]?.score ?? 0) >= 70).length,
+    0
+  );
+  const pct = totalLessons > 0 ? completedLessons / totalLessons : 0;
+  const firstIncomplete = useMemo(() => {
+    for (const chapter of chapters) {
+      for (const lesson of chapter.lessons) {
+        if ((progress[lesson.id]?.score ?? 0) < 70) return lesson;
+      }
+    }
+    return chapters[0]?.lessons[0] ?? null;
+  }, [chapters, progress]);
+
+  const phrases = useMemo(() => starterPhrasebook(language.id).slice(0, 3), [language.id]);
+
+  function startLesson(lesson: Lesson | null) {
+    if (!lesson) return;
+    setTargetLanguage(language.id);
+    router.push({ pathname: '/lesson/[id]', params: { id: lesson.id, lang: language.id } });
+  }
+
+  const status = languageStatus(language.id);
+
   return (
     <Screen scroll>
-      <View style={styles.hero}>
-        <Text style={styles.flag}>{language.flag}</Text>
-        <Text style={styles.name}>{language.name}</Text>
-        <Text style={styles.native}>{language.nativeName}</Text>
-        <View style={styles.statusChip}>
-          <Text style={styles.statusChipText}>
-            {languageStatus(language.id) === 'beta'
-              ? 'BETA — weekly reviewed updates'
-              : 'PREVIEW — sampler chapter'}
-          </Text>
+      <LinearGradient
+        colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.orbA} />
+        <View style={styles.orbB} />
+        <View style={styles.heroTop}>
+          <Text style={styles.flag}>{language.flag}</Text>
+          <View style={styles.heroPills}>
+            <Pill label="FREE" tone="dark" icon="sparkles" />
+            <Pill label={status === 'beta' ? 'WEEKLY UPDATES' : 'STARTER PACK'} tone="dark" />
+          </View>
         </View>
-        <View style={styles.metaRow}>
-          <View style={styles.metaPill}>
-            <Ionicons name="people-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.metaText}>{language.nativeSpeakers}</Text>
+        <Text style={styles.name}>{language.name}</Text>
+        <Text style={styles.native}>
+          {language.nativeName} · {language.nativeSpeakers}
+        </Text>
+        <Text
+          style={[styles.hello, language.direction === 'rtl' && styles.rtl]}
+        >
+          {language.greeting.text}
+        </Text>
+        <Text style={styles.helloMeaning}>
+          “{language.greeting.meaning}”
+          {language.greeting.roman ? ` · ${language.greeting.roman}` : ''}
+        </Text>
+
+        <View style={styles.heroMeta}>
+          <Meta icon="text-outline" label={language.script} />
+          <Meta icon="layers-outline" label={language.family} />
+          <Meta icon="speedometer-outline" label={DIFFICULTY_LABEL[language.difficulty]} />
+        </View>
+
+        <Button
+          label={
+            completedLessons > 0
+              ? `Continue ${language.name}`
+              : `Start ${language.name} — free`
+          }
+          variant="light"
+          onPress={() => startLesson(firstIncomplete)}
+          style={styles.heroCta}
+        />
+        <Pressable
+          onPress={() => toggleMyLanguage(language.id)}
+          style={styles.addToggle}
+          accessibilityRole="button"
+          accessibilityState={{ selected: inMyLanguages }}
+        >
+          <Ionicons
+            name={inMyLanguages ? 'checkmark-circle' : 'add-circle-outline'}
+            size={17}
+            color={colors.onDark}
+          />
+          <Text style={styles.addToggleText}>
+            {inMyLanguages ? 'In my languages' : 'Add to my languages'}
+          </Text>
+        </Pressable>
+      </LinearGradient>
+
+      <View style={styles.progressCard}>
+        <View style={styles.progressTop}>
+          <View>
+            <Text style={styles.progressTitle}>
+              {completedLessons > 0 ? 'Your progress' : 'Ready when you are'}
+            </Text>
+            <Text style={styles.progressSub}>
+              {chaptersLoaded
+                ? `${completedLessons} of ${totalLessons} lessons mastered · ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}`
+                : 'Loading your course…'}
+            </Text>
           </View>
-          <View style={styles.metaPill}>
-            <Ionicons name="text-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.metaText}>{language.script}</Text>
-          </View>
+          <Text style={styles.progressPct}>{Math.round(pct * 100)}%</Text>
+        </View>
+        <ProgressBar value={pct} height={9} style={styles.progressBar} />
+        <View style={styles.progressStats}>
+          <ProgressStat value={chapters.length} label="CHAPTERS" />
+          <View style={styles.progressDivider} />
+          <ProgressStat value={totalLessons} label="LESSONS" />
+          <View style={styles.progressDivider} />
+          <ProgressStat value="∞" label="RETAKES" />
         </View>
       </View>
 
       <Text style={styles.blurb}>{language.blurb}</Text>
 
-      <Text style={styles.sectionLabel}>DIALECTS WE TEACH</Text>
+      <SectionHeader title="Dialects we teach" icon="chatbubbles-outline" />
       <View style={styles.chipsWrap}>
         {language.dialects.map((dialect) => (
-          <Chip key={dialect} label={dialect} />
+          <View key={dialect} style={styles.dialectChip}>
+            <Text style={styles.dialectText}>{dialect}</Text>
+          </View>
         ))}
       </View>
 
-      <Text style={styles.sectionLabel}>CHAPTERS · CEFR A1</Text>
+      <SectionHeader
+        title="Course · CEFR A1"
+        action={completedLessons > 0 ? 'Start over' : undefined}
+        onAction={firstIncomplete ? () => startLesson(chapters[0]?.lessons[0] ?? null) : undefined}
+      />
+
       {!chaptersLoaded ? (
-        <View style={styles.chapterLoading}>
-          <ActivityIndicator color={colors.primarySoft} />
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} />
         </View>
       ) : chapters.length === 0 ? (
         <Text style={styles.comingSoon}>
@@ -98,7 +204,7 @@ export default function LanguageDetailScreen() {
           const doneCount = chapter.lessons.filter(
             (lesson) => (progress[lesson.id]?.score ?? 0) >= 70
           ).length;
-          const pct = chapter.lessons.length
+          const chapterPct = chapter.lessons.length
             ? Math.round((doneCount / chapter.lessons.length) * 100)
             : 0;
           const expanded = expandedIdEffective === chapter.id;
@@ -119,12 +225,15 @@ export default function LanguageDetailScreen() {
                   )}
                 </View>
                 <View style={styles.flex}>
-                  <Text
-                    style={[styles.chapterTitle, !unlocked && styles.chapterTitleLocked]}
-                    numberOfLines={1}
-                  >
-                    {chapter.title}
-                  </Text>
+                  <View style={styles.chapterTitleRow}>
+                    <Text
+                      style={[styles.chapterTitle, !unlocked && styles.chapterTitleLocked]}
+                      numberOfLines={1}
+                    >
+                      {chapter.title}
+                    </Text>
+                    {chapterPct === 100 ? <Pill label="DONE" tone="free" /> : null}
+                  </View>
                   <Text style={styles.chapterDesc} numberOfLines={2}>
                     {unlocked
                       ? chapter.description
@@ -133,9 +242,9 @@ export default function LanguageDetailScreen() {
                   {unlocked && doneCount > 0 ? (
                     <View style={styles.chapterProgressRow}>
                       <View style={styles.chapterProgressTrack}>
-                        <View style={[styles.chapterProgressFill, { width: `${pct}%` }]} />
+                        <View style={[styles.chapterProgressFill, { width: `${chapterPct}%` }]} />
                       </View>
-                      <Text style={styles.chapterProgressText}>{pct}%</Text>
+                      <Text style={styles.chapterProgressText}>{chapterPct}%</Text>
                     </View>
                   ) : null}
                 </View>
@@ -157,21 +266,16 @@ export default function LanguageDetailScreen() {
                       <View key={lesson.id}>
                         {lessonIndex > 0 ? <View style={styles.rowDivider} /> : null}
                         <Pressable
-                          onPress={() =>
-                            router.push({
-                              pathname: '/lesson/[id]',
-                              params: { id: lesson.id, lang: language.id },
-                            })
-                          }
+                          onPress={() => startLesson(lesson)}
                           style={styles.lessonRow}
                           accessibilityRole="button"
                         >
                           <View style={[styles.lessonDot, mastered && styles.lessonDotDone]}>
-                            <Text
-                              style={[styles.lessonDotText, mastered && styles.lessonDotTextDone]}
-                            >
-                              {mastered ? '✓' : lessonIndex + 1}
-                            </Text>
+                            {mastered ? (
+                              <Ionicons name="checkmark" size={15} color={colors.success} />
+                            ) : (
+                              <Text style={styles.lessonDotText}>{lessonIndex + 1}</Text>
+                            )}
                           </View>
                           <View style={styles.flex}>
                             <Text style={styles.lessonTitle}>{lesson.title}</Text>
@@ -184,7 +288,9 @@ export default function LanguageDetailScreen() {
                               {score}%
                             </Text>
                           ) : (
-                            <Ionicons name="play-circle-outline" size={24} color={colors.accent} />
+                            <View style={styles.playDot}>
+                              <Ionicons name="play" size={12} color={colors.accent} />
+                            </View>
                           )}
                         </Pressable>
                       </View>
@@ -197,122 +303,251 @@ export default function LanguageDetailScreen() {
         })
       )}
 
-      <Text style={styles.sectionLabel}>REAL-LIFE SCENARIOS</Text>
-      <View style={styles.group}>
-        {language.scenarios.map((scenario, index) => (
-          <View key={scenario.id}>
-            {index > 0 ? <View style={styles.rowDivider} /> : null}
-            <View style={styles.scenarioRow}>
-              <Text style={styles.scenarioEmoji}>{scenario.emoji}</Text>
-              <Text style={styles.scenarioTitle}>{scenario.title}</Text>
+      <SectionHeader
+        title="Starter phrases"
+        action="Full phrasebook"
+        onAction={() => {
+          setTargetLanguage(language.id);
+          router.push('/words?tab=phrasebook');
+        }}
+      />
+      <View style={styles.phraseList}>
+        {phrases.map((phrase, index) => {
+          const saved = Boolean(vocab[`${phrase.languageId}:${normalizeKey(phrase.target)}`]);
+          return (
+            <View key={phrase.id}>
+              {index > 0 ? <View style={styles.rowDivider} /> : null}
+              <View style={styles.phraseRow}>
+                <Pressable
+                  onPress={() => speakNative(phrase.target, language.ttsLocale)}
+                  style={styles.phrasePlay}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Hear ${phrase.target}`}
+                >
+                  <Ionicons name="volume-medium" size={17} color={colors.primary} />
+                </Pressable>
+                <View style={styles.flex}>
+                  <Text
+                    style={[styles.phraseTarget, language.direction === 'rtl' && styles.rtl]}
+                  >
+                    {phrase.target}
+                  </Text>
+                  <Text style={styles.phraseEnglish}>
+                    {phrase.english}
+                    {phrase.roman ? ` · ${phrase.roman}` : ''}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() =>
+                    void addWord({
+                      languageId: language.id,
+                      target: phrase.target,
+                      translation: phrase.english,
+                    })
+                  }
+                  disabled={saved}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={saved ? 'Saved' : 'Save phrase'}
+                >
+                  <Ionicons
+                    name={saved ? 'checkmark-circle' : 'add-circle-outline'}
+                    size={21}
+                    color={saved ? colors.success : colors.textFaint}
+                  />
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
+      <SectionHeader title="Real-life scenarios" icon="sparkles-outline" />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scenarioRail}
+      >
+        {language.scenarios.map((scenario) => (
+          <Pressable
+            key={scenario.id}
+            onPress={() => {
+              setTargetLanguage(language.id);
+              router.push('/speak');
+            }}
+            style={({ pressed }) => [styles.scenarioCard, pressed && styles.pressed]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.scenarioEmoji}>{scenario.emoji}</Text>
+            <Text style={styles.scenarioTitle}>{scenario.title}</Text>
+            <Text style={styles.scenarioMeta}>Talk it through →</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       <Button
-        label={isCurrent ? `Continue speaking ${language.name}` : `Start speaking ${language.name}`}
+        label={isCurrent ? `Speak ${language.name} now` : `Switch to ${language.name} & speak`}
         onPress={() => {
           setTargetLanguage(language.id);
           router.push('/speak');
         }}
         style={{ marginTop: spacing.xl }}
       />
+      <Text style={styles.footerNote}>
+        Every lesson here is free, including retakes. Your progress syncs when you are online and
+        works offline too.
+      </Text>
     </Screen>
+  );
+}
+
+function Meta({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.metaPill}>
+      <Ionicons name={icon} size={11} color={colors.onDarkMuted} />
+      <Text style={styles.metaText} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function ProgressStat({ value, label }: { value: number | string; label: string }) {
+  return (
+    <View style={styles.progressStat}>
+      <Text style={styles.progressStatValue}>{value}</Text>
+      <Text style={styles.progressStatLabel}>{label}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  hero: { alignItems: 'center', marginTop: spacing.lg },
-  flag: { fontSize: 64 },
-  statusChip: {
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
+  pressed: { opacity: 0.85 },
+  hero: {
+    borderRadius: radii.xl,
+    padding: spacing.xl,
     marginTop: spacing.sm,
+    overflow: 'hidden',
+    ...shadows.hero,
   },
-  statusChipText: { ...typography.micro, color: colors.accent, fontWeight: '600' as const },
-  name: { ...typography.display, color: colors.text, marginTop: spacing.md },
-  native: { ...typography.heading, color: colors.textMuted, marginTop: spacing.xs },
-  metaRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  orbA: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    top: -80,
+    right: -60,
+  },
+  orbB: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(242,193,78,0.12)',
+    bottom: -40,
+    left: -20,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  flag: { fontSize: 56 },
+  heroPills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 },
+  name: { ...typography.display, color: colors.onDark, marginTop: spacing.md },
+  native: { ...typography.body, color: colors.onDarkMuted, marginTop: 2 },
+  hello: { ...typography.title, color: colors.sun, marginTop: spacing.lg, fontSize: 22 },
+  helloMeaning: { ...typography.caption, color: colors.onDarkMuted, marginTop: 2 },
+  heroMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.lg },
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceHigh,
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    maxWidth: '100%',
   },
-  metaText: { ...typography.caption, color: colors.textMuted },
-  blurb: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 23,
-    marginTop: spacing.xl,
+  metaText: { ...typography.micro, color: colors.onDarkMuted, fontSize: 9.5, letterSpacing: 0.3 },
+  heroCta: { marginTop: spacing.lg },
+  addToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  sectionLabel: {
-    ...typography.micro,
-    color: colors.textFaint,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
-  },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  group: {
+  addToggleText: { ...typography.caption, color: colors.onDark, fontWeight: '600' },
+  progressCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    ...shadows.card,
   },
-  scenarioRow: {
+  progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  progressTitle: { ...typography.bodyStrong, color: colors.text },
+  progressSub: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  progressPct: { ...typography.title, color: colors.primary, fontSize: 22 },
+  progressBar: { marginTop: spacing.md },
+  progressStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 54,
+    marginTop: spacing.lg,
+    backgroundColor: colors.surfaceTint,
+    borderRadius: radii.sm,
     paddingVertical: spacing.md,
   },
-  scenarioEmoji: { fontSize: 22 },
-  scenarioTitle: { ...typography.body, color: colors.text },
-  rowDivider: { height: 1, backgroundColor: colors.border },
-  chapterLoading: { paddingVertical: spacing.xl, alignItems: 'center' },
+  progressStat: { flex: 1, alignItems: 'center' },
+  progressStatValue: { ...typography.heading, color: colors.text, fontSize: 17 },
+  progressStatLabel: { ...typography.micro, color: colors.textFaint, fontSize: 8.5, marginTop: 2 },
+  progressDivider: { width: 1, height: 24, backgroundColor: colors.border },
+  blurb: { ...typography.body, color: colors.text, lineHeight: 23, marginTop: spacing.xl },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  dialectChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+  },
+  dialectText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
+  loading: { paddingVertical: spacing.xl, alignItems: 'center' },
+  comingSoon: { ...typography.caption, color: colors.textFaint, lineHeight: 18 },
   chapterCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     overflow: 'hidden',
+    ...shadows.card,
   },
-  chapterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-  },
+  chapterHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg },
   chapterBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primarySoft,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chapterBadgeLocked: { backgroundColor: colors.surfaceHigh },
-  chapterNum: { ...typography.bodyStrong, color: colors.primary },
-  chapterTitle: { ...typography.bodyStrong, color: colors.text },
+  chapterNum: { ...typography.bodyStrong, color: colors.primary, fontSize: 14 },
+  chapterTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  chapterTitle: { ...typography.bodyStrong, color: colors.text, flexShrink: 1 },
   chapterTitleLocked: { color: colors.textFaint },
-  chapterDesc: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
-  chapterProgressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
+  chapterDesc: { ...typography.caption, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
+  chapterProgressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   chapterProgressTrack: {
     flex: 1,
     height: 5,
@@ -321,23 +556,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   chapterProgressFill: { height: '100%', backgroundColor: colors.success, borderRadius: radii.pill },
-  chapterProgressText: { ...typography.micro, color: colors.success },
-  lessonList: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: spacing.lg,
-  },
-  lessonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 60,
-    paddingVertical: spacing.md,
-  },
+  chapterProgressText: { ...typography.micro, color: colors.success, fontSize: 9 },
+  lessonList: { borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: spacing.lg },
+  lessonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 60, paddingVertical: spacing.md },
+  rowDivider: { height: 1, backgroundColor: colors.border },
   lessonDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceHigh,
@@ -345,16 +571,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   lessonDotDone: { backgroundColor: colors.successSoft, borderColor: colors.success },
-  lessonDotText: { ...typography.micro, color: colors.textMuted },
-  lessonDotTextDone: { color: colors.success, fontSize: 13 },
+  lessonDotText: { ...typography.micro, color: colors.textMuted, fontSize: 10 },
   lessonTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
-  lessonGoal: { ...typography.micro, color: colors.textFaint, marginTop: 2 },
-  lessonScore: { ...typography.caption, color: colors.textMuted },
-  lessonScoreDone: { color: colors.success, fontWeight: '700' },
-  comingSoon: {
+  lessonGoal: { ...typography.micro, color: colors.textFaint, marginTop: 2, fontSize: 9, letterSpacing: 0.2, fontWeight: '500', lineHeight: 14 },
+  lessonScore: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
+  lessonScoreDone: { color: colors.success, fontWeight: '800' },
+  playDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phraseList: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+    ...shadows.card,
+  },
+  phraseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  phrasePlay: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phraseTarget: { ...typography.bodyStrong, color: colors.text, fontSize: 15 },
+  phraseEnglish: { ...typography.caption, color: colors.textMuted, marginTop: 1, fontSize: 12 },
+  scenarioRail: { gap: spacing.sm, paddingVertical: 2, paddingRight: spacing.lg },
+  scenarioCard: {
+    width: 160,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  scenarioEmoji: { fontSize: 24 },
+  scenarioTitle: { ...typography.bodyStrong, color: colors.text, marginTop: spacing.sm, fontSize: 13 },
+  scenarioMeta: { ...typography.micro, color: colors.accent, marginTop: 4, fontSize: 9 },
+  footerNote: {
     ...typography.caption,
     color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: spacing.md,
     lineHeight: 18,
-    marginTop: spacing.lg,
   },
 });

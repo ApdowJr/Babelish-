@@ -1,8 +1,10 @@
 /**
- * Key phrases for pronunciation practice — one small phrasebook per
- * language/scenario pair. Used by the Speak tab's "say it out loud" cards;
- * the same phrases score typed practice in demo mode (no AI key needed).
+ * Key phrases for pronunciation practice — curated per language/scenario pair
+ * for the original ten, with a starter-word fallback for every other language
+ * in the 2.0 atlas. Powers the Speak tab's "say it out loud" cards; the same
+ * phrases score typed practice in demo mode (no AI key needed).
  */
+import { STARTERS } from '@/data/starters';
 export type PracticePhrase = {
   id: string;
   /** In the target language. */
@@ -199,5 +201,20 @@ export const PRACTICE_PHRASES: Record<string, ScenarioPhrases> = {
 export const CHAR_BASED_LANGUAGES = new Set(['zh', 'ja']);
 
 export function getPracticePhrases(languageId: string, scenarioId: string): PracticePhrase[] {
-  return PRACTICE_PHRASES[languageId]?.[scenarioId] ?? [];
+  const curated = PRACTICE_PHRASES[languageId]?.[scenarioId];
+  if (curated && curated.length > 0) return curated;
+
+  // Fallback for the wider 2.0 atlas: derive a short, real practice set from
+  // the bundled starter words (never an empty practice screen).
+  const pack = STARTERS[languageId];
+  if (!pack || pack.essentials.length === 0) return [];
+  const offset = Array.from(scenarioId).reduce((hash, char) => hash + char.charCodeAt(0), 0);
+  return Array.from({ length: 3 }).map((_, index) => {
+    const word = pack.essentials[(offset + index * 3) % pack.essentials.length];
+    return {
+      id: `${languageId}-${scenarioId}-starter-${index}`,
+      target: word.target,
+      translation: word.english,
+    };
+  });
 }
