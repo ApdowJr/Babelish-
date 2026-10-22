@@ -71,6 +71,8 @@ export type ChatMeta = {
   learnerName?: string;
   explanationLanguage?: string;
   profile?: Record<string, unknown>;
+  /** Bundled lesson id — the proxy resolves it; no prompt text crosses. */
+  lessonId?: string;
 };
 
 export type ChatCall = {

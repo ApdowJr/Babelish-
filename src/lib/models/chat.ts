@@ -271,6 +271,7 @@ function gatewayBody(call: ChatCall) {
     learnerName: meta?.learnerName,
     explanationLanguage: meta?.explanationLanguage,
     profile: meta?.profile,
+    lessonId: meta?.lessonId,
     history: history.length > 0 ? history : [{ role: 'user', text: 'Hello!' }],
   };
 }

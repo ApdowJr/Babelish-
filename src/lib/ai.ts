@@ -3,10 +3,12 @@ import { Platform } from 'react-native';
 import { getLanguage, type Language } from '@/data/languages';
 import {
   buildSystemPrompt,
+  lessonGrounding,
   parseTutorPayload,
   scriptMatches,
   type TutorMessage,
 } from '@/lib/aiCore';
+import { findBundledLesson } from '@/data/curriculum';
 import type { ProfileContext } from '@/lib/profilePrompt';
 import { showAlert } from '@/lib/alert';
 import { getModelSettings } from '@/lib/models/settings';
@@ -99,6 +101,8 @@ export type TutorOptions = {
   profile?: ProfileContext;
   /** Aborts the turn (the Speak screen's Stop button, or leaving the screen). */
   signal?: AbortSignal;
+  /** The bundled lesson being studied — grounds the answer in course content. */
+  lessonId?: string;
 };
 
 /**
@@ -126,6 +130,10 @@ export async function tutorReply(
   const ctx = gatewayContext(io);
   const level = opts.level ?? 'A2';
 
+  // Resolve the lesson from the bundled curriculum (the same data the proxy
+  // uses), so local and browser runtimes get the identical grounding.
+  const lesson = opts.lessonId ? findBundledLesson(opts.language.id, opts.lessonId) : null;
+
   const system = buildSystemPrompt({
     language: opts.language,
     level,
@@ -133,6 +141,7 @@ export async function tutorReply(
     learnerName: opts.learnerName,
     explanationLanguage: opts.explanationLanguage,
     profile: opts.profile,
+    lesson: lesson ? lessonGrounding(lesson) : undefined,
   });
 
   const messages = [
@@ -155,6 +164,7 @@ export async function tutorReply(
       learnerName: opts.learnerName,
       explanationLanguage: opts.explanationLanguage,
       profile: opts.profile as Record<string, unknown> | undefined,
+      lessonId: lesson?.id,
     },
   };
 

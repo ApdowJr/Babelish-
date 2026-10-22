@@ -25,8 +25,14 @@ import * as league from './league';
 import { createFailureLimiter, createLimiter } from './rateLimit';
 import { consumeQuota, ensureUsageSchema, quotaStatus, refundQuota } from './quotaStore';
 import { limitsFromEnv, type QuotaKind } from '../../src/lib/quota';
-import { buildSystemPrompt, extractTutorReply, parseAiChatRequest } from '../../src/lib/aiCore';
+import {
+  buildSystemPrompt,
+  extractTutorReply,
+  lessonGrounding,
+  parseAiChatRequest,
+} from '../../src/lib/aiCore';
 import { getLanguage } from '../../src/data/languages';
+import { findBundledLesson } from '../../src/data/curriculum';
 
 /**
  * Babelish API — the mobile app's backend, running on the same branch as the
@@ -509,6 +515,13 @@ app.post('/api/ai/chat', async (c) => {
     return c.json({ error: 'invalid-request', message: 'Unknown language.' }, 400);
   }
 
+  // Ground the answer in the learner's current lesson. The id is validated
+  // against the bundled curriculum here, so an unknown or foreign id simply
+  // means "no lesson context" — the prompt never trusts client text.
+  const lesson = parsed.request.lessonId
+    ? findBundledLesson(language.id, parsed.request.lessonId)
+    : null;
+
   const allowance = await takeDailyQuota(c, 'chat');
   if (!allowance.ok) return allowance.response;
 
@@ -519,6 +532,7 @@ app.post('/api/ai/chat', async (c) => {
     learnerName: parsed.request.learnerName,
     explanationLanguage: parsed.request.explanationLanguage,
     profile: parsed.request.profile,
+    lesson: lesson ? lessonGrounding(lesson) : undefined,
   });
 
   // Try the configured chain in order: a free endpoint that disappeared

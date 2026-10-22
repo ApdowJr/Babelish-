@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +24,7 @@ import { useLearning } from '@/state/learning';
 import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
 import { getLanguage, LANGUAGES } from '@/data/languages';
+import { bundledCurriculum } from '@/data/curriculum';
 import { isMobileWeb } from '@/lib/speech';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
@@ -81,10 +82,22 @@ export default function SpeakScreen() {
   const { targetLanguageId, nativeLanguageId, setTargetLanguage, setNativeLanguage } =
     usePreferences();
   const { settings } = useModelSettings();
-  const { lessonsCompleted } = useLearning();
+  const { lessonsCompleted, progress } = useLearning();
   const { profile } = useProfile();
   const { logSpeakingScore } = useAnalytics();
   const language = getLanguage(targetLanguageId);
+  // Ground the tutor in the course the learner is actually working through:
+  // the first lesson they have not passed yet, or the last one they reached.
+  const activeLesson = useMemo(() => {
+    const chapters = bundledCurriculum(language.id);
+    for (const chapter of chapters) {
+      for (const lesson of chapter.lessons) {
+        if ((progress[lesson.id]?.score ?? 0) < 70) return lesson;
+      }
+    }
+    const lastChapter = chapters[chapters.length - 1];
+    return lastChapter?.lessons[lastChapter.lessons.length - 1] ?? null;
+  }, [language.id, progress]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [scenarioId, setScenarioId] = useState<string | null>(null);
@@ -266,6 +279,7 @@ export default function SpeakScreen() {
             profile: tutorProfile,
             level,
             explanationLanguage,
+            lessonId: activeLesson?.id,
             signal: controller.signal,
           },
           await aiIo()
@@ -335,6 +349,7 @@ export default function SpeakScreen() {
           profile: tutorProfile,
           level,
           explanationLanguage,
+          lessonId: activeLesson?.id,
           signal: controller.signal,
         },
         await aiIo()

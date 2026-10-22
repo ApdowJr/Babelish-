@@ -9,6 +9,7 @@
  *  - no env access (the server reads its own env).
  */
 import { LANGUAGES, type Language } from '../data/languages';
+import type { Lesson } from './curriculum/types';
 import { formatProfileContext, type ProfileContext } from './profilePrompt';
 
 export type TutorMessage = { role: 'user' | 'assistant'; text: string; translation?: string };
@@ -22,8 +23,65 @@ export type AiChatRequest = {
   /** Language for translations/tips — the learner's native language. */
   explanationLanguage?: string;
   profile?: ProfileContext;
+  /** Bundled lesson the learner is working through — grounds the answers. */
+  lessonId?: string;
   history: { role: 'user' | 'assistant'; text: string }[];
 };
+
+/**
+ * The slice of a lesson the tutor is allowed to see.
+ *
+ * Deliberately small: a title, the goal, a handful of words, the notes already
+ * taught and a few example lines. Enough to make the conversation relevant,
+ * not enough to blow the prompt budget (or turn the reply into a textbook).
+ */
+export type LessonGrounding = {
+  title: string;
+  goal: string;
+  vocabulary: { target: string; translation: string }[];
+  notes: string[];
+  examples: string[];
+};
+
+const clip = (value: string, max: number) =>
+  value.length > max ? `${value.slice(0, max - 1)}…` : value;
+
+/** Extracts the teachable parts of a lesson, deduped and bounded. */
+export function lessonGrounding(lesson: Lesson): LessonGrounding {
+  const vocabulary: LessonGrounding['vocabulary'] = [];
+  const notes: string[] = [];
+  const examples: string[] = [];
+  const seenWords = new Set<string>();
+
+  for (const exercise of lesson.exercises) {
+    if (exercise.vocab && vocabulary.length < 8) {
+      const key = exercise.vocab.target.trim().toLowerCase();
+      if (key && !seenWords.has(key)) {
+        seenWords.add(key);
+        vocabulary.push({
+          target: clip(exercise.vocab.target.trim(), 60),
+          translation: clip(exercise.vocab.translation.trim(), 60),
+        });
+      }
+    }
+    if (exercise.note && notes.length < 3) {
+      const note = clip(exercise.note.trim(), 160);
+      if (note.length > 12 && !notes.includes(note)) notes.push(note);
+    }
+    if ((exercise.type === 'type' || exercise.type === 'speak') && examples.length < 3) {
+      const line = exercise.answer?.[0]?.trim();
+      if (line && !examples.includes(clip(line, 120))) examples.push(clip(line, 120));
+    }
+  }
+
+  return {
+    title: clip(lesson.title.trim(), 80),
+    goal: clip(lesson.goal.trim(), 160),
+    vocabulary,
+    notes,
+    examples,
+  };
+}
 
 /** Proxy → client body for `POST /api/ai/chat`. */
 export type AiChatResponse = { reply: string; translation: string; tip?: string };
@@ -75,6 +133,11 @@ export function parseAiChatRequest(
   if (typeof b.learnerName === 'string' && b.learnerName.trim()) {
     request.learnerName = b.learnerName.slice(0, 60);
   }
+  // Only the shape of an id is checked here; the proxy resolves it against
+  // the bundled curriculum, so a bogus id degrades to "no grounding".
+  if (typeof b.lessonId === 'string' && /^[a-z]{2,3}-ch\d{1,2}-l\d{1,2}$/.test(b.lessonId)) {
+    request.lessonId = b.lessonId;
+  }
   if (typeof b.explanationLanguage === 'string' && b.explanationLanguage.trim()) {
     request.explanationLanguage = b.explanationLanguage.trim().slice(0, 60);
   }
@@ -111,8 +174,9 @@ export function buildSystemPrompt(opts: {
   learnerName?: string;
   explanationLanguage?: string;
   profile?: ProfileContext;
+  lesson?: LessonGrounding;
 }): string {
-  const { language, level, scenarioTitle, learnerName, profile } = opts;
+  const { language, level, scenarioTitle, learnerName, profile, lesson } = opts;
   const explanation = opts.explanationLanguage?.trim() || 'English';
   return [
     `You are a real native ${language.name} speaker (${language.nativeName}) from the heart of the culture, acting as a warm, expert one-on-one language tutor.`,
@@ -125,6 +189,23 @@ export function buildSystemPrompt(opts: {
       ? `The learner's name is ${learnerName}. Personalize examples around their life when it fits naturally.`
       : '',
     ...formatProfileContext(profile),
+    ...(lesson
+      ? [
+          `The learner is working through lesson "${lesson.title}"${lesson.goal ? ` (goal: ${lesson.goal})` : ''}.`,
+          lesson.vocabulary.length
+            ? `Reuse the lesson's words naturally: ${lesson.vocabulary
+                .map((word) => `${word.target} = ${word.translation}`)
+                .join('; ')}.`
+            : '',
+          lesson.notes.length
+            ? `Points already taught in this lesson — build on them, never contradict them: ${lesson.notes.join(' · ')}.`
+            : '',
+          lesson.examples.length
+            ? `Lesson example lines: ${lesson.examples.map((line) => `"${line}"`).join('; ')}.`
+            : '',
+          `If the learner asks something outside this lesson, answer briefly and steer back to the lesson's topic and words.`,
+        ]
+      : []),
     `If the learner makes a mistake, first recast it naturally in ${language.name} (a gentle native-style correction), then briefly explain the rule in ${explanation} inside the tip, then continue with a follow-up question.`,
     `If the learner asks for a translation, a grammar explanation, a drill or an example sentence, provide it — stay in ${language.name} for examples and use ${explanation} only for the explanation/translation fields.`,
     `Only teach grammar you are certain about. If something is dialect-dependent or uncertain, say so instead of inventing a rule.`,

@@ -24,6 +24,13 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **Answers grounded in the learner's current lesson.** Speak resolves the
+  first unfinished lesson of the target language from the bundled curriculum
+  and sends only its id. The proxy (or a local/browser adapter) looks that id
+  up and adds the lesson's goal, up to eight vocabulary pairs, the notes
+  already taught and three example lines to the system prompt — about 700
+  characters, so the per-turn cost barely moves. An unknown id, or one from
+  another language, adds nothing; client text never reaches the prompt.
 - **Conversations survive a reload.** The Speak screen restores the last chat
   for the selected language and scenario instead of starting over — on web
   refresh, tab remount and app restart, and with no quota spent on a fresh
