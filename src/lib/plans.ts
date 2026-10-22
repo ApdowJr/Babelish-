@@ -1,16 +1,21 @@
 /**
- * Plans — free tier = 1 NEW scenario (lesson) per calendar day, premium =
- * unlimited. Replays of scenarios already used today are always free:
- * re-practice is never punished. Pure and dependency-free for node tests.
+ * Plans — Babelish 2.0 makes learning free: every language, every bundled
+ * lesson, every review, every phrase is unlimited on the free tier. "Premium"
+ * now means *supporter* (early access badges and family seats at launch), not
+ * access to education. Pure and dependency-free for node tests.
  */
-import { dayKey } from '@/lib/analytics';
+import { dayKey } from './analytics';
 
 export type Plan = 'free' | 'premium';
 
-export const FREE_DAILY_SCENARIOS = 1;
+/** Core learning is unlimited and free — kept as `null` (no limit). */
+export const FREE_DAILY_SCENARIOS: number | null = null;
 
 /** Codes accepted by the beta stand-in for real billing (documented in PHASE5). */
 export const PREMIUM_CODES: Record<string, string> = {
+  'BABELISH-FREE': 'Babelish free-forever programme',
+  'BABELISH-BETA': 'Babelish beta supporter',
+  'BABELISH-PREMIUM': 'Babelish supporter',
   'ZELVOCA-BETA': 'Zelvoca beta programme',
   'ZELVOCA-PREMIUM': 'Zelvoca premium',
 };
@@ -27,8 +32,8 @@ export function emptyScenarioState(now = new Date()): ScenarioState {
   return { plan: 'free', day: dayKey(now), used: [] };
 }
 
-export function scenarioAllowance(plan: Plan): number | null {
-  return plan === 'premium' ? null : FREE_DAILY_SCENARIOS;
+export function scenarioAllowance(_plan: Plan): number | null {
+  return null; // every lesson is free for everyone
 }
 
 function rolled(state: ScenarioState, now: Date): ScenarioState {
@@ -52,8 +57,9 @@ export function nextResetAt(now = new Date()): Date {
 }
 
 /**
- * The gate: premium always starts; free users start their FIRST new scenario
- * of the day and any replay. Otherwise `reason: 'limit'`.
+ * 2.0: every plan can start every lesson. The shape stays so the UI and the
+ * stored `used` list keep working, but `allowed` is always true and `limit`
+ * is null (unlimited).
  */
 export function canStartScenario(
   state: ScenarioState,
@@ -65,24 +71,14 @@ export function canStartScenario(
   const isReplay = current.used.includes(lessonId);
   const used = current.used.length;
 
-  if (current.plan === 'premium' || isReplay) {
-    return {
-      allowed: true,
-      reason: isReplay && current.plan === 'free' ? 'replay' : 'ok',
-      used,
-      limit,
-      resetsAt: nextResetAt(now),
-      remaining: limit === null ? Number.POSITIVE_INFINITY : Math.max(0, limit - used),
-    };
-  }
-  const allowed = used < limit!; // free: limit is a number
+  // Unlimited: nothing to gate, so every lesson starts (and replays stay free).
   return {
-    allowed,
-    reason: allowed ? 'ok' : 'limit',
+    allowed: true,
+    reason: isReplay ? 'replay' : 'ok',
     used,
     limit,
     resetsAt: nextResetAt(now),
-    remaining: Math.max(0, (limit ?? 0) - used),
+    remaining: limit === null ? Number.POSITIVE_INFINITY : Math.max(0, limit - used),
   };
 }
 
@@ -97,7 +93,7 @@ export function consumeScenario(
   return { ...current, used: [...current.used, lessonId] };
 }
 
-/** Beta stand-in for the App Store / Play billing flow. */
+/** Supporter codes — beta stand-in for the App Store / Play billing flow. */
 export function redeemCode(state: ScenarioState, raw: string): { state: ScenarioState; label: string } | null {
   const label = PREMIUM_CODES[String(raw ?? '').trim().toUpperCase()];
   if (!label) return null;

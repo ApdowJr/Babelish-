@@ -100,7 +100,7 @@ backend env (see `docs/DEPLOYMENT.md`).
 - [x] Streaks, XP, leagues (ethical gamification — no dark patterns)
 - [x] Offline lessons (download packs per language)
 - [x] Notifications: smart reminders based on the learner's own schedule
-- [x] Referral + family plans; free tier = 1 scenario/day, premium = unlimited
+- [x] Referral + family plans; **2.0: every lesson is free** — premium is an optional supporter tier
 
 ### 🗓 Phase 6 — Launch
 - [x] App Store / Play Store compliance (kids' privacy, speech data handling)
@@ -183,9 +183,9 @@ Learner report ──────────────► Review queue ◄─
 
 ## 6. Monetization (aligned with learning, not against it)
 
-- **Free:** 1 full chapter per language + 1 scenario/day + basic AI chat (text).
-- **Premium (~$12/mo):** unlimited scenarios, voice conversations, pronunciation scoring, offline packs, all languages.
-- **Family / Student tiers** at launch+3 months.
+- **Free (2.0):** all 24 languages, every chapter, every lesson, reviews, phrasebook and text chat — no daily caps.
+- **Supporter (optional, coming with billing):** a badge, early features and family seats — no learning feature is ever gated.
+- **Family / Student supporter tiers** at launch+3 months.
 
 ## 7. Success Metrics (North stars)
 

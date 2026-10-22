@@ -155,9 +155,14 @@ export function parseTutorPayload(raw: string): {
 
 const SCRIPT_PATTERNS: { test: RegExp; script: string }[] = [
   { script: 'Arabic', test: /[\u0600-\u06FF]/ },
+  { script: 'Hebrew', test: /[\u0590-\u05FF]/ },
   { script: '中文', test: /[\u4E00-\u9FFF]/ },
   { script: 'देवनागरी', test: /[\u0900-\u097F]/ },
+  { script: 'বাংলা', test: /[\u0980-\u09FF]/ },
   { script: 'ひらがな', test: /[\u3040-\u30FF]/ },
+  { script: 'Hangul', test: /[\uAC00-\uD7AF\u1100-\u11FF]/ },
+  { script: 'Thai', test: /[\u0E00-\u0E7F]/ },
+  { script: 'Greek', test: /[\u0370-\u03FF]/ },
   { script: 'Cyrillic', test: /[\u0400-\u04FF]/ },
 ];
 

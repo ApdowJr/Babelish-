@@ -105,7 +105,7 @@ export default function ReviewScreen() {
     return (
       <Screen>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.primarySoft} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       </Screen>
     );
