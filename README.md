@@ -110,7 +110,7 @@ AI_API_KEY=sk-or-... npm run deploy:tutor
 That one command deploys the `api` Function with the model chain in its
 environment — the key stays on the server, the app is untouched.
 
-Free Qwen3 endpoints document 24 of 25 atlas languages; Somali is available as a starter course but remains unverified for this model. Prefer your own hardware?
+Free Qwen3 endpoints document 24 of 25 atlas languages; Somali is available as a starter course but remains unverified for this model. Free endpoints are rate-limited and availability can change. Prefer your own hardware?
 Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see
 [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §7.
 
