@@ -15,6 +15,15 @@ needed a model at all.
 > 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
 > bundled offline. Every lesson playable on the free plan.
 
+## What's new in 3.3
+
+| Area | 3.3 |
+|---|---|
+| **Your profile** | A real editor — emoji avatar with six colour themes, bio, job, interests and goals, with a live preview of what the tutor sees |
+| **Terms** | `/terms`, linked from Settings and from a consent line in onboarding |
+| **Store readiness** | Bundle ids, version codes, permissions, iOS plist keys, `eas.json`, Play icon + feature graphic, notification icon |
+| **Release gate** | `npm run check:release` blocks the mistakes that cost a build cycle |
+
 ## What's new in 3.2
 
 | Area | 3.2 |

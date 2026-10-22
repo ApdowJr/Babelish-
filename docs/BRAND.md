@@ -42,6 +42,9 @@ draws at 4× and downsamples, and writes every file the config references.
 | `android-icon-monochrome.png` | 1024 | Android themed icons |
 | `splash-icon.png` | 512 | native splash (transparent mark) |
 | `favicon.png` | 96 | web |
+| `notification-icon.png` | 96 | Android notification small icon (white silhouette) |
+| `store/play-icon-512.png` | 512 | Play Console app icon (RGB, no alpha) |
+| `store/feature-graphic.png` | 1024×500 | Play Store feature graphic |
 
 ## Splash hand-off
 
