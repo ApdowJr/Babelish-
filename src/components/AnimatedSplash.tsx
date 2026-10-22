@@ -115,8 +115,7 @@ export function AnimatedSplash({
       style={[StyleSheet.absoluteFill, styles.root, { opacity: plateOpacity }]}
       accessibilityRole="progressbar"
       accessibilityLabel="Babelish is starting"
-      // It is a splash, not content: keep it out of the way for screen readers
-      // the moment it starts fading.
+      accessibilityViewIsModal
       accessible
     >
       <LinearGradient colors={gradients.hero} style={StyleSheet.absoluteFill} />

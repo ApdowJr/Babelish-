@@ -521,7 +521,9 @@ export default function SettingsScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          Settings
+        </Text>
         <View style={styles.iconButton} />
       </View>
 
@@ -558,7 +560,9 @@ export default function SettingsScreen() {
 
       {visible.map((group) => (
         <View key={group.id} style={styles.group}>
-          <Text style={styles.groupTitle}>{group.title.toUpperCase()}</Text>
+          <Text style={styles.groupTitle} accessibilityRole="header">
+            {group.title.toUpperCase()}
+          </Text>
           <View style={styles.card}>
             {group.rows.map((row, index) => (
               <View key={row.id}>
@@ -755,7 +759,7 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.bodyStrong, color: colors.text },
   emptyBody: { ...typography.caption, color: colors.textMuted },
   group: { marginTop: spacing.xl },
-  groupTitle: { ...typography.micro, color: colors.textFaint, marginBottom: spacing.sm, marginLeft: spacing.xs },
+  groupTitle: { ...typography.micro, color: colors.textMuted, marginBottom: spacing.sm, marginLeft: spacing.xs },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
@@ -798,7 +802,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
   chipTextOn: { color: colors.onDark },
-  footer: { ...typography.caption, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xxl },
+  footer: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
   backdrop: {
     position: 'absolute',
     top: 0,

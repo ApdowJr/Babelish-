@@ -87,52 +87,57 @@ function RootNavigator() {
 
   return (
     <View style={styles.root}>
-      {booting ? null : (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="settings" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="language/[id]"
-          options={{
-            headerShown: true,
-            title: '',
-            headerStyle: { backgroundColor: colors.bg },
-            headerTintColor: colors.text,
-            headerShadowVisible: false,
-          }}
-        />
-        <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="review"
-          options={{
-            headerShown: true,
-            title: 'Daily review',
-            headerStyle: { backgroundColor: colors.bg },
-            headerTintColor: colors.text,
-            headerShadowVisible: false,
-          }}
-        />
-      </Stack.Protected>
+      <View
+        style={styles.fill}
+        // While the splash covers the app, a screen reader must not walk into
+        // the screens underneath it (they mount a moment before the fade).
+        accessibilityElementsHidden={!splashDone}
+        importantForAccessibility={splashDone ? 'auto' : 'no-hide-descendants'}
+      >
+        {booting ? null : (
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.bg },
+            }}
+          >
+            <Stack.Protected guard={signedIn}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="language/[id]"
+                options={{
+                  headerShown: true,
+                  title: '',
+                  headerStyle: { backgroundColor: colors.bg },
+                  headerTintColor: colors.text,
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="review"
+                options={{
+                  headerShown: true,
+                  title: 'Daily review',
+                  headerStyle: { backgroundColor: colors.bg },
+                  headerTintColor: colors.text,
+                  headerShadowVisible: false,
+                }}
+              />
+            </Stack.Protected>
 
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
-      )}
+            <Stack.Protected guard={!signedIn}>
+              <Stack.Screen name="(auth)" />
+            </Stack.Protected>
+          </Stack>
+        )}
+      </View>
+
       {/* Covers the boot window, then fades out over the mounted app. */}
       {splashDone ? null : (
-        <AnimatedSplash
-          ready={!booting}
-          reduceMotion={reduceMotion}
-          onDone={() => setSplashDone(true)}
-        />
+        <AnimatedSplash ready={!booting} reduceMotion={reduceMotion} onDone={() => setSplashDone(true)} />
       )}
     </View>
   );
@@ -140,6 +145,7 @@ function RootNavigator() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  fill: { flex: 1 },
 });
 
 /**
