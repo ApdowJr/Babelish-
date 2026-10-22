@@ -1,7 +1,8 @@
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PreferencesProvider, usePreferences } from '@/state/preferences';
 import { LearningProvider } from '@/state/learning';
@@ -10,9 +11,17 @@ import { AnalyticsProvider } from '@/state/analytics';
 import { SubscriptionProvider } from '@/state/subscription';
 import { AlertProvider } from '@/components/AlertProvider';
 import { CrashScreen, ErrorBoundary as ScreenBoundary } from '@/components/ErrorBoundary';
-import { Logo } from '@/components/Logo';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { colors } from '@/theme/tokens';
 import { validateConfigurationAtStartup } from '@/lib/config';
+
+// Keep the native splash up until our own animated one has painted: the two
+// use the same mark on the same forest plate, so the hand-off is invisible.
+// (Web has no native splash; expo-splash-screen is a no-op there.)
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+  SplashScreen.setOptions({ duration: 220, fade: true });
+}
 
 export default function RootLayout() {
   // One-shot, secret-free config validation: warns in the console exactly
@@ -51,7 +60,9 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { user, loading } = useAuth();
-  const { ready: prefsReady, onboarded } = usePreferences();
+  const { ready: prefsReady, onboarded, reduceMotion } = usePreferences();
+  const [splashDone, setSplashDone] = useState(false);
+  const booting = loading || !prefsReady;
   const segments = useSegments();
 
   const signedIn = Boolean(user);
@@ -74,16 +85,9 @@ function RootNavigator() {
     }
   }, [loading, prefsReady, signedIn, onboarded, inAuthGroup, inOnboarding]);
 
-  if (loading || !prefsReady) {
-    return (
-      <View style={styles.splash}>
-        <Logo size={36} />
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
-      </View>
-    );
-  }
-
   return (
+    <View style={styles.root}>
+      {booting ? null : (
     <Stack
       screenOptions={{
         headerShown: false,
@@ -92,6 +96,7 @@ function RootNavigator() {
     >
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen
           name="language/[id]"
@@ -120,16 +125,21 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
+      )}
+      {/* Covers the boot window, then fades out over the mounted app. */}
+      {splashDone ? null : (
+        <AnimatedSplash
+          ready={!booting}
+          reduceMotion={reduceMotion}
+          onDone={() => setSplashDone(true)}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
 });
 
 /**

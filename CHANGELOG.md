@@ -3,6 +3,39 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.2.0] — 2026-10-22
+
+### Added
+
+- **A real brand mark.** Two speech bubbles — a parchment answer with a written
+  line, a tangerine reply — replace the template icon. `scripts/brand/generate-icons.py`
+  draws every size from one set of coordinates and the app palette, and the
+  in-app `BrandMark` rebuilds the same drawing from views, so icon, splash and
+  header cannot drift apart. Regenerated: iOS/store icon, Android adaptive
+  foreground + gradient background + monochrome, splash mark, favicon.
+- **A splash that belongs to the app.** The native splash (`expo-splash-screen`)
+  now uses the same mark on the same forest plate, and hands off to an animated
+  in-app splash: the mark settles, the wordmark rises, a hairline progress bar
+  fills, then the plate fades onto the ready app. A minimum on-screen time stops
+  a warm start from flashing a half-drawn frame. “Reduce motion” keeps the
+  timing and drops the movement.
+- **Settings, rebuilt as a settings screen.** A searchable, grouped screen
+  (Account · Learning · Languages · Tutor & voice · Accessibility · Data &
+  storage · About & help · Danger zone) with real switches and segmented
+  choices, a language sheet, live tutor/voice status, data export, chat
+  clearing, account deletion and an about section with version and privacy.
+- **New preferences, each with a visible effect**: translations on/off under
+  tutor replies, playback speed (slow / normal / fast) applied to every spoken
+  line, “read replies aloud”, and reduced motion. Stored values are validated in
+  one pure module (`src/lib/preferenceRules.ts`) so a blob from any version
+  cannot reach the speech engine as a NaN rate.
+
+### Changed
+
+- The Profile tab is now about you — identity, level, streak, languages, plan —
+  with a single entry point to Settings; reminder, offline pack, privacy and
+  status moved to the new screen instead of being duplicated.
+
 ## [3.1.0] — 2026-10-22
 
 ### Added
