@@ -2,7 +2,7 @@
   "expo": {
     "name": "Babelish",
     "slug": "babelish",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": [
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B3A2C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -23,7 +23,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#0B3A2C",
+      "themeColor": "#0F4C3A"
     },
     "plugins": [
       "expo-router",
@@ -31,6 +33,19 @@
         "expo-audio",
         {
           "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 168,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B3A2C",
+          "dark": {
+            "backgroundColor": "#0B3A2C",
+            "image": "./assets/splash-icon.png"
+          }
         }
       ]
     ],

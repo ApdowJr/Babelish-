@@ -1,17 +1,8 @@
-import { useEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -27,26 +18,10 @@ import { useSubscription } from '@/state/subscription';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { progressForLanguage } from '@/lib/catalog';
 import { computeStreak } from '@/lib/analytics';
-import { fetchAiStatus, type AiStatus } from '@/lib/ai';
-import { useModelSettings } from '@/lib/models/settings';
-import { isSupabaseConfigured } from '@/lib/supabase';
-import { isNeonConfigured, NEON_API_URL } from '@/lib/neon';
 import { levelForXp, todayXp } from '@/lib/xp';
 import { tierForXp } from '@/lib/league';
-import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
-import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
-import { clearConversations } from '@/lib/conversationStorage';
-import { ownerIdFor } from '@/lib/conversations';
-import { deleteAccount } from '@/lib/neonApi';
-import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
-import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
-import { loadCurriculum } from '@/lib/curriculum/store';
 import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
-
-function StatusDot({ ok }: { ok: boolean }) {
-  return <View style={[styles.dot, { backgroundColor: ok ? colors.success : colors.warning }]} />;
-}
 
 /** English + every language in the 2.0 atlas. */
 const NATIVE_CHOICES = ['en', ...LANGUAGES.map((language) => language.id)];
@@ -58,22 +33,20 @@ function nativeLabel(id: string): string {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut, isDemo, isNeon, getAccessToken } = useAuth();
+  const { user, signOut, isDemo, isNeon } = useAuth();
+
   const {
     targetLanguageId,
     nativeLanguageId,
     setNativeLanguage,
-    reminderKey,
-    setReminderKey,
     dailyGoalMinutes,
     setDailyGoal,
     activeLanguageIds,
     setTargetLanguage,
   } = usePreferences();
-  const { wordsMastered, lastSyncedAt, progress, vocab } = useLearning();
+  const { wordsMastered, progress } = useLearning();
   const { profile, updateProfile } = useProfile();
   const { state: analytics } = useAnalytics();
-  const { settings } = useModelSettings();
   const { plan, redeem, resetToFree } = useSubscription();
   const target = getLanguage(targetLanguageId);
 
@@ -84,140 +57,12 @@ export default function ProfileScreen() {
   const today = todayXp(analytics.xp);
   const myReferralCode = referralCode(user?.id ?? 'babelish-demo');
 
-  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const jwt = await getAccessToken().catch(() => null);
-      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
-      if (!cancelled) setAiStatus(status);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // A settings change (server URL / mode) triggers a fresh, real probe.
-  }, [getAccessToken, settings]);
-
-  const tutorLive = aiStatus?.chat === true;
-  const voiceLive = aiStatus?.stt === true;
-  const aiSource = aiStatus?.source ?? 'none';
-  const aiValue =
-    aiStatus === null
-      ? 'Checking…'
-      : !aiStatus.chat
-        ? 'Coach mode'
-        : aiSource === 'gateway'
-          ? 'App server'
-          : aiSource === 'browser'
-            ? 'This browser'
-            : 'This device';
-
-  const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    loadCurriculum(targetLanguageId)
-      .then((chapters) => {
-        if (cancelled) return;
-        const exercises = chapters.reduce(
-          (n, chapter) => n + chapter.lessons.reduce((m, lesson) => m + lesson.exercises.length, 0),
-          0
-        );
-        setPack(buildPack({ languageId: targetLanguageId, chapters: chapters.length, exercises, phrases: 0 }));
-      })
-      .catch(() => {
-        if (!cancelled) setPack(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [targetLanguageId]);
-
-  async function pickReminder(hour: number, minute: number, turningOff: boolean) {
-    if (turningOff) {
-      await cancelDailyReminder();
-      setReminderKey(null);
-      return;
-    }
-    const slot = { hour, minute, label: '', icon: '' };
-    const result = await scheduleDailyReminder(slot, {
-      languageName: target.name,
-      streak: 0,
-      name: profile.displayName || undefined,
-    });
-    if (result === 'scheduled') {
-      setReminderKey(slotKey(hour, minute));
-    } else if (result === 'denied') {
-      showAlert(
-        'Notifications blocked',
-        'Allow notifications for Babelish in your system settings, then pick a time again.'
-      );
-    } else {
-      showAlert('Reminder unavailable', 'This device could not schedule the reminder.');
-    }
-  }
-
   function shareReferral() {
     void Share.share({
       message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get supporter perks at launch. https://zelvoca.app`,
     }).catch(() => {
       // sharing dismissed — nothing to do
     });
-  }
-
-  function exportMyData() {
-    void Share.share({
-      title: 'Babelish data export',
-      message: buildDataExport({
-        profile,
-        preferences: { targetLanguageId, nativeLanguageId, reminderKey },
-        progress,
-        vocab,
-        analytics,
-      }),
-    }).catch(() => {
-      // sharing dismissed — nothing to do
-    });
-  }
-
-  function deleteMyAccount() {
-    showAlert(
-      'Delete account?',
-      'This removes your profile, progress, vocabulary, XP and reports from this device and from Babelish servers. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              let serverIssue = false;
-              try {
-                if (isNeon) {
-                  const jwt = await getAccessToken();
-                  if (jwt) {
-                    const result = await deleteAccount(jwt);
-                    serverIssue = result.authUser === 'failed';
-                  }
-                }
-              } catch {
-                // server unreachable — the local wipe below still happens
-              }
-              await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
-              // Chats live under a per-owner key that the static list cannot
-              // name; erase this account's book explicitly.
-              await clearConversations(ownerIdFor(user?.id ?? null));
-              signOut();
-              if (serverIssue) {
-                showAlert(
-                  'Account removal incomplete',
-                  'Your learning data was erased, but the account itself could not be removed from the server. Please try again later or contact support.'
-                );
-              }
-            })();
-          },
-        },
-      ]
-    );
   }
 
   const initials = (user?.displayName ?? 'L')
@@ -235,6 +80,15 @@ export default function ProfileScreen() {
           <Text style={styles.kicker}>YOUR SPACE</Text>
           <Text style={styles.title}>You</Text>
         </View>
+        <Pressable
+          onPress={() => router.push('/settings')}
+          style={styles.gear}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+        >
+          <Ionicons name="settings-outline" size={20} color={colors.text} />
+        </Pressable>
         <Pill label={`LEVEL ${level.level}`} tone="free" icon="sparkles" />
       </View>
 
@@ -505,119 +359,25 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <SectionHeader title="Daily reminder" icon="notifications-outline" />
-      <View style={styles.card}>
-        <Text style={styles.fieldLabel}>
-          One calm reminder at a time you pick. Scheduled on-device — nothing leaves your phone.
-        </Text>
-        <View style={styles.chipWrap}>
-          {REMINDER_SLOTS.map((slot) => {
-            const key = slotKey(slot.hour, slot.minute);
-            const on = reminderKey === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => void pickReminder(slot.hour, slot.minute, on)}
-                style={[styles.choiceChip, on && styles.choiceChipOn]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`${slot.label} reminder at ${key}`}
-              >
-                <Text style={[styles.choiceText, on && styles.choiceTextOn]}>
-                  {slot.icon} {slot.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+      <SectionHeader title="App settings" icon="settings-outline" />
+      <Pressable
+        onPress={() => router.push('/settings')}
+        accessibilityRole="button"
+        accessibilityLabel="Open settings"
+        accessibilityHint="Reminders, voice, data, privacy and account"
+        style={({ pressed }) => [styles.card, styles.settingsCard, pressed && styles.settingsCardPressed]}
+      >
+        <View style={styles.settingsIcon}>
+          <Ionicons name="options-outline" size={20} color={colors.primary} />
         </View>
-        <Text style={styles.hint}>
-          {reminderKey
-            ? `Reminder set for ${reminderKey} daily — tap the time again to turn it off.`
-            : 'Off — pick a time to get one daily reminder.'}
-        </Text>
-      </View>
-
-      <SectionHeader title="Offline pack" icon="download-outline" />
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>
-            {target.flag} {target.name} pack
-          </Text>
-          <Text style={[styles.rowValue, { color: colors.success }]}>Installed ✓</Text>
-        </View>
-        <View style={styles.rowDivider} />
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Contents</Text>
-          <Text style={styles.rowValue}>
-            {pack ? `${pack.chapters} chapters · ${formatPackSize(pack.kb)}` : 'Bundled'}
+        <View style={styles.flex}>
+          <Text style={styles.settingsTitle}>Reminders, voice, data & privacy</Text>
+          <Text style={styles.hint}>
+            Daily reminder, offline pack, translations, playback speed, export and account.
           </Text>
         </View>
-        <View style={styles.rowDivider} />
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Voice input (speaking)</Text>
-          <Text style={[styles.rowValue, { color: colors.warning }]}>Needs internet</Text>
-        </View>
-        <Text style={styles.hint}>
-          Every language ships inside the app — lessons, reviews and voice playback all work
-          offline. {OFFLINE_CAPABILITIES.tts} {OFFLINE_CAPABILITIES.sync}
-        </Text>
-      </View>
-
-      <SectionHeader title="Privacy" icon="shield-checkmark-outline" />
-      <View style={styles.card}>
-        <Text style={styles.fieldLabel}>
-          Practice events, XP and streaks stay on this device. Cloud sync covers progress and
-          vocabulary only. Microphone audio is transcribed on demand and never stored. No ads, no
-          third-party trackers.
-        </Text>
-        <Button label="Export my data" variant="secondary" onPress={exportMyData} />
-        <View style={styles.rowDivider} />
-        <Text style={styles.fieldLabel}>
-          Deleting your account removes your data from this device and from Babelish servers.
-        </Text>
-        <Button label="Delete account" variant="danger" onPress={deleteMyAccount} />
-      </View>
-
-      <SectionHeader title="Status" icon="pulse-outline" />
-      <View style={styles.card}>
-        <StatusRow
-          ok={tutorLive}
-          label="AI tutor"
-          value={tutorLive ? 'Tutor server' : aiValue}
-        />
-        <View style={styles.rowDivider} />
-        <StatusRow
-          ok={voiceLive}
-          label="Voice input"
-          value={voiceLive ? (aiSource === 'gateway' ? 'App server' : 'On-device') : 'Not configured'}
-        />
-        <View style={styles.rowDivider} />
-        <StatusRow
-          ok={isSupabaseConfigured || isNeonConfigured}
-          label="Accounts"
-          value={isNeon ? 'Neon Auth' : isSupabaseConfigured ? 'Supabase' : 'On-device'}
-        />
-        <View style={styles.rowDivider} />
-        <StatusRow
-          ok={Boolean(lastSyncedAt)}
-          label="Progress sync"
-          value={
-            isNeon
-              ? lastSyncedAt
-                ? `Synced ${new Date(lastSyncedAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}`
-                : 'Syncing…'
-              : 'On-device only'
-          }
-        />
-        <Text style={styles.hint}>
-          {tutorLive
-            ? 'A real model is answering in the Speak tab — no paid AI service is involved.'
-            : 'The tutor server is not answering, so bundled phrases are used. Everything else works offline.'}
-        </Text>
-      </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
 
       <Button
         label="Sign out"
@@ -631,7 +391,7 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
         <Text style={styles.footerText}>
-          Babelish v2.0.0 · {LANGUAGES.length} languages · free
+          Babelish v{Constants.expoConfig?.version ?? '3.2.0'} · {LANGUAGES.length} languages · free
         </Text>
       </View>
       <Text style={styles.footerSub}>Made for curious people everywhere.</Text>
@@ -659,18 +419,6 @@ function QuickStat({
   );
 }
 
-function StatusRow({ ok, label, value }: { ok: boolean; label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowLabelWrap}>
-        <StatusDot ok={ok} />
-        <Text style={styles.rowLabel}>{label}</Text>
-      </View>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   headerRow: {
@@ -681,6 +429,32 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   kicker: { ...typography.micro, color: colors.accent },
+  gear: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  settingsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
+  settingsCardPressed: { backgroundColor: colors.surfaceTint },
+  settingsIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+  },
+  settingsTitle: { ...typography.bodyStrong, color: colors.text },
   title: { ...typography.display, color: colors.text, marginTop: 2 },
   profileCard: {
     flexDirection: 'row',

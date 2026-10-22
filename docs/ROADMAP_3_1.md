@@ -152,3 +152,22 @@ translation call), not smuggled in at the end of a hardening pass.
 | Wrong-script retry costs two slots | **Fixed** | The server retries once inside the same request (`correctiveUsed`), keeping a single quota claim; the client no longer re-asks in gateway mode. A failed retry returns `bad-reply` and refunds. |
 | Live tutor unproven | **Open — environment** | Requires `AI_API_KEY` and egress to OpenRouter/Neon from a networked machine: `AI_API_KEY=... npm run deploy:tutor` (or fill `.env.tutor`, gitignored, and run the same command). The gate then proves a real reply. Not verifiable in this sandbox. |
 | Device verification (screen readers, 200 % text, RTL focus) | **Open — hardware** | `docs/A11Y_3_1.md` lists the script; `/dev-crash` now exercises the crash screen on-device. |
+
+---
+
+## 3.2 — brand, splash and settings (2026-10-22)
+
+| Area | Shipped |
+|---|---|
+| Brand mark | Two-bubble mark, generated from `scripts/brand/generate-icons.py`; in-app `BrandMark` uses the same geometry |
+| Store assets | 1024 icon, adaptive foreground/background/monochrome, 512 splash, 96 favicon — sizes asserted in `tests/brandAssets.test.ts` |
+| Splash | Native splash hands off to an animated overlay; 900 ms minimum, reduce-motion aware |
+| Settings | Searchable groups (account, learning, languages, tutor, accessibility, data, about, danger) replacing four cards on Profile |
+| New preferences | `showTranslation`, `voiceSpeed`, `autoSpeak`, `reduceMotion` — validated once in `src/lib/preferenceRules.ts` |
+
+Re-checked against the 3.1 hardening list: cancellation (P0-3), persistence
+(P0-4), lesson grounding (P0-5), error boundary (P0-6) and barge-in (P0-7) are
+all present on `main` with tests (`tests/cancel.test.ts`,
+`tests/conversations.test.ts`, `tests/lessonGrounding.test.ts`,
+`tests/a11y.test.ts`, `tests/speech.test.ts`). Streaming stays deferred for the
+reason recorded above.
