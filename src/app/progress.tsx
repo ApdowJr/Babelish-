@@ -379,7 +379,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
   todayGoal: { ...typography.heading, color: c.textFaint, fontWeight: '700' },
   todayHint: { ...typography.caption, color: c.textMuted, marginTop: 3, lineHeight: 18 },
   todayWords: { alignItems: 'flex-end' },
-  todayWordsValue: { ...typography.heading, color: c.lilac },
+  todayWordsValue: { ...typography.heading, color: c.lilacInk },
   todayWordsLabel: { ...typography.caption, color: c.textFaint, textAlign: 'right', lineHeight: 16 },
   tail: { height: spacing.xxl },
 });
