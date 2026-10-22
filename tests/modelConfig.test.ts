@@ -131,7 +131,7 @@ test('a model is only allowed for documented languages unless opted in', () => {
   // Bengali is not in Qwen2.5's documented table.
   assert.equal(languageSupport('qwen2.5:1.5b', 'bn', false), 'unverified');
   assert.equal(languageSupport('qwen2.5:1.5b', 'bn', true), 'ok');
-  // Whisper documents every atlas language.
+  // Whisper documents 24 of 25 atlas languages; Somali remains unverified.
   for (const id of ['es', 'sw', 'bn', 'ar', 'th', 'he']) {
     assert.equal(languageSupport('whisper-large-v3-turbo', id, false), 'ok', id);
   }
