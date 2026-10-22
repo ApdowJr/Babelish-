@@ -13,7 +13,7 @@ test('every language gets a real offline card, never an empty reply', () => {
     const reply = offlineTutorReply({ languageId: language.id, turn: 0 });
     assert.ok(reply.text.trim().length > 0, `${language.id}: text`);
     assert.ok(reply.translation.trim().length > 0, `${language.id}: translation`);
-    assert.ok(reply.tip.includes('Offline coach'), `${language.id}: labelled`);
+    assert.ok(reply.tip.includes('Coach mode'), `${language.id}: labelled`);
     assert.ok(reply.total > 0, `${language.id}: cards expected`);
     assert.equal(offlineCardCount(language.id), reply.total, `${language.id}: count`);
   }
@@ -49,4 +49,12 @@ test('non-Latin cards keep the target script and add a romanisation tip', () => 
   const reply = offlineTutorReply({ languageId: 'ja', turn: 0 });
   assert.match(reply.text, /[\u3040-\u30FF\u4E00-\u9FFF]/);
   assert.ok(reply.tip.length > 0);
+});
+
+test('coach copy never points at a settings screen or claims a model ran', () => {
+  for (const language of LANGUAGES) {
+    const reply = offlineTutorReply({ languageId: language.id, turn: 0 });
+    assert.doesNotMatch(reply.tip, /Settings|AI model|download|ollama/i, language.id);
+    assert.match(reply.tip, /tutor server/i, language.id);
+  }
 });

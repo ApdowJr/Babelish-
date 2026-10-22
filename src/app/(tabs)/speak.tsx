@@ -24,6 +24,7 @@ import { useLearning } from '@/state/learning';
 import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
 import { getLanguage, LANGUAGES } from '@/data/languages';
+import { isMobileWeb } from '@/lib/speech';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
@@ -96,6 +97,9 @@ export default function SpeakScreen() {
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // A fixable voice problem (with a button that actually fixes it), as opposed
   // to `voiceError`, which is just a message.
+  // Bumped by the coach strip's "Retry" action: re-probes the tutor without
+  // a page reload (useful right after the server is configured).
+  const [probeNonce, setProbeNonce] = useState(0);
   const [voiceHelp, setVoiceHelp] = useState<
     null | { message: string; action?: 'browser-stt' | 'open-settings' }
   >(null);
@@ -128,8 +132,32 @@ export default function SpeakScreen() {
   const voiceLive = aiStatus ? aiStatus.stt : null;
   // Voice needs both a speech model and the mic permission — two different
   // problems with two different fixes, so they are reported separately.
+  // Offering a 150 MB on-device model on a phone is a bad trade, so the
+  // browser fallback is only proposed on a desktop-sized browser.
   const browserSpeechPossible =
-    Platform.OS === 'web' && typeof WebAssembly === 'object';
+    Platform.OS === 'web' &&
+    typeof WebAssembly === 'object' &&
+    !isMobileWeb(typeof navigator === 'undefined' ? '' : navigator.userAgent);
+
+  /**
+   * One explanation for "the mic cannot record right now", used by both the
+   * chat and the phrase practice. It never points at a settings screen.
+   */
+  function explainVoiceUnavailable() {
+    setVoiceError(null);
+    setVoiceHelp(
+      browserSpeechPossible
+        ? {
+            message:
+              'Voice input needs a speech model. You can run Whisper in this browser — about 150 MB, downloaded once and kept offline.',
+            action: 'browser-stt' as const,
+          }
+        : {
+            message:
+              'Voice input isn’t available on this device yet — typing works exactly the same.',
+          }
+    );
+  }
 
   /** Transport for AI calls: JWT for the backend proxy when available. */
   async function aiIo() {
@@ -163,9 +191,9 @@ export default function SpeakScreen() {
     return () => {
       cancelled = true;
     };
-    // Re-probe whenever the tutor settings change,
-    // so the badge never keeps an outdated "offline" claim.
-  }, [getAccessToken, settings]);
+    // Re-probe whenever the tutor settings change or the learner taps Retry,
+    // so the strip never keeps an outdated "unavailable" claim.
+  }, [getAccessToken, settings, probeNonce]);
 
   useEffect(() => {
     setSpeechErrorListener(setVoiceError);
@@ -215,6 +243,9 @@ export default function SpeakScreen() {
               role: 'assistant',
               text: reply.text,
               translation: reply.translation,
+              // The opening line must carry the same label as later turns:
+              // an unlabelled coach card looks like a real model reply.
+              tip: reply.tip,
               runtime: reply.runtime,
               model: reply.model,
             },
@@ -311,19 +342,7 @@ export default function SpeakScreen() {
     // that cannot be transcribed (and never point to a settings screen that
     // does not exist in this build).
     if (aiStatus && !voiceLive) {
-      setVoiceError(null);
-      setVoiceHelp(
-        browserSpeechPossible
-          ? {
-              message:
-                'Voice input needs a speech model. Babelish can run Whisper inside this browser — about 150 MB, downloaded once.',
-              action: 'browser-stt',
-            }
-          : {
-              message:
-                'Voice input needs a speech model on the tutor server. Typing works right now — no download required.',
-            }
-      );
+      explainVoiceUnavailable();
       return;
     }
     if (chatRecording) {
@@ -402,19 +421,7 @@ export default function SpeakScreen() {
     } else {
       if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
       if (aiStatus && !voiceLive) {
-        setVoiceError(null);
-        setVoiceHelp(
-          browserSpeechPossible
-            ? {
-                message:
-                  'Voice input needs a speech model. Babelish can run Whisper inside this browser — about 150 MB, downloaded once.',
-                action: 'browser-stt',
-              }
-            : {
-                message:
-                  'Voice input needs a speech model on the tutor server. Typing works right now — no download required.',
-              }
-        );
+        explainVoiceUnavailable();
         return;
       }
       const mic = await ensureRecordingReady();
@@ -887,15 +894,22 @@ export default function SpeakScreen() {
       >
         {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
         {aiStatus && !aiStatus.chat ? (
-          <View style={styles.offlineBox}>
-            <Ionicons name="cloud-offline-outline" size={18} color={colors.accent} />
-            <View style={styles.offlineBody}>
-              <Text style={styles.offlineTitle}>Coach mode</Text>
-              <Text style={styles.offlineText} numberOfLines={3}>
-                The tutor server isn’t answering, so bundled phrases are used. Typing and the rest
-                of the app work normally.
-              </Text>
-            </View>
+          <View style={styles.coachStrip}>
+            <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.coachStripText} numberOfLines={2}>
+              Coach mode · tutor server unavailable, bundled phrases only
+            </Text>
+            <Pressable
+              onPress={() => {
+                setAiStatus(null);
+                setProbeNonce((value) => value + 1);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Retry the tutor server"
+            >
+              <Text style={styles.coachRetry}>Retry</Text>
+            </Pressable>
           </View>
         ) : null}
         {voiceHelp ? (
@@ -944,15 +958,18 @@ export default function SpeakScreen() {
             }}
           >
             <Ionicons
-              name={chatRecording ? 'stop' : 'mic-outline'}
+              name={chatRecording ? 'stop' : voiceLive === false ? 'mic-off-outline' : 'mic-outline'}
               size={20}
-              color={chatRecording ? colors.white : colors.accent}
+              color={chatRecording ? colors.white : voiceLive === false ? colors.textFaint : colors.accent}
             />
           </Pressable>
           <TextInput
             style={styles.input}
             value={input}
-            onChangeText={setInput}
+            onChangeText={(next) => {
+              setInput(next);
+              if (voiceHelp) setVoiceHelp(null);
+            }}
             placeholder={
               chatRecording
                 ? `Recording… ${Math.round(recorder.durationMs / 1000)}s`
@@ -1147,18 +1164,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     lineHeight: 18,
   },
-  offlineBox: {
+  coachStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.accentSoft,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 6,
   },
+  coachStripText: { ...typography.micro, color: colors.textMuted, flex: 1, lineHeight: 14 },
+  coachRetry: { ...typography.micro, color: colors.primary },
   offlineBody: { flex: 1 },
-  offlineTitle: { ...typography.bodyStrong, color: colors.text, fontSize: 13 },
   offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   voiceHelpBox: {
     flexDirection: 'row',
@@ -1274,18 +1289,20 @@ const styles = StyleSheet.create({
   aiActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.md },
   listenRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   listenLabel: { ...typography.micro, color: colors.accent },
-  userText: { ...typography.body, color: colors.text, lineHeight: 23 },
+  // Dark green bubble: the text must be light, not the body ink — this was the
+  // "Hi" that looked like it floated outside its own bubble.
+  userText: { ...typography.body, color: colors.onDark, lineHeight: 23 },
   userMetaRow: { flexDirection: 'row', marginTop: spacing.sm },
   voiceChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  voiceChipText: { ...typography.micro, color: colors.primary },
+  voiceChipText: { ...typography.micro, color: colors.onDark },
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   typingText: { ...typography.caption, color: colors.textMuted },
   voiceError: {

@@ -25,6 +25,14 @@ import {
 import { NEON_API_URL } from '@/lib/neon';
 import type { RuntimeId } from '@/lib/models/types';
 import { EngineFailed } from '@/lib/models/types';
+import {
+  holdUtterance,
+  matchVoice,
+  releaseUtterance,
+  speechErrorMessage,
+  toVoiceLike,
+  type VoiceLike,
+} from '@/lib/speech';
 
 export type { TutorMessage } from '@/lib/aiCore';
 export type { AiStatus } from '@/lib/models/status';
@@ -220,11 +228,11 @@ export async function tutorReply(
   throw new Error(`The tutor replied in the wrong language for ${opts.language.name} — try again.`);
 }
 
-/* ── Speech output (device/browser voices via expo-speech) ─────────────── */
+/* ── Speech output (device/browser voices) ─────────────────────────────── */
 
 type SpeechErrorListener = (message: string) => void;
 let speechErrorListener: SpeechErrorListener | null = null;
-let warnedVoiceFallback = false;
+let warnedMissingVoice = false;
 
 /**
  * Screens can register a banner-style listener (the Speak screen does); when
@@ -243,54 +251,170 @@ function reportSpeechError(message: string): void {
 /**
  * Speaks text with the locale's native voice, e.g. es-ES, ar-EG, ja-JP.
  *
- * This is the OS voice engine (`expo-speech`) — the `device` TTS option. A
- * self-hosted neural TTS server can be selected in Settings, but playback
- * still uses this path until an audio URL is returned; the UI says so.
+ * Native uses `expo-speech` (the OS engine). Web uses the Web Speech API
+ * directly, because the shim turned normal events (a new utterance replacing
+ * an old one) into visible "playback failed" errors on Android Chrome.
  */
 export async function speakNative(text: string, ttsLocale: string, rate = 0.92): Promise<void> {
-  if (!text.trim()) return;
-  try {
-    void Speech.stop().catch(() => undefined);
+  const trimmed = text.trim();
+  if (!trimmed) return;
 
-    let voice: string | undefined;
-    if (Platform.OS === 'web') {
-      await new Promise((resolve) => setTimeout(resolve, 60));
-
-      const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
-      if (!synthesis) {
-        throw new Error(
-          'Speech playback is blocked in this view — open Babelish in a normal browser tab to hear audio.'
-        );
-      }
-
-      const voices = await Promise.race([
-        Speech.getAvailableVoicesAsync().catch(() => null),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1_500)),
-      ]);
-
-      if (voices && voices.length === 0) {
-        throw new Error('This browser has no speech voices — text-to-speech is unavailable.');
-      } else if (voices) {
-        const base = ttsLocale.split('-')[0].toLowerCase();
-        const match = voices.find((candidate) =>
-          (candidate.language ?? '').toLowerCase().replace('_', '-').startsWith(base)
-        );
-        if (match) voice = match.identifier;
-        else if (!warnedVoiceFallback) {
-          warnedVoiceFallback = true;
-          reportSpeechError(
-            `No ${ttsLocale} voice is installed on this device — playing with the default voice.`
-          );
-        }
-      }
+  if (Platform.OS === 'web') {
+    try {
+      await speakInBrowser(trimmed, ttsLocale, rate);
+    } catch (err) {
+      reportSpeechError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Speech playback is unavailable in this browser — the text is still there to read.'
+      );
     }
+    return;
+  }
 
-    await speakWithCallbacks(text, { language: ttsLocale, rate, pitch: 1.0, voice });
+  try {
+    await Speech.stop().catch(() => undefined);
+    await speakWithCallbacks(trimmed, { language: ttsLocale, rate, pitch: 1.0 });
   } catch (err) {
     reportSpeechError(
-      err instanceof Error && err.message ? err.message : 'Speech playback failed — try again.'
+      err instanceof Error && err.message
+        ? err.message
+        : 'Speech playback failed — try again.'
     );
   }
+}
+
+/** Resolves when voices are listed; some browsers populate them lazily. */
+function loadVoices(synthesis: SpeechSynthesis): Promise<VoiceLike[]> {
+  const immediate = synthesis.getVoices();
+  if (immediate.length > 0) return Promise.resolve(toVoiceLike(immediate));
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      synthesis.removeEventListener('voiceschanged', done);
+      resolve(toVoiceLike(synthesis.getVoices()));
+    };
+    synthesis.addEventListener('voiceschanged', done);
+    setTimeout(done, 1_200);
+  });
+}
+
+/**
+ * One utterance, one promise.
+ *
+ * - `interrupted` / `canceled` resolve silently: they mean a newer request
+ *   replaced this one, which is the normal "tap Listen twice" path.
+ * - A missing locale voice falls back to the default voice once, with a note.
+ * - The utterance is held in a module-level set: Chrome on Android otherwise
+ *   garbage-collects it mid-sentence and `onend` never fires.
+ */
+function speakInBrowser(text: string, locale: string, rate: number): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      reject(
+        new Error(
+          'This browser cannot play speech. The text is still there to read — try Chrome or Safari.'
+        )
+      );
+      return;
+    }
+    const synthesis = window.speechSynthesis;
+
+    void (async () => {
+      // Speak in the same tick as the tap when the voice list is already
+      // populated: Android Chrome can refuse an utterance whose activation
+      // went stale during a long await.
+      const voices = await loadVoices(synthesis);
+      const voice = matchVoice(voices, locale);
+
+      // Only cancel when something is actually playing — an unconditional
+      // cancel() is what makes Android emit a spurious error for the new line.
+      if (synthesis.speaking || synthesis.pending) {
+        synthesis.cancel();
+        await new Promise((done) => setTimeout(done, 40));
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = locale;
+      utterance.rate = Math.min(2, Math.max(0.5, rate));
+      utterance.pitch = 1;
+      if (voice?.identifier) {
+        // Browser voices are keyed by `name`, which `toVoiceLike` stored as
+        // the identifier — this is the actual voice the learner will hear.
+        const installed = synthesis.getVoices().find((item) => item.name === voice.identifier);
+        if (installed) utterance.voice = installed;
+      }
+
+      let settled = false;
+      let started = false;
+      let startCheck: ReturnType<typeof setTimeout> | undefined;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        releaseUtterance(utterance);
+        clearTimeout(guard);
+        if (startCheck) clearTimeout(startCheck);
+        if (error) reject(error);
+        else resolve();
+      };
+
+      utterance.onstart = () => {
+        started = true;
+        if (startCheck) clearTimeout(startCheck);
+      };
+      utterance.onend = () => finish();
+      utterance.onerror = (event) => {
+        const code = (event as SpeechSynthesisErrorEvent).error;
+        const message = speechErrorMessage(code, locale);
+        // Silent codes resolve; unknown noise does not fail the tap either.
+        finish(message ? new Error(message) : undefined);
+      };
+
+      // Safety net: some Android builds never fire onend.
+      const guard = setTimeout(() => finish(), Math.min(90_000, 4_000 + text.length * 180));
+
+      if (!voice && !warnedMissingVoice) {
+        warnedMissingVoice = true;
+        reportSpeechError(
+          `No ${locale} voice is installed on this device — playing with the default voice.`
+        );
+      }
+
+      holdUtterance(utterance);
+      try {
+        synthesis.speak(utterance);
+        // Nothing started: blocked by the embedding page, silent mode, or a
+        // stuck engine. Saying so beats a dead tap.
+        startCheck = setTimeout(() => {
+          if (started || settled) return;
+          finish(
+            new Error(
+              'Audio didn’t start. Check the media volume, or open Babelish in its own browser tab.'
+            )
+          );
+        }, 2_500);
+        // Chrome pauses long utterances at ~15 s; nudging resume keeps it going.
+        const keepAlive = setInterval(() => {
+          if (!synthesis.speaking || synthesis.paused) {
+            clearInterval(keepAlive);
+            return;
+          }
+          synthesis.resume();
+        }, 8_000);
+        setTimeout(() => clearInterval(keepAlive), 120_000);
+      } catch (err) {
+        finish(
+          err instanceof Error
+            ? err
+            : new Error(
+                'Speech playback is unavailable in this browser — the text is still there to read.'
+              )
+        );
+      }
+    })();
+  });
 }
 
 /** Resolves when playback finishes/stops; rejects on engine errors. */
@@ -332,6 +456,10 @@ function speakWithCallbacks(text: string, opts: Speech.SpeechOptions): Promise<v
 }
 
 export function stopSpeaking(): void {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    return;
+  }
   void Speech.stop().catch(() => undefined);
 }
 
@@ -373,7 +501,7 @@ export async function transcribeSpeech(
   if (usable.length === 0) {
     const language = getLanguage(languageId);
     throw new Error(
-      `${settings.sttModel} does not document ${language.name} transcription — enable “use unverified languages” in Settings to try it.`
+      `Speech recognition is not available for ${language.name} yet — type your reply instead.`
     );
   }
 

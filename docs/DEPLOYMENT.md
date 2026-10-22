@@ -56,11 +56,7 @@ free Qwen3 endpoints cover all 24 Babelish languages:
 ```bash
 # key stays on the server; rotate it if it was ever pasted into a chat
 read -rsp "OpenRouter API key: " AI_API_KEY; echo
-neon functions deploy api --src functions/api/index.ts \
-  --env "AI_API_KEY=$AI_API_KEY" \
-  --env AI_API_URL=https://openrouter.ai/api/v1 \
-  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
-  --env AI_STT_ENABLED=false --wait
+AI_API_KEY="$AI_API_KEY" npm run deploy:tutor
 unset AI_API_KEY
 ```
 
