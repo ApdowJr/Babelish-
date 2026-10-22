@@ -563,8 +563,7 @@ export const LANGUAGES: Language[] = [
       { id: 'safari', title: 'On safari', emoji: '🦁' },
       { id: 'greetings', title: 'Greetings & respect', emoji: '🙌' },
     ],
-  },,
-
+  },
   {
     id: 'so',
     name: 'Somali',
@@ -616,7 +615,7 @@ export function isKnownLanguage(id: string): boolean {
   return LANGUAGES.some((l) => l.id === id);
 }
 
-/** "24 languages — every one free" — used in copy without hardcoding numbers. */
+/** Language count is derived from the atlas so copy can stay in sync. */
 export const LANGUAGE_COUNT = LANGUAGES.length;
 
 export const FEATURED_LANGUAGES = LANGUAGES.filter((language) => language.featured);
