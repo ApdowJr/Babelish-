@@ -528,10 +528,21 @@ app.post('/api/ai/chat', async (c) => {
     { role: 'system', content: sys },
     ...parsed.request.history.map((m) => ({ role: m.role, content: m.text })),
   ];
+  // The learner can tap Stop at any time; the browser then drops the request
+  // and `c.req.raw.signal` fires. Abort the upstream call too — it costs the
+  // owner money and nobody will read the answer. The daily slot is NOT
+  // refunded: the model was already asked, and refunding cancellations would
+  // be a free-inference loop (start, cancel after billing, repeat).
+  const clientAbort = new AbortController();
+  const onClientGone = () => clientAbort.abort();
+  c.req.raw.signal?.addEventListener('abort', onClientGone);
+
   let lastDetail = '';
   for (const model of CHAT_MODELS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 55_000);
+    const forwardCancel = () => controller.abort();
+    clientAbort.signal.addEventListener('abort', forwardCancel);
     try {
       const upstream = await fetch(`${AI_URL}/chat/completions`, {
         method: 'POST',
@@ -590,6 +601,11 @@ app.post('/api/ai/chat', async (c) => {
       });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
+        if (clientAbort.signal.aborted) {
+          // Cancelled by the learner: no refund (see above), no error copy.
+          // 204 — there is no response to describe, the caller is gone.
+          return c.body(null, 204);
+        }
         await refundDailyQuota(userId, 'chat');
         return c.json(
           { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
@@ -599,9 +615,11 @@ app.post('/api/ai/chat', async (c) => {
       lastDetail = err instanceof Error ? err.message : 'network error';
     } finally {
       clearTimeout(timer);
+      clientAbort.signal.removeEventListener('abort', forwardCancel);
     }
   }
 
+  c.req.raw.signal?.removeEventListener('abort', onClientGone);
   await refundDailyQuota(userId, 'chat');
   return c.json(
     {
@@ -661,7 +679,14 @@ app.post('/api/ai/stt', async (c) => {
   outbound.append('response_format', 'json');
   if (typeof languageId === 'string' && languageId) outbound.append('language', languageId);
 
+  // Stopping a transcription aborts the upload/provider call for the same
+  // reason as chat: save the spend, keep the slot spent.
+  const clientAbort = new AbortController();
+  const onClientGone = () => clientAbort.abort();
+  c.req.raw.signal?.addEventListener('abort', onClientGone);
   const controller = new AbortController();
+  const forwardCancel = () => controller.abort();
+  clientAbort.signal.addEventListener('abort', forwardCancel);
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
     const upstream = await fetch(`${AI_URL}/audio/transcriptions`, {
@@ -692,6 +717,10 @@ app.post('/api/ai/stt', async (c) => {
     return c.json({ text });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
+      if (clientAbort.signal.aborted) {
+        // No refund: the provider was already asked (see the chat route).
+        return c.body(null, 204);
+      }
       await refundDailyQuota(userId, 'stt');
       return c.json(
         { error: 'upstream-timeout', message: 'Transcription took too long — try again.' },
@@ -705,6 +734,8 @@ app.post('/api/ai/stt', async (c) => {
     );
   } finally {
     clearTimeout(timer);
+    clientAbort.signal.removeEventListener('abort', forwardCancel);
+    c.req.raw.signal?.removeEventListener('abort', onClientGone);
   }
 });
 

@@ -25,6 +25,7 @@ import {
   EngineFailed,
   EngineUnavailable,
   QuotaExceeded,
+  RequestCancelled,
   classifyFetchError,
   linkedAbort,
 } from './types';
@@ -457,6 +458,8 @@ export async function runChat(
   if (candidates.length === 0) return null;
 
   for (const runtime of candidates) {
+    // Already stopped: do not even open a request.
+    if (call.signal?.aborted) throw new RequestCancelled(runtime);
     const model = modelForRuntime(settings, runtime);
     try {
       // Enforced per runtime: an unverified model is skipped, not guessed at.
@@ -466,6 +469,10 @@ export async function runChat(
       if (runtime === 'gateway') return await runGateway(settings, call, ctx);
       if (runtime === 'browser') return await runBrowser(settings, call);
     } catch (err) {
+      // A caller abort must not be mistaken for a timeout (both surface as
+      // AbortError) and must not fall through to the next engine: that would
+      // start a second request the learner did not ask for.
+      if (call.signal?.aborted) throw new RequestCancelled(runtime);
       if (err instanceof EngineUnavailable) continue;
       throw err;
     }

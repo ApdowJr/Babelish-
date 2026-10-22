@@ -37,7 +37,7 @@ import {
   type TutorMessage,
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
-import { QuotaExceeded } from '@/lib/models/types';
+import { isCancelled, QuotaExceeded } from '@/lib/models/types';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -111,6 +111,8 @@ export default function SpeakScreen() {
   // first probe resolves. See voiceLive below.
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  // One in-flight turn at a time; Stop (or leaving the screen) aborts it.
+  const abortRef = useRef<AbortController | null>(null);
 
   const recorder = useVoiceRecorder();
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
@@ -174,6 +176,9 @@ export default function SpeakScreen() {
   const conversationKey = `${language.id}:${scenarioId ?? 'free'}`;
   const [prevKey, setPrevKey] = useState(conversationKey);
   if (prevKey !== conversationKey) {
+    // The old conversation is gone, so its pending turn must go too.
+    abortRef.current?.abort();
+    abortRef.current = null;
     setPrevKey(conversationKey);
     setMessages([]);
     setRevealed([]);
@@ -227,6 +232,8 @@ export default function SpeakScreen() {
   // be ignored for the greeting and the screen could silently start in demo mode.
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
     void (async () => {
       try {
         const reply = await tutorReply(
@@ -239,6 +246,7 @@ export default function SpeakScreen() {
             profile: tutorProfile,
             level,
             explanationLanguage,
+            signal: controller.signal,
           },
           await aiIo()
         );
@@ -258,6 +266,8 @@ export default function SpeakScreen() {
         }
       } catch (error) {
         if (!cancelled) {
+          // Stopped or unmounted: nothing to report.
+          if (isCancelled(error, controller.signal)) return;
           if (error instanceof QuotaExceeded) {
             // The budget message names the reset time; printing it as a fake
             // "…" tutor turn would be both ugly and misleading.
@@ -278,15 +288,19 @@ export default function SpeakScreen() {
         }
       } finally {
         if (!cancelled) setBusy(false);
+        if (abortRef.current === controller) abortRef.current = null;
       }
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationKey]);
 
   async function respond(history: ChatMessage[]) {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     try {
       const reply = await tutorReply(
@@ -299,9 +313,11 @@ export default function SpeakScreen() {
           profile: tutorProfile,
           level,
           explanationLanguage,
+          signal: controller.signal,
         },
         await aiIo()
       );
+      if (controller.signal.aborted) return;
       setQuotaNote(null);
       setMessages((prev) => [
         ...prev,
@@ -315,6 +331,9 @@ export default function SpeakScreen() {
         },
       ]);
     } catch (error) {
+      // Stop is a choice, not a failure: no error card, no retry, and the
+      // turn keeps its place in the daily budget (the model was asked).
+      if (isCancelled(error, controller.signal)) return;
       // Real-mode failures surface as themselves (timeouts, wrong-script,
       // missing key) — never replaced by scripted content. A spent daily
       // budget is not a failure: it is a dated pause, shown in its own strip.
@@ -334,8 +353,16 @@ export default function SpeakScreen() {
         },
       ]);
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
     }
+  }
+
+  /** Stop the turn in flight — chat or voice — without inventing a reply. */
+  function stopTurn() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
   }
 
   async function send() {
@@ -370,14 +397,20 @@ export default function SpeakScreen() {
         setVoiceError('Nothing was captured — try again, or type your reply.');
         return;
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
       setBusy(true);
       try {
-        const text = await transcribeSpeech(uri, language.id, await aiIo());
+        const text = await transcribeSpeech(uri, language.id, await aiIo(), {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
         const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
         setMessages(history);
         setBusy(false);
         await respond(history);
       } catch (error) {
+        if (isCancelled(error, controller.signal)) return;
         setBusy(false);
         if (error instanceof QuotaExceeded) {
           setQuotaNote(error.message);
@@ -386,6 +419,8 @@ export default function SpeakScreen() {
         setVoiceError(
           error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
         );
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
       const mic = await ensureRecordingReady();
@@ -429,11 +464,17 @@ export default function SpeakScreen() {
         setVoiceError('Nothing was captured — try again, or type the phrase.');
         return;
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
-        const transcript = await transcribeSpeech(uri, language.id, await aiIo());
+        const transcript = await transcribeSpeech(uri, language.id, await aiIo(), {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
         finishPractice(phrase, transcript);
       } catch (error) {
         setPractice(null);
+        if (isCancelled(error, controller.signal)) return;
         if (error instanceof QuotaExceeded) {
           setQuotaNote(error.message);
           return;
@@ -443,6 +484,8 @@ export default function SpeakScreen() {
             ? error.message
             : "Couldn't catch that — try again, or type the phrase instead."
         );
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
       if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
@@ -1012,22 +1055,36 @@ export default function SpeakScreen() {
             onSubmitEditing={send}
             accessibilityLabel="Message your tutor"
           />
-          <Pressable
-            onPress={send}
-            disabled={!input.trim() || busy}
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            style={({ pressed }) => [styles.sendWrap, (pressed || !input.trim() || busy) && { opacity: 0.6 }]}
-          >
-            <LinearGradient
-              colors={[colors.gradientFrom, colors.gradientTo]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.sendButton}
+          {busy ? (
+            <Pressable
+              onPress={stopTurn}
+              accessibilityRole="button"
+              accessibilityLabel="Stop the tutor"
+              accessibilityHint="Cancels the reply in progress"
+              style={({ pressed }) => [styles.sendWrap, pressed && { opacity: 0.7 }]}
             >
-              <Ionicons name="arrow-up" size={20} color={colors.white} />
-            </LinearGradient>
-          </Pressable>
+              <View style={styles.stopButton}>
+                <Ionicons name="stop" size={18} color={colors.white} />
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={send}
+              disabled={!input.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+              style={({ pressed }) => [styles.sendWrap, (pressed || !input.trim()) && { opacity: 0.6 }]}
+            >
+              <LinearGradient
+                colors={[colors.gradientFrom, colors.gradientTo]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sendButton}
+              >
+                <Ionicons name="arrow-up" size={20} color={colors.white} />
+              </LinearGradient>
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -1387,6 +1444,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   sendWrap: { borderRadius: 23 },
+  stopButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.text,
+  },
   sendButton: {
     width: 46,
     height: 46,

@@ -24,7 +24,7 @@ import {
 } from '@/lib/models/config';
 import { NEON_API_URL } from '@/lib/neon';
 import type { RuntimeId } from '@/lib/models/types';
-import { EngineFailed } from '@/lib/models/types';
+import { EngineFailed, RequestCancelled } from '@/lib/models/types';
 import {
   holdUtterance,
   matchVoice,
@@ -97,6 +97,8 @@ export type TutorOptions = {
   explanationLanguage?: string;
   /** Learner profile — injected as example-flavored context in the prompt. */
   profile?: ProfileContext;
+  /** Aborts the turn (the Speak screen's Stop button, or leaving the screen). */
+  signal?: AbortSignal;
 };
 
 /**
@@ -156,7 +158,7 @@ export async function tutorReply(
     },
   };
 
-  const answer = await runChat(settings, call, ctx);
+  const answer = await runChat(settings, { ...call, signal: opts.signal }, ctx);
 
   if (!answer) {
     // Nothing ran: bundled coach, clearly labelled in the tip.
@@ -195,6 +197,8 @@ export async function tutorReply(
   }
 
   // Wrong-script guardrail: one corrective retry, then fail honestly.
+  // Never retry a turn the learner already cancelled.
+  if (opts.signal?.aborted) throw new RequestCancelled(answer.runtime);
   const retry = await runChat(
     settings,
     {
@@ -204,9 +208,11 @@ export async function tutorReply(
         { role: 'system', content: system },
         { role: 'user', content: `Reply again, ONLY in ${opts.language.name}.` },
       ],
+      signal: opts.signal,
     },
     ctx
   ).catch((err) => {
+    if (err instanceof RequestCancelled) throw err;
     if (err instanceof EngineFailed) return null;
     throw err;
   });
@@ -475,7 +481,8 @@ export function stopSpeaking(): void {
 export async function transcribeSpeech(
   audioUri: string,
   languageId: string,
-  io?: AiTransport | null
+  io?: AiTransport | null,
+  opts: { signal?: AbortSignal } = {}
 ): Promise<string> {
   const settings = getModelSettings();
   const ctx = gatewayContext(io);
@@ -505,7 +512,9 @@ export async function transcribeSpeech(
     );
   }
 
-  const answer = await runTranscribe(settings, audioUri, languageId, ctx);
+  const answer = await runTranscribe(settings, audioUri, languageId, ctx, {
+    signal: opts.signal,
+  });
   if (!answer) {
     throw new Error(
       'Voice input is unavailable right now — type instead.'

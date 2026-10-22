@@ -24,6 +24,16 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **Stop a reply in progress.** The send button becomes Stop while the tutor is
+  thinking; tapping it (or leaving the screen, or switching language/scenario)
+  aborts the request. Cancellation is its own outcome — no error card, no
+  retry against another runtime, and the server aborts the upstream provider
+  call so the owner is not billed for an answer nobody will read. The daily
+  slot stays spent: the model was already asked, and refund-on-cancel would be
+  a free-inference loop.
+- The voice path is cancellable too: stopping a transcription aborts the
+  upload instead of waiting for a result that is no longer wanted.
+
 ### Changed
 
 - `/api/ai/status` now reports `quota` (limits, used, reset time, and whether

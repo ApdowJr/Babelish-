@@ -21,6 +21,7 @@ import {
   EngineFailed,
   EngineUnavailable,
   QuotaExceeded,
+  RequestCancelled,
   classifyFetchError,
   linkedAbort,
 } from './types';
@@ -103,6 +104,8 @@ export async function runTranscribe(
 ): Promise<TranscribeAnswer | null> {
   const candidates = sttCandidates(settings, ctx);
   for (const runtime of candidates) {
+    // Already stopped: do not even open a request (or load a model).
+    if (opts.signal?.aborted) throw new RequestCancelled(runtime);
     const model = sttModelForRuntime(settings, runtime);
     try {
       assertCoverage(settings, model, languageId, runtime);
@@ -151,6 +154,9 @@ export async function runTranscribe(
         return { ...answer, ms: Date.now() - started };
       }
     } catch (err) {
+      // A cancelled take is not a failed take; never retry it on another
+      // runtime (the learner has already stopped waiting).
+      if (opts.signal?.aborted) throw new RequestCancelled(runtime);
       if (err instanceof EngineUnavailable) continue;
       // A server without credits or a valid key cannot transcribe, but the
       // next candidate (on-device Whisper) can — and it is free. Only move on

@@ -118,6 +118,29 @@ export class EngineFailed extends Error {
 }
 
 /**
+ * The learner stopped the turn.
+ *
+ * Separate from `EngineFailed` on purpose: this is not a failure, it must not
+ * be shown as one, and it must not be retried on the next runtime (that would
+ * start a request the learner already cancelled). The server has already been
+ * asked, so the turn still counts against the daily budget — cancelling is not
+ * a way to get free inference.
+ */
+export class RequestCancelled extends Error {
+  constructor(readonly runtime?: RuntimeId) {
+    super('The request was cancelled.');
+    this.name = 'RequestCancelled';
+  }
+}
+
+/** True for anything a cancelled turn can surface (class or raw DOMException). */
+export function isCancelled(error: unknown, signal?: AbortSignal): boolean {
+  if (error instanceof RequestCancelled) return true;
+  if (signal?.aborted) return true;
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+/**
  * The day's tutor budget is spent.
  *
  * Deliberately its own class: this is not a failure to apologise for, and it
