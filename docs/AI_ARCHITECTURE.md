@@ -114,7 +114,8 @@ pretend to offer it.
   break the honesty rule, so it is left out rather than faked. Swahili (`sw`)
   is the nearest East African course and is covered by Whisper.
 - The default hosted Qwen3 model documents 24 of 25 atlas languages, including
-  Swahili, Bengali, Hebrew and Persian. If you swap in Qwen2.5 instead, nine
+  Swahili, Bengali, Hebrew and Persian. Somali is the one atlas language not yet
+  verified for this model family. If you swap in Qwen2.5 instead, nine
   languages (`nl sv pl uk el he fa hi bn sw`) are listed as unverified and are
   blocked unless you opt in — that is the catalogue being honest, not a bug.
 - No model is claimed to produce *perfect* grammar in any language. Lessons are
@@ -261,7 +262,7 @@ neon functions deploy api --src functions/api/index.ts \
 ```
 
 Any OpenAI-compatible server works the same way (llama.cpp, LM Studio, vLLM,
-LocalAI). Qwen2.5 documents 14 of the 25 atlas languages; the other ten show as
+LocalAI). Qwen2.5 documents 14 of the 25 atlas languages; the other eleven show as
 unverified rather than being silently guessed at.
 
 ### 7.3 Voice input
