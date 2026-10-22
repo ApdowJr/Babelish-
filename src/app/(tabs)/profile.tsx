@@ -36,6 +36,8 @@ import { tierForXp } from '@/lib/league';
 import { buildPack, formatPackSize, OFFLINE_CAPABILITIES } from '@/lib/offline';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
 import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
+import { clearConversations } from '@/lib/conversationStorage';
+import { ownerIdFor } from '@/lib/conversations';
 import { deleteAccount } from '@/lib/neonApi';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
@@ -201,6 +203,9 @@ export default function ProfileScreen() {
                 // server unreachable — the local wipe below still happens
               }
               await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
+              // Chats live under a per-owner key that the static list cannot
+              // name; erase this account's book explicitly.
+              await clearConversations(ownerIdFor(user?.id ?? null));
               signOut();
               if (serverIssue) {
                 showAlert(

@@ -38,6 +38,8 @@ import {
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
 import { isCancelled, QuotaExceeded } from '@/lib/models/types';
+import { loadConversation, saveConversation } from '@/lib/conversationStorage';
+import { ownerIdFor } from '@/lib/conversations';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -174,7 +176,15 @@ export default function SpeakScreen() {
   // Reset the conversation when the language or scenario changes — done
   // during render (React's recommended pattern), not inside the effect.
   const conversationKey = `${language.id}:${scenarioId ?? 'free'}`;
+  // Conversations are stored per account on this device: two learners sharing
+  // a phone never see each other's chats, and a guest never inherits one.
+  const siteOwner = ownerIdFor(user?.id ?? null);
   const [prevKey, setPrevKey] = useState(conversationKey);
+
+  /** Best-effort save of what is on screen; storage failure is silent. */
+  function persist(next: ChatMessage[]) {
+    void saveConversation(siteOwner, language.id, scenarioId, next);
+  }
   if (prevKey !== conversationKey) {
     // The old conversation is gone, so its pending turn must go too.
     abortRef.current?.abort();
@@ -235,6 +245,16 @@ export default function SpeakScreen() {
     const controller = new AbortController();
     abortRef.current = controller;
     void (async () => {
+      // Restore first: a saved conversation costs no quota, works offline and
+      // is what the learner expects to find after a reload.
+      const stored = await loadConversation(siteOwner, language.id, scenarioId).catch(() => null);
+      if (cancelled) return;
+      if (stored && stored.messages.length > 0) {
+        setMessages(stored.messages as ChatMessage[]);
+        setBusy(false);
+        if (abortRef.current === controller) abortRef.current = null;
+        return;
+      }
       try {
         const reply = await tutorReply(
           {
@@ -251,7 +271,7 @@ export default function SpeakScreen() {
           await aiIo()
         );
         if (!cancelled) {
-          setMessages([
+          const opening: ChatMessage[] = [
             {
               role: 'assistant',
               text: reply.text,
@@ -262,7 +282,9 @@ export default function SpeakScreen() {
               runtime: reply.runtime,
               model: reply.model,
             },
-          ]);
+          ];
+          setMessages(opening);
+          persist(opening);
         }
       } catch (error) {
         if (!cancelled) {
@@ -296,7 +318,7 @@ export default function SpeakScreen() {
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationKey]);
+  }, [conversationKey, siteOwner]);
 
   async function respond(history: ChatMessage[]) {
     const controller = new AbortController();
@@ -319,8 +341,8 @@ export default function SpeakScreen() {
       );
       if (controller.signal.aborted) return;
       setQuotaNote(null);
-      setMessages((prev) => [
-        ...prev,
+      const withReply: ChatMessage[] = [
+        ...history,
         {
           role: 'assistant',
           text: reply.text,
@@ -329,7 +351,9 @@ export default function SpeakScreen() {
           runtime: reply.runtime,
           model: reply.model,
         },
-      ]);
+      ];
+      setMessages(withReply);
+      persist(withReply);
     } catch (error) {
       // Stop is a choice, not a failure: no error card, no retry, and the
       // turn keeps its place in the daily budget (the model was asked).
@@ -371,6 +395,7 @@ export default function SpeakScreen() {
     setInput('');
     const history: ChatMessage[] = [...messages, { role: 'user', text }];
     setMessages(history);
+    persist(history);
     await respond(history);
   }
 
@@ -407,6 +432,7 @@ export default function SpeakScreen() {
         if (controller.signal.aborted) return;
         const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
         setMessages(history);
+        persist(history);
         setBusy(false);
         await respond(history);
       } catch (error) {

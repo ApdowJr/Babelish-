@@ -24,6 +24,14 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **Conversations survive a reload.** The Speak screen restores the last chat
+  for the selected language and scenario instead of starting over — on web
+  refresh, tab remount and app restart, and with no quota spent on a fresh
+  greeting. History is stored per account on the device (`u:<id>` or `guest`),
+  so two learners sharing a phone never read each other's chats; it is capped
+  at 12 conversations of 40 messages, clipped to the server's 4 000-character
+  limit, expires after 45 days, and is erased by “Delete account”. Storage is
+  best-effort: offline or full storage just means the chat is not restored.
 - **Stop a reply in progress.** The send button becomes Stop while the tutor is
   thinking; tapping it (or leaving the screen, or switching language/scenario)
   aborts the request. Cancellation is its own outcome — no error card, no
