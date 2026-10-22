@@ -83,7 +83,7 @@ export function offlineTutorReply(input: {
   const base = `Offline coach — card ${index + 1} of ${cards.length} from ${label}.`;
   const tip = card.roman
     ? `${base} Say it as “${card.roman}”. No language model is running, so I can’t correct or explain yet.`
-    : `${base} No language model is running, so I can’t correct or explain yet. Set one up in Settings → AI model.`;
+    : `${base} The tutor server isn’t available, so I can only show bundled phrases right now — no corrections or explanations.`;
 
   return {
     text: card.target,
@@ -97,4 +97,4 @@ export function offlineTutorReply(input: {
 
 /** Honest one-liner for the Speak screen's status pill. */
 export const OFFLINE_COACH_NOTE =
-  'Offline coach: bundled phrases only — no AI model is running. Lessons, reviews and the phrasebook still work.';
+  'Coach mode: bundled phrases only — the tutor server is not answering. Lessons, reviews and the phrasebook still work.';

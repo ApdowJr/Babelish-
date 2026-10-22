@@ -29,7 +29,6 @@ import { progressForLanguage } from '@/lib/catalog';
 import { computeStreak } from '@/lib/analytics';
 import { fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { useModelSettings } from '@/lib/models/settings';
-import { MODE_LABEL, RUNTIME_SHORT } from '@/lib/models/config';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { isNeonConfigured, NEON_API_URL } from '@/lib/neon';
 import { levelForXp, todayXp } from '@/lib/xp';
@@ -94,7 +93,7 @@ export default function ProfileScreen() {
     return () => {
       cancelled = true;
     };
-    // Settings changes (Settings → AI model) trigger a fresh, real probe.
+    // A settings change (server URL / mode) triggers a fresh, real probe.
   }, [getAccessToken, settings]);
 
   const tutorLive = aiStatus?.chat === true;
@@ -110,10 +109,6 @@ export default function ProfileScreen() {
           : aiSource === 'browser'
             ? 'This browser'
             : 'This device';
-  const aiDetail =
-    aiStatus === null
-      ? 'Probing the configured engines…'
-      : aiStatus.detail || `${MODE_LABEL[settings.mode]} · no model answered.`;
 
   const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
   useEffect(() => {
@@ -578,32 +573,13 @@ export default function ProfileScreen() {
         <Button label="Delete account" variant="danger" onPress={deleteMyAccount} />
       </View>
 
-      <SectionHeader title="AI model" icon="hardware-chip-outline" />
-      <View style={styles.card}>
-        <View style={styles.freeTop}>
-          <Pill
-            label={tutorLive ? 'OPEN-SOURCE · LIVE' : 'OFFLINE COACH'}
-            tone={tutorLive ? 'free' : 'muted'}
-            icon={tutorLive ? 'flash' : 'cloud-offline-outline'}
-          />
-          <Text style={styles.freeTier}>{MODE_LABEL[settings.mode]}</Text>
-        </View>
-        <Text style={styles.freeBody}>
-          {tutorLive
-            ? `${RUNTIME_SHORT[aiStatus?.chatRuntime ?? 'gateway']} · ${aiStatus?.model ?? 'model'}. No paid AI API is used for tutoring.`
-            : 'No language model is answering, so the bundled phrase coach is used. Lessons, reviews, phrasebook and audio still work.'}
-        </Text>
-        <Text style={styles.hint}>{aiDetail}</Text>
-        <Button
-          label="Model settings"
-          variant="secondary"
-          onPress={() => router.push('/settings/ai')}
-        />
-      </View>
-
       <SectionHeader title="Status" icon="pulse-outline" />
       <View style={styles.card}>
-        <StatusRow ok={tutorLive} label="AI tutor" value={aiValue} />
+        <StatusRow
+          ok={tutorLive}
+          label="AI tutor"
+          value={tutorLive ? 'Tutor server' : aiValue}
+        />
         <View style={styles.rowDivider} />
         <StatusRow
           ok={voiceLive}
@@ -633,8 +609,8 @@ export default function ProfileScreen() {
         />
         <Text style={styles.hint}>
           {tutorLive
-            ? 'A real model is answering in the Speak tab. Switch engines any time in Model settings.'
-            : 'The tutor is running the offline coach. Add Ollama, a local server or a browser model in Model settings — no paid API is required.'}
+            ? 'A real model is answering in the Speak tab — no paid AI service is involved.'
+            : 'The tutor server is not answering, so bundled phrases are used. Everything else works offline.'}
         </Text>
       </View>
 

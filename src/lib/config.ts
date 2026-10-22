@@ -70,13 +70,13 @@ export function validateConfigurationAtStartup(): string[] {
     );
   }
   const settings = getModelSettings();
-  // Whether a model actually answers is decided by a real probe on the Speak
-  // and Profile screens; startup can only report what the learner selected.
+  // The tutor is server-hosted; the Speak/Profile probes report whether it
+  // actually answered. Startup only flags a configuration that cannot work.
   if (settings.mode === 'offline') {
-    warnings.push('AI mode is set to the offline coach — no model will be contacted.');
+    warnings.push('Tutor mode is set to the offline coach — no server will be contacted.');
   } else if (settings.mode === 'browser' && !settings.browser.enabled) {
     warnings.push(
-      'Browser mode is selected but browser inference is off — the tutor will fall back to the offline coach.'
+      'Browser mode is selected but browser inference is off — the tutor falls back to the coach.'
     );
   }
   if (!isSupabaseConfigured && !isNeonConfigured) {

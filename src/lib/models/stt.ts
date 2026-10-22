@@ -142,6 +142,16 @@ export async function runTranscribe(
       }
     } catch (err) {
       if (err instanceof EngineUnavailable) continue;
+      // A server without credits or a valid key cannot transcribe, but the
+      // next candidate (on-device Whisper) can — and it is free. Only move on
+      // for credential/quota failures; a real transcription error is surfaced.
+      if (
+        err instanceof EngineFailed &&
+        runtime === 'gateway' &&
+        /(credit|quota|rate|402|401|403|rejected|unauthor)/i.test(err.message)
+      ) {
+        continue;
+      }
       throw err;
     }
   }

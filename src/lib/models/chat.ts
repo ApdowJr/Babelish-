@@ -101,14 +101,18 @@ export async function probeOpenAI(base: string): Promise<string[]> {
 
 /** Health-checks the app owner's gateway. */
 export async function probeGateway(base: string, jwt?: string | null) {
-  if (!jwt) throw new EngineUnavailable('Sign in to use the app server.', 'gateway');
   try {
     const res = await getJson(
       `${base}/api/ai/status`,
-      { method: 'GET', headers: { Authorization: `Bearer ${jwt}` } },
+      { method: 'GET', headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} },
       3_000
     );
-    if (!res.ok) throw new EngineUnavailable(`App server answered HTTP ${res.status}.`, 'gateway');
+    // Signed out (or an owner-hosted keyless gateway): not an error, just a
+    // tutor that is not usable from here — the coach covers it.
+    if (res.status === 401 || res.status === 403) {
+      throw new EngineUnavailable('Sign in to use the tutor server.', 'gateway');
+    }
+    if (!res.ok) throw new EngineUnavailable(`Tutor server answered HTTP ${res.status}.`, 'gateway');
     const data = res.json as { chat?: boolean; stt?: boolean; model?: string } | null;
     return {
       chat: data?.chat === true,
@@ -354,13 +358,16 @@ async function runGateway(
   ctx: EngineContext
 ): Promise<ChatAnswer> {
   const base = ctx.gatewayBase;
-  if (!base || !ctx.jwt) throw new EngineUnavailable('App server is not configured.', 'gateway');
+  if (!base) throw new EngineUnavailable('Tutor server is not configured.', 'gateway');
   const started = Date.now();
   const linked = linkedAbort(call.signal, 60_000);
   try {
     const res = await fetch(`${base}/api/ai/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ctx.jwt}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(ctx.jwt ? { Authorization: `Bearer ${ctx.jwt}` } : {}),
+      },
       body: JSON.stringify(gatewayBody(call)),
       signal: linked.signal,
     });
@@ -373,7 +380,12 @@ async function runGateway(
       model?: string;
     } | null;
     if (res.status === 503 && json?.error === 'ai-not-configured') {
-      throw new EngineUnavailable('The app server has no model configured.', 'gateway');
+      throw new EngineUnavailable('The tutor server has no model configured.', 'gateway');
+    }
+    // 401/403 = no session for a protected gateway; fall through to the coach
+    // instead of showing the learner an auth error mid-conversation.
+    if (res.status === 401 || res.status === 403) {
+      throw new EngineUnavailable('Sign in to use the tutor server.', 'gateway');
     }
     if (!res.ok) {
       throw new EngineFailed(

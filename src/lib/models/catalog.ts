@@ -54,8 +54,20 @@ const PIPER_LANGUAGES = [
   'ar', 'fa', 'zh', 'vi', 'sw',
 ] as const;
 
+/**
+ * Qwen3 (incl. Qwen3-Next 80B A3B) documents 119 languages and dialects; every
+ * Babelish language appears in that table (Swahili is listed explicitly, as
+ * are Bengali, Hebrew, Persian, Dutch, Swedish, Polish, Ukrainian and Greek).
+ * Source: Qwen3 Technical Report §1 + the Qwen3 language table.
+ */
+const QWEN3_LANGUAGES = [
+  'es', 'fr', 'de', 'it', 'pt', 'nl', 'sv', 'pl', 'ru', 'uk', 'el', 'tr',
+  'ar', 'he', 'fa', 'hi', 'bn', 'zh', 'ja', 'ko', 'vi', 'th', 'id', 'sw',
+] as const;
+
 const COVERAGE: Record<string, readonly string[]> = {
   qwen: QWEN_LANGUAGES,
+  qwen3: QWEN3_LANGUAGES,
   whisper: WHISPER_LANGUAGES,
   aya: AYA_LANGUAGES,
   kokoro: KOKORO_LANGUAGES,
@@ -251,6 +263,53 @@ export const MODELS: ModelSpec[] = [
     roles: [],
   },
 ];
+
+// Gateway-hosted entries: what the tutor server actually runs. Zero download
+// on the device; the hardware note points at whoever hosts the server.
+MODELS.push(
+  {
+    id: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    family: 'qwen3',
+    kind: 'chat',
+    label: 'Qwen3-Next 80B (free endpoint)',
+    parameters: '80B MoE (3B active)',
+    sizeMb: 0,
+    runtimes: ['gateway'],
+    license: { name: 'Apache-2.0', spdx: 'Apache-2.0', commercial: 'yes' },
+    contextTokens: 262144,
+    hardware: 'Runs on the provider — nothing is downloaded by the app.',
+    notes:
+      'Default when the tutor server points at OpenRouter. Free endpoints rotate; the server keeps a fallback chain.',
+    roles: ['tutor'],
+  },
+  {
+    id: 'qwen/qwen3-next-80b-a3b-instruct',
+    family: 'qwen3',
+    kind: 'chat',
+    label: 'Qwen3-Next 80B (metered endpoint)',
+    parameters: '80B MoE (3B active)',
+    sizeMb: 0,
+    runtimes: ['gateway'],
+    license: { name: 'Apache-2.0', spdx: 'Apache-2.0', commercial: 'yes' },
+    contextTokens: 262144,
+    hardware: 'Runs on the provider.',
+    notes: 'Second choice if the free endpoint is unavailable. Metered by the provider.',
+    roles: ['tutor'],
+  },
+  {
+    id: 'server',
+    family: 'qwen3',
+    kind: 'chat',
+    label: 'Tutor server model (owner-configured)',
+    parameters: 'server-side',
+    sizeMb: 0,
+    runtimes: ['gateway'],
+    license: { name: 'Set by the server owner', commercial: 'check' },
+    hardware: 'Provided by whoever hosts the tutor server.',
+    notes: 'Used when the server does not report which model answered.',
+    roles: ['tutor'],
+  }
+);
 
 const INDEX = new Map(MODELS.map((model) => [model.id, model]));
 

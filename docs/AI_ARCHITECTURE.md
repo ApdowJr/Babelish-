@@ -1,9 +1,14 @@
 # Babelish 3.0 — AI architecture
 
-Babelish teaches 24 languages. Its tutor, voice input and course drills run on
-**open-weight models you can host yourself**, with a bundled, labelled offline
-coach as the floor. No paid AI API is required for any core feature, and the
-app never silently calls one.
+Babelish teaches 24 languages. **The learner never configures a model.** They
+open Speak and the tutor answers; the only configuration lives on the server
+that the app owner runs.
+
+The tutor is a hosted deployment of open-weight models (Qwen3-Next 80B via
+OpenRouter by default, or any OpenAI-compatible endpoint you host). Courses,
+review, the phrasebook and device audio need no model at all, and a labelled
+coach covers the tutor when the server is unreachable. No model screen ships in
+the app.
 
 This document is the honest map: what runs where, which models were verified
 for which languages, how to set each one up, what it costs in hardware, and
@@ -16,13 +21,15 @@ what is **not** finished.
 | Plane | What it is | Runs on | Needs a server? | Cost to you |
 |---|---|---|---|---|
 | **On-device content** | 97 chapters · 204 lessons · 1,678 exercises · 528 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
-| **On-device model** | Optional Transformers.js chat (`Qwen2.5-0.5B-Instruct`) and Whisper (`whisper-base`) in the browser | The learner's browser, via WebAssembly/WebGPU | No (first use downloads weights) | Free (bandwidth + battery) |
-| **Self-hosted server** | Optional Ollama / llama.cpp / LM Studio / vLLM / faster-whisper endpoint, or Babelish's own `api` Function gateway | Hardware you own or rent | Yes | Your hardware, power and bandwidth |
-| **External provider** | *Not required.* Any OpenAI-compatible endpoint can be pointed at, including paid ones | Someone else's servers | Yes | Whatever that provider charges |
+| **Tutor server** | Babelish's `api` Function → OpenRouter free Qwen3 endpoints (default) or any OpenAI-compatible server you host | A machine you rent or own | Yes | Free-tier requests are $0; self-hosting costs electricity and hardware |
+| **On-device model** | Transformers.js Whisper (`whisper-base`) for voice input in the browser | The learner's browser | No (one ~150 MB download) | Free (bandwidth + battery) |
+| **External provider** | Optional. Any OpenAI-compatible endpoint, including paid ones | Someone else's servers | Yes | Whatever that provider charges |
 
-The first three are the product. The fourth exists only because the same
-OpenAI-compatible adapter can reach it — it is never a default, never a
-fallback, and the UI never labels it as free.
+The first two are the product. The tutor server is what makes the app work with
+**zero setup for the learner**: they never download weights, never pick a model,
+never paste a key. That convenience has a real cost for whoever operates the
+server — free endpoints are rate-limited and rotate, and self-hosting is not
+free of electricity.
 
 The **offline coach** is not a model. It is a curated set of starter words and
 scenario phrases with a translator note, and every message it produces says
@@ -36,23 +43,23 @@ connection, or on a device that cannot run any model.
 ```
 src/lib/models/
   types.ts        # ModelSpec, RuntimeId, Coverage, ChatAnswer, EngineUnavailable/EngineFailed
-  catalog.ts      # the model catalogue + per-family language tables + licence/commercial flags
-  config.ts       # defaults, URL sanitising, settings validation, runtime planning, coverage gate
-  chat.ts         # adapters: Ollama · OpenAI-compatible · gateway · browser; probes
+  catalog.ts      # model catalogue + per-family language tables + licence/commercial flags
+  config.ts       # defaults (server mode), URL sanitising, runtime planning, coverage gate
+  chat.ts         # adapters: gateway · Ollama · OpenAI-compatible · browser; probes
   stt.ts          # adapters: gateway · local Whisper · browser Whisper
   browser.ts      # Transformers.js runtime loader, chat, Whisper decode/resample/transcribe
   audio.ts        # recording bytes for on-device inference
   offlineTutor.ts # the bundled coach (cards + scenario phrases), labelled in every reply
-  settings.ts     # AsyncStorage-backed settings store (useSyncExternalStore)
+  settings.ts     # on-device settings store (server mode by default)
   status.ts       # probe → AiStatus {chat, stt, source, runtime, model, detail}
+src/lib/mic.ts    # microphone failure → actionable message (web/native, iframe, insecure…)
 src/lib/ai.ts     # app-facing API: tutorReply, transcribeSpeech, speakNative, fetchAiStatus
 src/lib/aiCore.ts # prompt + strict-JSON contract + wrong-script guard (shared with the Function)
-src/app/settings/ai.tsx  # the whole model UI: modes, coverage, URLs, hardware, reset
-functions/api/index.ts   # optional gateway (JWT-gated, rate-limited, key stays server-side)
+functions/api/index.ts  # the tutor server: model chain, rate limits, key stays server-side
 ```
 
-Swapping a model = changing a settings value or an entry in `catalog.ts`. No
-screen talks to a provider directly, and no adapter knows what a lesson is.
+There is no model screen. Swapping a model is a server environment change
+(`AI_MODELS`), not an app rebuild and never something the learner does.
 
 ### Runtime selection
 
@@ -60,9 +67,9 @@ screen talks to a provider directly, and no adapter knows what a lesson is.
 
 | Mode | Chat order | Speech-to-text order |
 |---|---|---|
-| `auto` (default) | Ollama → local OpenAI-compatible → gateway → browser | gateway → local Whisper → browser |
+| `server` (**default**) | tutor server | tutor server → browser Whisper |
+| `auto` | local/LAN → tutor server → browser | tutor server → local Whisper → browser |
 | `local` | Ollama → local OpenAI-compatible → browser | local Whisper → browser |
-| `server` | gateway only | gateway only |
 | `browser` | browser only | browser only |
 | `offline` | none (bundled coach) | none (typing) |
 
@@ -83,6 +90,7 @@ blocked unless the learner flips *Use unverified languages* in Settings.
 
 | Model | Kind | Size (approx.) | Runtime(s) | Licence | Commercial use | Languages in the atlas documented by its card |
 |---|---|---|---|---|---|---|
+| **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **all 24** (Qwen3 documents 119 languages) |
 | Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 15: zh en es fr de it pt ru ja ko vi th ar id tr |
 | Qwen2.5 3B Instruct | chat | 2 GB | Ollama, gateway | Qwen Research licence | **no** (research only) | same 15 |
 | Llama 3.2 3B Instruct | chat | 2 GB | Ollama, gateway | Llama 3.2 Community | check (700 M MAU cap) | 8: es fr de it pt hi th tr |
@@ -105,10 +113,10 @@ pretend to offer it.
   Adding Somali requires a curated starter pack — guessing vocabulary would
   break the honesty rule, so it is left out rather than faked. Swahili (`sw`)
   is the nearest East African course and is covered by Whisper.
-- Qwen2.5 does not document `nl sv pl uk el he fa hi bn sw`. Dutch, Swedish,
-  Polish, Ukrainian, Greek, Hebrew, Persian, Hindi, Bengali and Swahili
-  therefore run **only** with the opt-in, or on a server model whose own card
-  covers them.
+- The default hosted Qwen3 model documents all 24 atlas languages, including
+  Swahili, Bengali, Hebrew and Persian. If you swap in Qwen2.5 instead, nine
+  languages (`nl sv pl uk el he fa hi bn sw`) are listed as unverified and are
+  blocked unless you opt in — that is the catalogue being honest, not a bug.
 - No model is claimed to produce *perfect* grammar in any language. Lessons are
   the validated content; the model is a conversation partner.
 
@@ -200,63 +208,78 @@ meaning, meaning → typed target), records every answer through
 
 ## 7. Setup
 
-### 7.1 Local model (recommended, free)
+The app ships with **no model configuration for the learner**. Everything below
+is an operator task, done once.
+
+### 7.1 Hosted tutor server (recommended — zero setup for learners)
+
+Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints cover all
+24 languages at $0 per token:
 
 ```bash
-# 1. Install Ollama (https://ollama.com) and pull a small multilingual model
-ollama pull qwen2.5:1.5b        # ~1 GB, Apache-2.0, 15 documented languages
-
-# 2. Let the web build (a different origin) call the daemon
-export OLLAMA_ORIGINS='*'       # dev only — restrict to your app origin in production
-ollama serve
-
-# 3. Run Babelish and open Settings → AI model → Check
-npm install && npx expo start --web
+neon functions deploy api --src functions/api/index.ts \
+  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
+  --env AI_API_URL=https://openrouter.ai/api/v1 \
+  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
+  --env AI_STT_ENABLED=false --wait
 ```
 
-Defaults: `http://localhost:11434`, `qwen2.5:1.5b`. For a phone on the same
-Wi-Fi, use the computer's LAN address (`http://192.168.x.x:11434`) and set
-`OLLAMA_HOST=0.0.0.0` on the server. The same screen lets you enter any
-OpenAI-compatible base URL (LM Studio, llama.cpp server, vLLM, LocalAI).
+No app rebuild is needed — the client discovers the tutor by probing
+`GET /api/ai/status` through the same backend URL it already uses.
 
-### 7.2 Self-hosted gateway (optional)
+**Fallback chain.** `AI_MODELS` is tried in order. Free endpoints are retired
+without notice, so when one disappears the server moves to the next; a bad key,
+a rate limit or a timeout is returned as itself instead of being hidden.
 
-Deploy the `api` Function and set:
+**Rate limits.** Free OpenRouter tiers allow roughly 20 requests/minute and
+50/day on an unfunded account (1,000/day after a one-time $10 credit purchase).
+The server adds its own budgets: 20 chat + 10 transcription per minute per
+signed-in learner, 6 + 2 per minute per anonymous IP.
 
+**A note on privacy.** Prompts leave the learner's device and reach the model
+provider you configured. The app says "Tutor server" — it does not claim the
+model runs locally. If that matters for your audience, use §7.2 instead.
+
+### 7.2 Self-hosted model (no account, no bill, real electricity)
+
+```bash
+ollama pull qwen2.5:1.5b          # ~1 GB, Apache-2.0
+OLLAMA_ORIGINS='*' ollama serve   # dev only — restrict in production
+
+neon functions deploy api --src functions/api/index.ts \
+  --env AI_API_URL=http://127.0.0.1:11434/v1 \
+  --env AI_MODEL=qwen2.5:1.5b --env AI_STT_ENABLED=false --wait
 ```
-AI_API_URL=http://127.0.0.1:11434/v1     # your OpenAI-compatible server
-AI_MODEL=qwen2.5:1.5b                    # any id your server serves
-AI_API_KEY=                              # only if the server requires one
-AI_STT_MODEL=whisper-large-v3-turbo      # needs /audio/transcriptions
-AI_STT_ENABLED=false                     # chat-only servers
-```
 
-The gateway is considered configured only when one of those variables is set.
-Leaving them unset is the normal open-source deployment: `/api/ai/status`
-reports `chat: false` and the app uses local, browser or offline paths.
+Any OpenAI-compatible server works the same way (llama.cpp, LM Studio, vLLM,
+LocalAI). Qwen2.5 documents 15 of the 24 languages; the other nine show as
+unverified rather than being silently guessed at.
 
-If you point it at a paid provider, that is your choice and your bill — the app
-does not default to one, and the docs do not call it free.
+### 7.3 Voice input
 
-### 7.3 Browser model (opt-in, experimental)
+Priority: server transcription (if enabled) → **browser Whisper** → typing.
 
-Settings → *In this browser*:
+- Server: `AI_STT_ENABLED=true` + `AI_STT_MODEL=openai/whisper-large-v3-turbo`.
+  Accurate, works on phones, **metered per second of audio** by the provider.
+- Browser: free and on-device. On web, tapping the mic when the server has no
+  audio offers **one tap** to download `onnx-community/whisper-base` (~150 MB,
+  cached afterwards). Nothing downloads until that tap.
+- Typing always works, and the mic says why it cannot record instead of
+  pointing at a settings screen that does not exist.
 
-- chat: `onnx-community/Qwen2.5-0.5B-Instruct` (~300–600 MB)
-- speech: `onnx-community/whisper-base` (~150 MB)
-- runtime: `https://esm.sh/@huggingface/transformers@3.7.5` (overridable for
-  air-gapped builds)
+### 7.4 Browser chat model (optional)
 
-Nothing is downloaded until the switch is on and the first request runs; the
-screen shows download progress and falls back from WebGPU to WebAssembly.
-
----
+A small chat model can run fully on-device (`onnx-community/Qwen2.5-0.5B-Instruct`,
+~300–600 MB) for air-gapped use. It is off by default, never needed for the
+normal hosted setup, and never downloaded without an explicit opt-in. The
+`Transformers.js` module URL is configurable for self-hosted builds.
 
 ## 8. Hardware and cost
 
 | Setup | RAM needed | Disk / download | GPU | Notes |
 |---|---|---|---|---|
-| Offline coach only | any | 0 | no | Works on low-end phones; no model |
+| **Hosted tutor (default)** | 0 on device | 0 | no | The server does the work; learners need nothing |
+| Coach only | any | 0 | no | Works on low-end phones; no model |
 | Qwen2.5 0.5B (browser) | ~2 GB free | 0.4–0.6 GB | WebGPU helps; WASM works | First load is slow on mobile |
 | Qwen2.5 1.5B (Ollama) | ~3 GB | 1 GB | no | Good balance for a laptop |
 | Qwen2.5 3B | ~6 GB | 2 GB | no | Research licence — not for commercial use |
@@ -266,9 +289,37 @@ screen shows download progress and falls back from WebGPU to WebAssembly.
 | Kokoro-82M TTS | ~1 GB | 0.3 GB | no | 7 languages; needs a TTS server |
 | Piper TTS | <1 GB | ~60 MB/voice | no | 16 verified voices |
 
-Self-hosting is **not free**: it costs electricity, hardware, storage and
-maintenance. A small VPS or a laptop that stays on is the realistic baseline;
-a GPU only matters for larger models and low-latency voice.
+**What "free" means in each case:**
+
+- Hosted free endpoints: $0 per token, but rate-limited and dependent on the
+  provider's goodwill — they rotate, and a stalled free tier has no SLA.
+- Self-hosting: free of API fees, not free of electricity, hardware, storage and
+  maintenance. A laptop that stays on is the realistic baseline; a GPU only
+  matters for larger models and low-latency voice.
+- Server transcription: **metered per second of audio** where enabled. Browser
+  Whisper is the free alternative.
+
+---
+
+## 8b. Microphone behaviour (why it asks for what it asks for)
+
+`getUserMedia` fails for four different reasons that all look alike: permission
+denied, an embedded frame without mic policy, no input device, or an insecure
+origin. `src/lib/mic.ts` keeps the real `DOMException` name and maps it to
+advice the learner can act on:
+
+| Cause | What the learner sees |
+|---|---|
+| Embedded preview (`window.self !== window.top`) | "Open Babelish in its own browser tab…" |
+| `NotAllowedError` / denied | "Tap the lock icon next to the address, set Microphone to Allow…" |
+| Insecure origin | "Browsers only allow the microphone on HTTPS (or localhost)…" |
+| `NotFoundError` / `OverconstrainedError` | "No microphone was found…" |
+| `NotReadableError` | "The microphone is busy in another tab or app…" |
+| Native app denied | "Turn on Microphone in the app's system settings" + an Open-settings button |
+
+Permission is still requested only on the first mic tap, never at launch, and
+the probe stops the stream immediately so the recorder (or another tab) can
+open the device.
 
 ---
 
@@ -295,13 +346,18 @@ a GPU only matters for larger models and low-latency voice.
 
 ## 10. Testing — what is and is not proven
 
-Automated (`npm test`, 14 files, 105 tests):
+Automated (`npm test`, 16 files, 116 tests):
 
 - catalogue consistency and licence labels;
 - URL sanitising, settings validation, runtime plans per mode;
 - coverage gating (blocked unverified language, opt-in path, unknown model);
 - adapters against stubbed HTTP: Ollama success/404, fallback to gateway,
   gateway 503, unverified-language skip, local OpenAI-compatible path;
+- **server routing** (new): default is the tutor server, no localhost probing,
+  a signed-out request sends no Authorization header, 401 and
+  `ai-not-configured` both fall through to the coach instead of an error;
+- **microphone copy** (new): iframe, browser denial, insecure origin, missing
+  device, busy device and native denial each produce their own actionable text;
 - offline coach for all 24 languages (labels, counts, scripts, scenarios);
 - course data: 24 courses, unique ids, answerable exercises, four skills,
   tier labels, catalogue totals;
@@ -309,13 +365,15 @@ Automated (`npm test`, 14 files, 105 tests):
 
 **Not proven in this environment:**
 
-- a live model call (no GPU/server or model download was available here). The
-  adapter paths are tested with stubbed HTTP; run §7.1 to exercise a real one.
-- browser inference in a real browser (the runtime is loaded from a CDN at
-  call time; the sandbox has no browser).
-- TTS beyond the OS voice engine; a Kokoro/Piper server adapter is catalogued
-  but playback still uses `expo-speech`.
-- microphone capture on a physical device.
+- a live call to OpenRouter (this sandbox cannot reach it) or to any model.
+  Adapter paths are tested with stubbed HTTP; the server chain is exercised by
+  the local smoke harness against a fake provider, not a real one.
+- browser inference in a real browser.
+- microphone capture on a physical device or in a non-embedded tab.
+- a deployed gateway with the real key.
+
+Run `npm run smoke:local` (fake provider, 4 phases) and then the §7.1 deploy
+command to see a real answer.
 
 ---
 
@@ -324,13 +382,13 @@ Automated (`npm test`, 14 files, 105 tests):
 1. **No Somali course.** See §3.
 2. **Starter courses are not CEFR-complete.** A1–A2 vocabulary drills only for
    23 languages; no grammar notes for those languages yet.
-3. **Model coverage gaps.** Ten atlas languages are unverified for Qwen2.5.
-4. **Browser inference is experimental.** It depends on a CDN module import
-   (`new Function('u', 'import(u)')` to defeat static bundling) and on the
-   host's Content-Security-Policy. Self-host the runtime URL if your CSP blocks
-   `esm.sh`.
-5. **TTS is the device voice.** Neural TTS options are catalogued, not wired.
-6. **Word-match, not phonetics.** No acoustic pronunciation scoring exists.
-7. **Self-hosting has real costs.** See §8.
-8. **Gateway requires deployment.** Without it, `server` mode has nothing to
-   talk to — the app says so instead of falling back to a paid API.
+3. **Free hosted models are rate-limited and rotate.** The fallback chain
+   absorbs retired endpoints, not outages or exhausted daily quotas.
+4. **Server transcription costs money** where enabled; browser Whisper is free
+   but downloads ~150 MB once.
+5. **Browser chat inference is experimental** (`new Function('u', 'import(u)')`
+   to defeat static bundling; host CSP must allow the runtime URL).
+6. **TTS is the device voice.** Kokoro/Piper are catalogued, not wired.
+7. **Word-match, not phonetics.** No acoustic pronunciation scoring exists.
+8. **The learner's text leaves the device** on the hosted path. §7.2 is the
+   local-only alternative.

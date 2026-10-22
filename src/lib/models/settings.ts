@@ -1,15 +1,16 @@
 /**
  * Model settings store.
  *
- * A tiny external store (no provider needed) so the Speak screen, Profile and
- * Settings always read the same values. Persisted on-device — a model URL is
- * device-specific and never syncs to the cloud.
+ * A tiny external store (no provider needed) so the Speak screen and Profile
+ * read the same values. Persisted on-device — a model URL is device-specific
+ * and never syncs to the cloud. There is no model screen in the app: these are
+ * defaults plus the learner's CEFR level choice.
  */
 import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_SETTINGS, normalizeSettings, type ModelSettings } from './config';
 
-const STORAGE_KEY = 'babelish:model-settings:v1';
+const STORAGE_KEY = 'babelish:model-settings:v2';
 
 let current: ModelSettings = DEFAULT_SETTINGS;
 let ready = false;
