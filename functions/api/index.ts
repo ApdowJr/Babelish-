@@ -400,7 +400,10 @@ async function removeAuthUser(userId: string): Promise<AuthRemoval> {
  * 503 ai-not-configured and the client uses its local/browser/offline paths.
  * JWT-gated by the /api/* middleware and rate-limited per user.
  */
-const AI_URL = (process.env.AI_API_URL ?? 'http://127.0.0.1:11434/v1').replace(/\/+$/, '');
+const AI_URL = (
+  process.env.AI_API_URL ??
+  (process.env.AI_API_KEY ? 'https://openrouter.ai/api/v1' : 'http://127.0.0.1:11434/v1')
+).replace(/\/+$/, '');
 const AI_KEY = process.env.AI_API_KEY ?? '';
 const IS_OPENROUTER = /openrouter\.ai/i.test(AI_URL);
 /**
@@ -416,9 +419,11 @@ const CHAT_MODELS = CONFIGURED_MODELS.length
   ? CONFIGURED_MODELS
   : IS_OPENROUTER
     ? [
-        // Qwen3 documents 24 of 25 Babelish languages; Somali remains unverified (119-language table).
+        // Free-only chain: never silently fall back to a metered model.
+        // OpenRouter's router selects from currently available free endpoints;
+        // explicit free variants remain as fallbacks if the router is unavailable.
+        'openrouter/free',
         'qwen/qwen3-next-80b-a3b-instruct:free',
-        'qwen/qwen3-next-80b-a3b-instruct',
         'openai/gpt-oss-120b:free',
       ]
     : ['qwen2.5:1.5b'];
@@ -438,7 +443,11 @@ const upstreamHeaders = (): Record<string, string> => ({
 const AI_CONFIGURED = Boolean(
   process.env.AI_API_URL || process.env.AI_API_KEY || process.env.AI_MODEL || process.env.AI_MODELS
 );
-const AI_STT_ENABLED = AI_CONFIGURED && process.env.AI_STT_ENABLED !== 'false';
+const AI_STT_ENABLED =
+  AI_CONFIGURED &&
+  (IS_OPENROUTER
+    ? process.env.AI_STT_ENABLED === 'true' && Boolean(process.env.AI_STT_MODEL)
+    : process.env.AI_STT_ENABLED !== 'false');
 
 const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
 const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
@@ -603,8 +612,10 @@ app.post('/api/ai/chat', async (c) => {
         return c.json({ error: 'upstream-failed', message: detail }, 502);
       }
       const data = (await upstream.json().catch(() => null)) as {
+        model?: string;
         choices?: { message?: { content?: string } }[];
       } | null;
+      const actualModel = typeof data?.model === 'string' ? data.model : model;
       const raw = data?.choices?.[0]?.message?.content ?? '';
 
       // Strict validation: an empty reply or one in the wrong script is an
@@ -655,7 +666,7 @@ app.post('/api/ai/chat', async (c) => {
         reply: reply.text,
         translation: reply.translation,
         tip: reply.tip,
-        model,
+        model: actualModel,
       });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
