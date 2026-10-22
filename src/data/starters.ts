@@ -664,7 +664,7 @@ export const STARTERS: Record<string, StarterPack> = {
       'tisa',
       'kumi',
     ]),
-  },,
+  },
 
   so: {
     essentials: [
