@@ -33,11 +33,11 @@ export const NEON_AUTH_URL = disabled ? '' : AUTH_URL;
 export const NEON_API_URL = disabled ? '' : API_URL;
 
 /**
- * Canonical app origin, registered as a trusted domain on the branch
- * (`neon neon-auth domain add https://zelvoca.app`). Managed Auth validates the
- * Origin header on auth requests (CSRF protection); the native app has no real
- * origin, so it always sends this one. In the browser the `Origin` header is a
- * forbidden header (the browser sends its own), which is why every preview
- * domain must also be registered as a trusted domain.
+ * Canonical app origin, registered as a trusted domain on the production
+ * branch. Managed Auth validates the Origin header on auth requests (CSRF
+ * protection); the native app has no real origin, so it sends this one.
+ * Browser requests send their own Origin header, so the deployed web origin
+ * must also be registered as a trusted domain.
  */
-export const NEON_TRUSTED_ORIGIN = process.env.EXPO_PUBLIC_NEON_ORIGIN ?? 'https://zelvoca.app';
+export const NEON_TRUSTED_ORIGIN =
+  process.env.EXPO_PUBLIC_NEON_ORIGIN ?? 'https://babelish.vercel.app';
