@@ -3,6 +3,117 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.1.0] — 2026-10-22
+
+### Added
+
+- **A release gate for the tutor.** `npm run check:tutor` asks the deployed
+  Function for `/api/ai/status` and then sends one real turn, so "deployed" and
+  "working" stop being the same word. A wrong key, a retired free model or an
+  empty reply fails with an actionable message instead of leaving learners on
+  Coach mode. `npm run deploy:tutor` runs the gate automatically after every
+  deploy (`SKIP_TUTOR_GATE=1` to skip).
+- **A daily budget, honestly stated.** Tutor messages and voice transcriptions
+  have separate per-learner allowances (30 / 12 by default) plus a server-wide
+  chat budget (45), because free model endpoints are not infinite. When a cap is
+  reached the Speak screen shows a dated note ("resets at 00:00 UTC") in its own
+  strip — not a generic error, not a fake tutor turn — and lessons, review and
+  the phrasebook keep working. Signed-in learners get a larger allowance than
+  guests; usage is counted per UTC day in `public.ai_usage`.
+- **Refunds for our failures.** A timeout, a 502 from the provider or an empty
+  transcript does not consume the learner's allowance; only turns that actually
+  produced something count.
+
+- **One slot per turn, even for a bad answer.** If the model replies in the
+  wrong script the server asks once more, in the same request, before giving
+  up — so a wobbly answer costs one daily slot instead of two. The app no
+  longer retries that case either; it would have been billed twice.
+- **Clear this conversation.** A trash button in the Speak header forgets the
+  current language/scenario chat on the device after a confirmation, and a
+  fresh opening line is requested. Other conversations, lessons and progress
+  are untouched. Restore stays deliberately device-local: the tutor transcript
+  is never stored on a server.
+- **Guest identity can no longer grow the database.** `X-Forwarded-For` is
+  client-controlled, so it is normalised (first hop, strips ports, quoted
+  values and `::ffff:`, validates IPv4/IPv6, ≤45 chars) and collapses to
+  `unknown` instead of becoming an address-shaped key. The admin login throttle
+  uses the same normaliser. Spoofing still buys another *guest* allowance —
+  the server-wide daily budget is the real ceiling, and the docs say so.
+- **A crash probe you can open.** `/dev-crash` throws on purpose in a
+  development build, so the crash screen can be verified on a device instead of
+  waiting for a real crash. Production builds redirect it home and throw
+  nothing.
+
+- **Accessibility pass (static).** Every tappable element in `src` now has an
+  accessible name or an explicit decorative opt-out, every modal can be
+  dismissed without its close button, the language picker is marked modal, the
+  conversation list is a labelled region, and status changes (thinking, voice
+  errors, the daily-limit note) are polite live regions. Chips and level
+  filters gained hit slop to reach the 44 pt guideline. Two automated guards
+  fail the suite if this regresses; device screen-reader checks are still open
+  and listed in `docs/A11Y_3_1.md`.
+- **Barge-in and one audio channel.** Opening the mic (chat or phrase practice)
+  stops the tutor mid-sentence, so the reply never plays into the recording and
+  the learner can answer immediately — the interrupt is a tap, not an
+  always-listening microphone. Starting any line stops the previous one, and
+  tapping the line that is playing turns its button into Stop.
+- **A crash screen instead of a blank one.** Any unexpected render error now
+  lands on a readable screen with Try again and Back to Learn, wired both
+  inside the provider tree and as Expo Router's route-level boundary. It never
+  clears storage, signs anyone out or touches progress — lessons and reviews
+  are written as they finish, so the copy can honestly say nothing completed
+  is lost. The one-line detail is redacted (`sk-…`, Bearer, JWT, long opaque
+  keys) and clipped before display.
+- **Answers grounded in the learner's current lesson.** Speak resolves the
+  first unfinished lesson of the target language from the bundled curriculum
+  and sends only its id. The proxy (or a local/browser adapter) looks that id
+  up and adds the lesson's goal, up to eight vocabulary pairs, the notes
+  already taught and three example lines to the system prompt — about 700
+  characters, so the per-turn cost barely moves. An unknown id, or one from
+  another language, adds nothing; client text never reaches the prompt.
+- **Conversations survive a reload.** The Speak screen restores the last chat
+  for the selected language and scenario instead of starting over — on web
+  refresh, tab remount and app restart, and with no quota spent on a fresh
+  greeting. History is stored per account on the device (`u:<id>` or `guest`),
+  so two learners sharing a phone never read each other's chats; it is capped
+  at 12 conversations of 40 messages, clipped to the server's 4 000-character
+  limit, expires after 45 days, and is erased by “Delete account”. Storage is
+  best-effort: offline or full storage just means the chat is not restored.
+- **Stop a reply in progress.** The send button becomes Stop while the tutor is
+  thinking; tapping it (or leaving the screen, or switching language/scenario)
+  aborts the request. Cancellation is its own outcome — no error card, no
+  retry against another runtime, and the server aborts the upstream provider
+  call so the owner is not billed for an answer nobody will read. The daily
+  slot stays spent: the model was already asked, and refund-on-cancel would be
+  a free-inference loop.
+- The voice path is cancellable too: stopping a transcription aborts the
+  upload instead of waiting for a result that is no longer wanted.
+
+### Changed
+
+- `/api/ai/status` now reports `quota` (limits, used, reset time, and whether
+  the store is database-backed or in-memory) alongside `chat`/`stt`.
+- `QuotaExceeded` is its own error class, so a spent budget is never retried
+  against another runtime and never dressed up as a connection problem.
+
+### Fixed
+
+- **Concurrent requests could overshoot a cap.** Counting was a read followed
+  by an increment, so two simultaneous turns could both take the last slot.
+  Each claim is now one conditional upsert (`insert … on conflict do update …
+  where <cap> returning`), and the shared budget lives in a single row per day
+  (`public.ai_usage_daily`) so the check and the increment cannot interleave.
+  The in-memory fallback never awaits between read and write, so it is atomic
+  per instance for the same reason.
+- **Voice was blocked by the chat budget in the fallback path.** The daily
+  budget covers chat spend only; a busy day of typing must not silence the
+  microphone. The fallback now matches the database path.
+- **Refunds were too generous.** A provider answer — even an unusable or
+  silent one — was billed upstream, so refunding it made repeated junk replies
+  or silent uploads a way to spend the server's provider quota for free.
+  Refunds now apply only when no provider answer was produced (network error,
+  timeout, 5xx).
+
 ## [3.0.3] — 2026-10-22
 
 ### Fixed

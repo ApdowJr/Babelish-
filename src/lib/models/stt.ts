@@ -16,7 +16,15 @@ import { readAudioBytes } from './audio';
 import { browserTranscribe } from './browser';
 import { languageSupport, sttCandidates, sttModelForRuntime, type EngineContext, type ModelSettings } from './config';
 import type { RuntimeId, TranscribeAnswer } from './types';
-import { EngineFailed, EngineUnavailable, classifyFetchError, linkedAbort } from './types';
+import { isQuotaResponse } from '../quota';
+import {
+  EngineFailed,
+  EngineUnavailable,
+  QuotaExceeded,
+  RequestCancelled,
+  classifyFetchError,
+  linkedAbort,
+} from './types';
 
 async function transcribeViaForm(input: {
   url: string;
@@ -44,6 +52,9 @@ async function transcribeViaForm(input: {
       error?: string | { message?: string };
       message?: string;
     } | null;
+    if (res.status === 429 && isQuotaResponse(json)) {
+      throw new QuotaExceeded(json.message, json.resetsAt, input.runtime);
+    }
     if (!res.ok) {
       const detail =
         typeof json?.error === 'string' ? json.error : json?.error?.message ?? json?.message;
@@ -93,6 +104,8 @@ export async function runTranscribe(
 ): Promise<TranscribeAnswer | null> {
   const candidates = sttCandidates(settings, ctx);
   for (const runtime of candidates) {
+    // Already stopped: do not even open a request (or load a model).
+    if (opts.signal?.aborted) throw new RequestCancelled(runtime);
     const model = sttModelForRuntime(settings, runtime);
     try {
       assertCoverage(settings, model, languageId, runtime);
@@ -141,6 +154,9 @@ export async function runTranscribe(
         return { ...answer, ms: Date.now() - started };
       }
     } catch (err) {
+      // A cancelled take is not a failed take; never retry it on another
+      // runtime (the learner has already stopped waiting).
+      if (opts.signal?.aborted) throw new RequestCancelled(runtime);
       if (err instanceof EngineUnavailable) continue;
       // A server without credits or a valid key cannot transcribe, but the
       // next candidate (on-device Whisper) can — and it is free. Only move on

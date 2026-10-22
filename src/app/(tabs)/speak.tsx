@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -24,19 +24,28 @@ import { useLearning } from '@/state/learning';
 import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
 import { getLanguage, LANGUAGES } from '@/data/languages';
-import { isMobileWeb } from '@/lib/speech';
+import { bundledCurriculum } from '@/data/curriculum';
+import { isMobileWeb, toggleSpeechTarget } from '@/lib/speech';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
   fetchAiStatus,
   setSpeechErrorListener,
   speakNative,
+  stopSpeaking,
   transcribeSpeech,
   tutorReply,
   type AiStatus,
   type TutorMessage,
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
+import { isCancelled, QuotaExceeded } from '@/lib/models/types';
+import {
+  clearConversation,
+  loadConversation,
+  saveConversation,
+} from '@/lib/conversationStorage';
+import { ownerIdFor } from '@/lib/conversations';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -78,10 +87,22 @@ export default function SpeakScreen() {
   const { targetLanguageId, nativeLanguageId, setTargetLanguage, setNativeLanguage } =
     usePreferences();
   const { settings } = useModelSettings();
-  const { lessonsCompleted } = useLearning();
+  const { lessonsCompleted, progress } = useLearning();
   const { profile } = useProfile();
   const { logSpeakingScore } = useAnalytics();
   const language = getLanguage(targetLanguageId);
+  // Ground the tutor in the course the learner is actually working through:
+  // the first lesson they have not passed yet, or the last one they reached.
+  const activeLesson = useMemo(() => {
+    const chapters = bundledCurriculum(language.id);
+    for (const chapter of chapters) {
+      for (const lesson of chapter.lessons) {
+        if ((progress[lesson.id]?.score ?? 0) < 70) return lesson;
+      }
+    }
+    const lastChapter = chapters[chapters.length - 1];
+    return lastChapter?.lessons[lastChapter.lessons.length - 1] ?? null;
+  }, [language.id, progress]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [scenarioId, setScenarioId] = useState<string | null>(null);
@@ -93,6 +114,15 @@ export default function SpeakScreen() {
   const [practice, setPractice] = useState<PracticeState | null>(null);
   const [chatRecording, setChatRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // Spent daily budget: a dated pause, not an error. Kept separate from
+  // `voiceError` because nothing went wrong and there is nothing to retry.
+  const [quotaNote, setQuotaNote] = useState<string | null>(null);
+  // Which line is playing right now (`msg-3`, `phrase-cafe-1`, …). One at a
+  // time: starting another stops this one, so two lines never overlap.
+  const [speakingKey, setSpeakingKey] = useState<string | null>(null);
+  // Bumped by "Clear conversation": re-runs the restore/opening effect with an
+  // empty slot, without pretending the language changed.
+  const [resetNonce, setResetNonce] = useState(0);
   // One picker for both tutor selectors: target language and explanation language.
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // A fixable voice problem (with a button that actually fixes it), as opposed
@@ -107,6 +137,8 @@ export default function SpeakScreen() {
   // first probe resolves. See voiceLive below.
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  // One in-flight turn at a time; Stop (or leaving the screen) aborts it.
+  const abortRef = useRef<AbortController | null>(null);
 
   const recorder = useVoiceRecorder();
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
@@ -168,13 +200,25 @@ export default function SpeakScreen() {
   // Reset the conversation when the language or scenario changes — done
   // during render (React's recommended pattern), not inside the effect.
   const conversationKey = `${language.id}:${scenarioId ?? 'free'}`;
+  // Conversations are stored per account on this device: two learners sharing
+  // a phone never see each other's chats, and a guest never inherits one.
+  const siteOwner = ownerIdFor(user?.id ?? null);
   const [prevKey, setPrevKey] = useState(conversationKey);
+
+  /** Best-effort save of what is on screen; storage failure is silent. */
+  function persist(next: ChatMessage[]) {
+    void saveConversation(siteOwner, language.id, scenarioId, next);
+  }
   if (prevKey !== conversationKey) {
+    // The old conversation is gone, so its pending turn must go too.
+    abortRef.current?.abort();
+    abortRef.current = null;
     setPrevKey(conversationKey);
     setMessages([]);
     setRevealed([]);
     setPractice(null);
     setVoiceError(null);
+    setQuotaNote(null);
     setBusy(true);
   }
 
@@ -222,8 +266,21 @@ export default function SpeakScreen() {
   // be ignored for the greeting and the screen could silently start in demo mode.
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
     void (async () => {
+      // Restore first: a saved conversation costs no quota, works offline and
+      // is what the learner expects to find after a reload.
+      const stored = await loadConversation(siteOwner, language.id, scenarioId).catch(() => null);
+      if (cancelled) return;
+      if (stored && stored.messages.length > 0) {
+        setMessages(stored.messages as ChatMessage[]);
+        setBusy(false);
+        if (abortRef.current === controller) abortRef.current = null;
+        return;
+      }
       try {
+        setBusy(true);
         const reply = await tutorReply(
           {
             language,
@@ -234,11 +291,13 @@ export default function SpeakScreen() {
             profile: tutorProfile,
             level,
             explanationLanguage,
+            lessonId: activeLesson?.id,
+            signal: controller.signal,
           },
           await aiIo()
         );
         if (!cancelled) {
-          setMessages([
+          const opening: ChatMessage[] = [
             {
               role: 'assistant',
               text: reply.text,
@@ -249,32 +308,47 @@ export default function SpeakScreen() {
               runtime: reply.runtime,
               model: reply.model,
             },
-          ]);
+          ];
+          setMessages(opening);
+          persist(opening);
         }
       } catch (error) {
         if (!cancelled) {
-          setMessages([
-            {
-              role: 'assistant',
-              text: '…',
-              translation:
-                error instanceof Error && error.message
-                  ? error.message
-                  : 'Could not reach the tutor — try again.',
-            },
-          ]);
+          // Stopped or unmounted: nothing to report.
+          if (isCancelled(error, controller.signal)) return;
+          if (error instanceof QuotaExceeded) {
+            // The budget message names the reset time; printing it as a fake
+            // "…" tutor turn would be both ugly and misleading.
+            setQuotaNote(error.message);
+            setMessages([]);
+          } else {
+            setMessages([
+              {
+                role: 'assistant',
+                text: '…',
+                translation:
+                  error instanceof Error && error.message
+                    ? error.message
+                    : 'Could not reach the tutor — try again.',
+              },
+            ]);
+          }
         }
       } finally {
         if (!cancelled) setBusy(false);
+        if (abortRef.current === controller) abortRef.current = null;
       }
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationKey]);
+  }, [conversationKey, siteOwner, resetNonce]);
 
   async function respond(history: ChatMessage[]) {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     try {
       const reply = await tutorReply(
@@ -287,11 +361,15 @@ export default function SpeakScreen() {
           profile: tutorProfile,
           level,
           explanationLanguage,
+          lessonId: activeLesson?.id,
+          signal: controller.signal,
         },
         await aiIo()
       );
-      setMessages((prev) => [
-        ...prev,
+      if (controller.signal.aborted) return;
+      setQuotaNote(null);
+      const withReply: ChatMessage[] = [
+        ...history,
         {
           role: 'assistant',
           text: reply.text,
@@ -300,10 +378,20 @@ export default function SpeakScreen() {
           runtime: reply.runtime,
           model: reply.model,
         },
-      ]);
+      ];
+      setMessages(withReply);
+      persist(withReply);
     } catch (error) {
-      // Real-mode failures surface as themselves (rate limits, timeouts,
-      // wrong-script, missing key) — never replaced by scripted content.
+      // Stop is a choice, not a failure: no error card, no retry, and the
+      // turn keeps its place in the daily budget (the model was asked).
+      if (isCancelled(error, controller.signal)) return;
+      // Real-mode failures surface as themselves (timeouts, wrong-script,
+      // missing key) — never replaced by scripted content. A spent daily
+      // budget is not a failure: it is a dated pause, shown in its own strip.
+      if (error instanceof QuotaExceeded) {
+        setQuotaNote(error.message);
+        return;
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -316,8 +404,68 @@ export default function SpeakScreen() {
         },
       ]);
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
     }
+  }
+
+  /**
+   * Plays one line, or stops it if it is already playing.
+   *
+   * Barge-in, honestly: the learner interrupts by tapping the mic or another
+   * line — nothing listens in the background. Any new sound stops the old one
+   * first, which is also what keeps two utterances from overlapping.
+   */
+  async function speakLine(key: string, text: string, rate = 0.92) {
+    const toggle = toggleSpeechTarget(speakingKey, key);
+    if (toggle.action === 'stop') {
+      stopSpeaking();
+      setSpeakingKey(null);
+      return;
+    }
+    stopSpeaking();
+    setSpeakingKey(toggle.next);
+    try {
+      await speakNative(text, language.ttsLocale, rate);
+    } finally {
+      setSpeakingKey((current) => (current === key ? null : current));
+    }
+  }
+
+  /** Forgets this language/scenario chat on this device and starts fresh. */
+  function confirmClearChat() {
+    if (messages.length === 0) return;
+    showAlert(
+      'Clear this conversation?',
+      'The tutor forgets this chat on this device. Lessons, reviews and your streak are untouched.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              abortRef.current?.abort();
+              abortRef.current = null;
+              stopSpeaking();
+              setSpeakingKey(null);
+              setBusy(false);
+              setQuotaNote(null);
+              setMessages([]);
+              await clearConversation(siteOwner, language.id, scenarioId);
+              setResetNonce((value) => value + 1);
+            })();
+          },
+        },
+      ]
+    );
+  }
+
+  /** Stop the turn in flight — chat or voice — without inventing a reply. */
+  function stopTurn() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
   }
 
   async function send() {
@@ -326,6 +474,7 @@ export default function SpeakScreen() {
     setInput('');
     const history: ChatMessage[] = [...messages, { role: 'user', text }];
     setMessages(history);
+    persist(history);
     await respond(history);
   }
 
@@ -352,20 +501,37 @@ export default function SpeakScreen() {
         setVoiceError('Nothing was captured — try again, or type your reply.');
         return;
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
       setBusy(true);
       try {
-        const text = await transcribeSpeech(uri, language.id, await aiIo());
+        const text = await transcribeSpeech(uri, language.id, await aiIo(), {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
         const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
         setMessages(history);
+        persist(history);
         setBusy(false);
         await respond(history);
       } catch (error) {
+        if (isCancelled(error, controller.signal)) return;
         setBusy(false);
+        if (error instanceof QuotaExceeded) {
+          setQuotaNote(error.message);
+          return;
+        }
         setVoiceError(
           error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
         );
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
+      // Barge-in: talking over the tutor is the natural way to interrupt, so
+      // opening the mic stops playback first (and keeps TTS out of the take).
+      stopSpeaking();
+      setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
         setVoiceError(mic.message);
@@ -407,16 +573,28 @@ export default function SpeakScreen() {
         setVoiceError('Nothing was captured — try again, or type the phrase.');
         return;
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
-        const transcript = await transcribeSpeech(uri, language.id, await aiIo());
+        const transcript = await transcribeSpeech(uri, language.id, await aiIo(), {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
         finishPractice(phrase, transcript);
       } catch (error) {
         setPractice(null);
+        if (isCancelled(error, controller.signal)) return;
+        if (error instanceof QuotaExceeded) {
+          setQuotaNote(error.message);
+          return;
+        }
         setVoiceError(
           error instanceof Error
             ? error.message
             : "Couldn't catch that — try again, or type the phrase instead."
         );
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
       if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
@@ -424,6 +602,9 @@ export default function SpeakScreen() {
         explainVoiceUnavailable();
         return;
       }
+      // Barge-in here too: practising a phrase means speaking over the tutor.
+      stopSpeaking();
+      setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
         setVoiceError(mic.message);
@@ -499,17 +680,26 @@ export default function SpeakScreen() {
 
         <View style={styles.phraseActions}>
           <Pressable
-            onPress={() => speakNative(phrase.target, language.ttsLocale)}
+            onPress={() => void speakLine(`phrase-${phrase.id}`, phrase.target)}
             style={styles.phraseAction}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel="Listen to this phrase"
+            accessibilityState={{ selected: speakingKey === `phrase-${phrase.id}` }}
+            accessibilityLabel={
+              speakingKey === `phrase-${phrase.id}` ? 'Stop this phrase' : 'Listen to this phrase'
+            }
           >
-            <Ionicons name="volume-medium-outline" size={15} color={colors.accent} />
-            <Text style={styles.phraseActionLabel}>Listen</Text>
+            <Ionicons
+              name={speakingKey === `phrase-${phrase.id}` ? 'stop' : 'volume-medium-outline'}
+              size={15}
+              color={colors.accent}
+            />
+            <Text style={styles.phraseActionLabel}>
+              {speakingKey === `phrase-${phrase.id}` ? 'Stop' : 'Listen'}
+            </Text>
           </Pressable>
           <Pressable
-            onPress={() => speakNative(phrase.target, language.ttsLocale, SLOW_RATE)}
+            onPress={() => void speakLine(`phrase-${phrase.id}-slow`, phrase.target, SLOW_RATE)}
             style={styles.phraseAction}
             hitSlop={6}
             accessibilityRole="button"
@@ -705,6 +895,16 @@ export default function SpeakScreen() {
             </Text>
           </View>
         </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={confirmClearChat}
+            style={styles.headerIcon}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Clear this conversation"
+          >
+            <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
+          </Pressable>
         <Pressable
           onPress={() => setShowTranslation((v) => !v)}
           style={styles.translateToggle}
@@ -720,10 +920,12 @@ export default function SpeakScreen() {
             {showTranslation ? 'Translation on' : 'Translation off'}
           </Text>
         </Pressable>
+        </View>
       </View>
 
       <FlatList
         ref={listRef}
+        accessibilityLabel="Conversation with your tutor"
         data={messages}
         keyExtractor={(_, index) => String(index)}
         contentContainerStyle={styles.listContent}
@@ -769,6 +971,7 @@ export default function SpeakScreen() {
                         void saveModelSettings({ level: option });
                       }}
                       style={[styles.levelChip, on && styles.levelChipOn]}
+                      hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: on }}
                       accessibilityLabel={option === 'auto' ? 'Level follows your progress' : `Level ${option}`}
@@ -815,7 +1018,11 @@ export default function SpeakScreen() {
         }
         ListFooterComponent={
           busy ? (
-            <View style={styles.typingRow}>
+            <View
+              style={styles.typingRow}
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={`${language.name} is thinking`}
+            >
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.typingText}>{language.name} is thinking…</Text>
             </View>
@@ -831,17 +1038,26 @@ export default function SpeakScreen() {
               {item.tip ? <Text style={styles.tipText}>{item.tip}</Text> : null}
               <View style={styles.aiActions}>
                 <Pressable
-                  onPress={() => speakNative(item.text, language.ttsLocale)}
+                  onPress={() => void speakLine(`msg-${index}`, item.text)}
                   style={styles.listenRow}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="Listen to this sentence"
+                  accessibilityState={{ selected: speakingKey === `msg-${index}` }}
+                  accessibilityLabel={
+                    speakingKey === `msg-${index}` ? 'Stop reading this sentence' : 'Listen to this sentence'
+                  }
                 >
-                  <Ionicons name="volume-medium-outline" size={15} color={colors.accent} />
-                  <Text style={styles.listenLabel}>Listen</Text>
+                  <Ionicons
+                    name={speakingKey === `msg-${index}` ? 'stop' : 'volume-medium-outline'}
+                    size={15}
+                    color={colors.accent}
+                  />
+                  <Text style={styles.listenLabel}>
+                    {speakingKey === `msg-${index}` ? 'Stop' : 'Listen'}
+                  </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => speakNative(item.text, language.ttsLocale, SLOW_RATE)}
+                  onPress={() => void speakLine(`msg-${index}-slow`, item.text, SLOW_RATE)}
                   style={styles.listenRow}
                   hitSlop={8}
                   accessibilityRole="button"
@@ -892,7 +1108,17 @@ export default function SpeakScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
+        {voiceError ? (
+          <Text style={styles.voiceError} accessibilityLiveRegion="polite">
+            {voiceError}
+          </Text>
+        ) : null}
+        {quotaNote ? (
+          <View style={styles.quotaStrip} accessibilityLiveRegion="polite">
+            <Ionicons name="time-outline" size={15} color={colors.warning} />
+            <Text style={styles.quotaStripText}>{quotaNote}</Text>
+          </View>
+        ) : null}
         {aiStatus && !aiStatus.chat ? (
           <View style={styles.coachStrip}>
             <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
@@ -980,22 +1206,36 @@ export default function SpeakScreen() {
             onSubmitEditing={send}
             accessibilityLabel="Message your tutor"
           />
-          <Pressable
-            onPress={send}
-            disabled={!input.trim() || busy}
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            style={({ pressed }) => [styles.sendWrap, (pressed || !input.trim() || busy) && { opacity: 0.6 }]}
-          >
-            <LinearGradient
-              colors={[colors.gradientFrom, colors.gradientTo]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.sendButton}
+          {busy ? (
+            <Pressable
+              onPress={stopTurn}
+              accessibilityRole="button"
+              accessibilityLabel="Stop the tutor"
+              accessibilityHint="Cancels the reply in progress"
+              style={({ pressed }) => [styles.sendWrap, pressed && { opacity: 0.7 }]}
             >
-              <Ionicons name="arrow-up" size={20} color={colors.white} />
-            </LinearGradient>
-          </Pressable>
+              <View style={styles.stopButton}>
+                <Ionicons name="stop" size={18} color={colors.white} />
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={send}
+              disabled={!input.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+              style={({ pressed }) => [styles.sendWrap, (pressed || !input.trim()) && { opacity: 0.6 }]}
+            >
+              <LinearGradient
+                colors={[colors.gradientFrom, colors.gradientTo]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sendButton}
+              >
+                <Ionicons name="arrow-up" size={20} color={colors.white} />
+              </LinearGradient>
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -1005,8 +1245,18 @@ export default function SpeakScreen() {
         animationType="fade"
         onRequestClose={() => setPicker(null)}
       >
-        <Pressable style={styles.pickerBackdrop} onPress={() => setPicker(null)}>
-          <Pressable style={styles.pickerCard} onPress={() => undefined}>
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setPicker(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Close the picker"
+        >
+          <Pressable
+            style={styles.pickerCard}
+            onPress={() => undefined}
+            accessible={false}
+            accessibilityViewIsModal
+          >
             <Text style={styles.pickerTitle}>
               {picker === 'explain' ? 'Explain in' : 'Practise which language?'}
             </Text>
@@ -1072,6 +1322,15 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerLanguage: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceHigh,
+  },
   headerFlag: { fontSize: 28 },
   headerTitle: { ...typography.bodyStrong, color: colors.text },
   headerSubtitle: { ...typography.caption, color: colors.textMuted },
@@ -1173,6 +1432,18 @@ const styles = StyleSheet.create({
   },
   coachStripText: { ...typography.micro, color: colors.textMuted, flex: 1, lineHeight: 14 },
   coachRetry: { ...typography.micro, color: colors.primary },
+  quotaStrip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.warningSoft,
+  },
+  quotaStripText: { ...typography.micro, color: colors.text, flex: 1, lineHeight: 16 },
   offlineBody: { flex: 1 },
   offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   voiceHelpBox: {
@@ -1343,6 +1614,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   sendWrap: { borderRadius: 23 },
+  stopButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.text,
+  },
   sendButton: {
     width: 46,
     height: 46,

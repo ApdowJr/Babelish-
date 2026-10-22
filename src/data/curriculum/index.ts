@@ -62,6 +62,23 @@ export function bundledCurriculum(languageId: string): Chapter[] {
   });
 }
 
+/**
+ * The bundled lesson with this id, or `null`.
+ *
+ * Ids are derived (`<language>-ch<n>-l<n>`), so the prefix check also stops a
+ * request for `fr-ch1-l1` from grounding a Spanish conversation. Used by the
+ * tutor proxy to look the lesson up server-side: the client sends an id, never
+ * prompt text.
+ */
+export function findBundledLesson(languageId: string, lessonId?: string | null): Lesson | null {
+  if (!lessonId || !lessonId.startsWith(`${languageId}-ch`)) return null;
+  for (const chapter of bundledCurriculum(languageId)) {
+    const lesson = chapter.lessons.find((entry) => entry.id === lessonId);
+    if (lesson) return lesson;
+  }
+  return null;
+}
+
 /** True when a language ships at least one chapter in the bundle. */
 export function hasBundledCurriculum(languageId: string): boolean {
   return Boolean(REGISTRY[languageId]?.length);

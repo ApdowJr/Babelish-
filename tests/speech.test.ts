@@ -13,6 +13,7 @@ import {
   matchVoice,
   normalizeLocale,
   speechErrorMessage,
+  toggleSpeechTarget,
   toVoiceLike,
 } from '../src/lib/speech';
 
@@ -81,4 +82,16 @@ test('mobile browsers are recognised so no one is offered a 150 MB download on d
   assert.equal(isMobileWeb('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'), true);
   assert.equal(isMobileWeb('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) Chrome/126'), false);
   assert.equal(isMobileWeb(undefined), false);
+});
+
+test('one line plays at a time: tapping the playing line stops it', () => {
+  const first = toggleSpeechTarget(null, 'msg-2');
+  assert.deepEqual(first, { action: 'speak', next: 'msg-2' });
+
+  const same = toggleSpeechTarget('msg-2', 'msg-2');
+  assert.deepEqual(same, { action: 'stop', next: null }, 'second tap stops instead of restarting');
+
+  const other = toggleSpeechTarget('msg-2', 'msg-5');
+  assert.deepEqual(other, { action: 'speak', next: 'msg-5' }, 'another line replaces the current one');
+  assert.equal(other.next === 'msg-2', false, 'the old key is never left active');
 });

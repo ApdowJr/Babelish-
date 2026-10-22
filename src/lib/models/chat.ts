@@ -20,7 +20,15 @@ import {
   type ModelSettings,
 } from './config';
 import type { ChatAnswer, ChatCall, ChatMeta, ChatTurn, RuntimeId } from './types';
-import { EngineFailed, EngineUnavailable, classifyFetchError, linkedAbort } from './types';
+import { isQuotaResponse } from '../quota';
+import {
+  EngineFailed,
+  EngineUnavailable,
+  QuotaExceeded,
+  RequestCancelled,
+  classifyFetchError,
+  linkedAbort,
+} from './types';
 
 function requireSupport(
   runtime: RuntimeId,
@@ -263,6 +271,7 @@ function gatewayBody(call: ChatCall) {
     learnerName: meta?.learnerName,
     explanationLanguage: meta?.explanationLanguage,
     profile: meta?.profile,
+    lessonId: meta?.lessonId,
     history: history.length > 0 ? history : [{ role: 'user', text: 'Hello!' }],
   };
 }
@@ -378,7 +387,11 @@ async function runGateway(
       error?: string;
       message?: string;
       model?: string;
+      resetsAt?: string;
     } | null;
+    if (res.status === 429 && isQuotaResponse(json)) {
+      throw new QuotaExceeded(json.message, json.resetsAt, 'gateway');
+    }
     if (res.status === 503 && json?.error === 'ai-not-configured') {
       throw new EngineUnavailable('The tutor server has no model configured.', 'gateway');
     }
@@ -446,6 +459,8 @@ export async function runChat(
   if (candidates.length === 0) return null;
 
   for (const runtime of candidates) {
+    // Already stopped: do not even open a request.
+    if (call.signal?.aborted) throw new RequestCancelled(runtime);
     const model = modelForRuntime(settings, runtime);
     try {
       // Enforced per runtime: an unverified model is skipped, not guessed at.
@@ -455,6 +470,10 @@ export async function runChat(
       if (runtime === 'gateway') return await runGateway(settings, call, ctx);
       if (runtime === 'browser') return await runBrowser(settings, call);
     } catch (err) {
+      // A caller abort must not be mistaken for a timeout (both surface as
+      // AbortError) and must not fall through to the next engine: that would
+      // start a second request the learner did not ask for.
+      if (call.signal?.aborted) throw new RequestCancelled(runtime);
       if (err instanceof EngineUnavailable) continue;
       throw err;
     }

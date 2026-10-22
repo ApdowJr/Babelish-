@@ -3,10 +3,12 @@ import { Platform } from 'react-native';
 import { getLanguage, type Language } from '@/data/languages';
 import {
   buildSystemPrompt,
+  lessonGrounding,
   parseTutorPayload,
   scriptMatches,
   type TutorMessage,
 } from '@/lib/aiCore';
+import { findBundledLesson } from '@/data/curriculum';
 import type { ProfileContext } from '@/lib/profilePrompt';
 import { showAlert } from '@/lib/alert';
 import { getModelSettings } from '@/lib/models/settings';
@@ -24,7 +26,7 @@ import {
 } from '@/lib/models/config';
 import { NEON_API_URL } from '@/lib/neon';
 import type { RuntimeId } from '@/lib/models/types';
-import { EngineFailed } from '@/lib/models/types';
+import { EngineFailed, RequestCancelled } from '@/lib/models/types';
 import {
   holdUtterance,
   matchVoice,
@@ -97,6 +99,10 @@ export type TutorOptions = {
   explanationLanguage?: string;
   /** Learner profile — injected as example-flavored context in the prompt. */
   profile?: ProfileContext;
+  /** Aborts the turn (the Speak screen's Stop button, or leaving the screen). */
+  signal?: AbortSignal;
+  /** The bundled lesson being studied — grounds the answer in course content. */
+  lessonId?: string;
 };
 
 /**
@@ -124,6 +130,10 @@ export async function tutorReply(
   const ctx = gatewayContext(io);
   const level = opts.level ?? 'A2';
 
+  // Resolve the lesson from the bundled curriculum (the same data the proxy
+  // uses), so local and browser runtimes get the identical grounding.
+  const lesson = opts.lessonId ? findBundledLesson(opts.language.id, opts.lessonId) : null;
+
   const system = buildSystemPrompt({
     language: opts.language,
     level,
@@ -131,6 +141,7 @@ export async function tutorReply(
     learnerName: opts.learnerName,
     explanationLanguage: opts.explanationLanguage,
     profile: opts.profile,
+    lesson: lesson ? lessonGrounding(lesson) : undefined,
   });
 
   const messages = [
@@ -153,10 +164,11 @@ export async function tutorReply(
       learnerName: opts.learnerName,
       explanationLanguage: opts.explanationLanguage,
       profile: opts.profile as Record<string, unknown> | undefined,
+      lessonId: lesson?.id,
     },
   };
 
-  const answer = await runChat(settings, call, ctx);
+  const answer = await runChat(settings, { ...call, signal: opts.signal }, ctx);
 
   if (!answer) {
     // Nothing ran: bundled coach, clearly labelled in the tip.
@@ -195,6 +207,12 @@ export async function tutorReply(
   }
 
   // Wrong-script guardrail: one corrective retry, then fail honestly.
+  // The gateway already retries inside the same request (one quota slot), so
+  // retrying here would charge the learner twice — surface it instead.
+  if (opts.signal?.aborted) throw new RequestCancelled(answer.runtime);
+  if (answer.runtime === 'gateway') {
+    throw new Error(`The tutor replied in the wrong language for ${opts.language.name} — try again.`);
+  }
   const retry = await runChat(
     settings,
     {
@@ -204,9 +222,11 @@ export async function tutorReply(
         { role: 'system', content: system },
         { role: 'user', content: `Reply again, ONLY in ${opts.language.name}.` },
       ],
+      signal: opts.signal,
     },
     ctx
   ).catch((err) => {
+    if (err instanceof RequestCancelled) throw err;
     if (err instanceof EngineFailed) return null;
     throw err;
   });
@@ -475,7 +495,8 @@ export function stopSpeaking(): void {
 export async function transcribeSpeech(
   audioUri: string,
   languageId: string,
-  io?: AiTransport | null
+  io?: AiTransport | null,
+  opts: { signal?: AbortSignal } = {}
 ): Promise<string> {
   const settings = getModelSettings();
   const ctx = gatewayContext(io);
@@ -505,7 +526,9 @@ export async function transcribeSpeech(
     );
   }
 
-  const answer = await runTranscribe(settings, audioUri, languageId, ctx);
+  const answer = await runTranscribe(settings, audioUri, languageId, ctx, {
+    signal: opts.signal,
+  });
   if (!answer) {
     throw new Error(
       'Voice input is unavailable right now — type instead.'

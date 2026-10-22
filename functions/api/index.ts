@@ -23,8 +23,17 @@ import {
 } from './admin';
 import * as league from './league';
 import { createFailureLimiter, createLimiter } from './rateLimit';
-import { buildSystemPrompt, extractTutorReply, parseAiChatRequest } from '../../src/lib/aiCore';
+import { consumeQuota, ensureUsageSchema, quotaStatus, refundQuota } from './quotaStore';
+import { limitsFromEnv, type QuotaKind } from '../../src/lib/quota';
+import {
+  buildSystemPrompt,
+  extractTutorReply,
+  lessonGrounding,
+  parseAiChatRequest,
+} from '../../src/lib/aiCore';
 import { getLanguage } from '../../src/data/languages';
+import { findBundledLesson } from '../../src/data/curriculum';
+import { normalizeClientIp } from '../../src/lib/clientIp';
 
 /**
  * Babelish API — the mobile app's backend, running on the same branch as the
@@ -104,9 +113,14 @@ async function adminGate(c: Context): Promise<Response | null> {
       503
     );
   }
-  // Fail-open when the platform exposes no client IP: better to serve the
-  // admin than to collapse every operator into one shared bucket.
-  const clientIp = (c.req.header('x-forwarded-for') ?? '').split(',')[0].trim();
+  // Only a well-formed address is rate-limited. When the platform exposes no
+  // usable client IP we fail open: collapsing every operator into one shared
+  // `unknown` bucket would let anyone lock the real admin out with 10 tries.
+  const rawIp = normalizeClientIp(
+    c.req.header('x-forwarded-for'),
+    c.req.header('x-real-ip')
+  );
+  const clientIp = rawIp === 'unknown' ? '' : rawIp;
   if (clientIp && adminFailLimiter.blocked(clientIp)) {
     return c.text('Too many failed attempts — try again in 10 minutes.', 429);
   }
@@ -179,10 +193,14 @@ const ANON_AI = /^\/api\/ai\/(chat|stt|status)$/;
 app.use('/api/*', async (c, next) => {
   const auth = c.req.header('authorization');
   const anonymous = () => {
-    const ip =
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-      c.req.header('x-real-ip') ||
-      'unknown';
+    // The header is attacker-controlled: normalise it to a bounded address (or
+    // `unknown`) so it can never become an unbounded database key. Spoofing a
+    // different address only buys another guest allowance — the server-wide
+    // daily budget is what actually caps spend.
+    const ip = normalizeClientIp(
+      c.req.header('x-forwarded-for'),
+      c.req.header('x-real-ip')
+    );
     c.set('userId', `anon:${ip}`);
   };
 
@@ -427,6 +445,43 @@ const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minut
 const anonChatLimiter = createLimiter(6, 60_000); // signed-out, per IP
 const anonSttLimiter = createLimiter(2, 60_000); // signed-out, per IP
 
+/* Daily budget: the per-minute limiters protect one burst, these protect the
+ * provider's day. Both are needed — 20/min is 28,800/day. */
+const QUOTA = limitsFromEnv(process.env);
+
+/** Counts one turn; returns a ready-to-send 429 when the day is spent. */
+async function takeDailyQuota(
+  c: Context<Env>,
+  kind: QuotaKind
+): Promise<{ ok: true } | { ok: false; response: Response }> {
+  const userId = c.get('userId');
+  const tier = userId.startsWith('anon:') ? 'guest' : 'learner';
+  const outcome = await consumeQuota(q, { userId, tier, kind, limits: QUOTA });
+  if (outcome.allowed) return { ok: true };
+  c.header('Retry-After', String(outcome.retryAfterSeconds ?? 60));
+  c.header('X-Quota-Source', outcome.source);
+  return {
+    ok: false,
+    response: c.json(
+      {
+        error: outcome.reason === 'budget' ? 'daily-budget' : 'daily-limit',
+        message: outcome.message,
+        resetsAt: outcome.resetsAt,
+        used: outcome.used,
+        limit: outcome.limit,
+        tier,
+        source: outcome.source,
+      },
+      429
+    ),
+  };
+}
+
+/** Our fault, not the learner's: hand the message back. */
+async function refundDailyQuota(userId: string, kind: QuotaKind): Promise<void> {
+  await refundQuota(q, { userId, kind }).catch(() => undefined);
+}
+
 /** Capability report for the client's status rows — booleans only, no secrets. */
 app.get('/api/ai/status', (c) =>
   c.json({
@@ -439,6 +494,8 @@ app.get('/api/ai/status', (c) =>
     keyless: AI_CONFIGURED && !AI_KEY,
     /** Audio transcription availability, decided by the owner's config. */
     sttEnabled: AI_STT_ENABLED,
+    /** Daily budgets so the app can explain a 429 without guessing. */
+    quota: quotaStatus(QUOTA),
   })
 );
 
@@ -468,6 +525,16 @@ app.post('/api/ai/chat', async (c) => {
     return c.json({ error: 'invalid-request', message: 'Unknown language.' }, 400);
   }
 
+  // Ground the answer in the learner's current lesson. The id is validated
+  // against the bundled curriculum here, so an unknown or foreign id simply
+  // means "no lesson context" — the prompt never trusts client text.
+  const lesson = parsed.request.lessonId
+    ? findBundledLesson(language.id, parsed.request.lessonId)
+    : null;
+
+  const allowance = await takeDailyQuota(c, 'chat');
+  if (!allowance.ok) return allowance.response;
+
   const sys = buildSystemPrompt({
     language,
     level: parsed.request.level ?? 'A2',
@@ -475,6 +542,7 @@ app.post('/api/ai/chat', async (c) => {
     learnerName: parsed.request.learnerName,
     explanationLanguage: parsed.request.explanationLanguage,
     profile: parsed.request.profile,
+    lesson: lesson ? lessonGrounding(lesson) : undefined,
   });
 
   // Try the configured chain in order: a free endpoint that disappeared
@@ -484,10 +552,25 @@ app.post('/api/ai/chat', async (c) => {
     { role: 'system', content: sys },
     ...parsed.request.history.map((m) => ({ role: m.role, content: m.text })),
   ];
+  // The learner can tap Stop at any time; the browser then drops the request
+  // and `c.req.raw.signal` fires. Abort the upstream call too — it costs the
+  // owner money and nobody will read the answer. The daily slot is NOT
+  // refunded: the model was already asked, and refunding cancellations would
+  // be a free-inference loop (start, cancel after billing, repeat).
+  const clientAbort = new AbortController();
+  const onClientGone = () => clientAbort.abort();
+  c.req.raw.signal?.addEventListener('abort', onClientGone);
+
   let lastDetail = '';
+  // One corrective retry for the whole turn (not per model), so a model that
+  // answers in the wrong script costs one quota slot — not two — and the
+  // learner does not see an error the server can fix itself.
+  let correctiveUsed = false;
   for (const model of CHAT_MODELS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 55_000);
+    const forwardCancel = () => controller.abort();
+    clientAbort.signal.addEventListener('abort', forwardCancel);
     try {
       const upstream = await fetch(`${AI_URL}/chat/completions`, {
         method: 'POST',
@@ -516,6 +599,7 @@ app.post('/api/ai/chat', async (c) => {
             : upstream.status === 429
               ? 'The model is rate-limited right now — try again in a minute.'
               : `The tutor provider returned HTTP ${upstream.status}.`;
+        await refundDailyQuota(userId, 'chat');
         return c.json({ error: 'upstream-failed', message: detail }, 502);
       }
       const data = (await upstream.json().catch(() => null)) as {
@@ -525,17 +609,47 @@ app.post('/api/ai/chat', async (c) => {
 
       // Strict validation: an empty reply or one in the wrong script is an
       // ERROR here — never replaced with scripted demo content in real mode.
-      let reply: { text: string; translation: string; tip?: string };
+      let reply: { text: string; translation: string; tip?: string } | null = null;
+      let replyError = `The tutor replied in the wrong language for ${language.name} — try again.`;
       try {
         reply = extractTutorReply(raw, language);
       } catch (err) {
-        return c.json(
-          {
-            error: 'bad-reply',
-            message: err instanceof Error ? err.message : 'The tutor returned an invalid reply.',
-          },
-          502
-        );
+        if (err instanceof Error && err.message) replyError = err.message;
+        const wrongScript = /wrong script/i.test(replyError);
+        if (wrongScript && !correctiveUsed) {
+          correctiveUsed = true;
+          const retry = await fetch(`${AI_URL}/chat/completions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', ...upstreamHeaders() },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model,
+              temperature: 0.6,
+              messages: [
+                ...messages,
+                {
+                  role: 'system',
+                  content: `Your previous answer was not in ${language.name}. Reply again, ONLY in ${language.name}, and keep the JSON shape.`,
+                },
+              ],
+              ...(IS_OPENROUTER ? { max_tokens: 600 } : {}),
+            }),
+          }).catch(() => null);
+          if (retry?.ok) {
+            const retryData = (await retry.json().catch(() => null)) as {
+              choices?: { message?: { content?: string } }[];
+            } | null;
+            const retryRaw = retryData?.choices?.[0]?.message?.content ?? '';
+            try {
+              reply = extractTutorReply(retryRaw, language);
+            } catch {
+              reply = null;
+            }
+          }
+        }
+      }
+      if (!reply) {
+        return c.json({ error: 'bad-reply', message: replyError }, 502);
       }
       return c.json({
         reply: reply.text,
@@ -545,6 +659,12 @@ app.post('/api/ai/chat', async (c) => {
       });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
+        if (clientAbort.signal.aborted) {
+          // Cancelled by the learner: no refund (see above), no error copy.
+          // 204 — there is no response to describe, the caller is gone.
+          return c.body(null, 204);
+        }
+        await refundDailyQuota(userId, 'chat');
         return c.json(
           { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
           504
@@ -553,9 +673,12 @@ app.post('/api/ai/chat', async (c) => {
       lastDetail = err instanceof Error ? err.message : 'network error';
     } finally {
       clearTimeout(timer);
+      clientAbort.signal.removeEventListener('abort', forwardCancel);
     }
   }
 
+  c.req.raw.signal?.removeEventListener('abort', onClientGone);
+  await refundDailyQuota(userId, 'chat');
   return c.json(
     {
       error: 'upstream-failed',
@@ -605,13 +728,23 @@ app.post('/api/ai/stt', async (c) => {
       ? (file as File).name
       : 'speech.webm';
 
+  const allowance = await takeDailyQuota(c, 'stt');
+  if (!allowance.ok) return allowance.response;
+
   const outbound = new FormData();
   outbound.append('file', file, filename);
   outbound.append('model', AI_STT_MODEL);
   outbound.append('response_format', 'json');
   if (typeof languageId === 'string' && languageId) outbound.append('language', languageId);
 
+  // Stopping a transcription aborts the upload/provider call for the same
+  // reason as chat: save the spend, keep the slot spent.
+  const clientAbort = new AbortController();
+  const onClientGone = () => clientAbort.abort();
+  c.req.raw.signal?.addEventListener('abort', onClientGone);
   const controller = new AbortController();
+  const forwardCancel = () => controller.abort();
+  clientAbort.signal.addEventListener('abort', forwardCancel);
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
     const upstream = await fetch(`${AI_URL}/audio/transcriptions`, {
@@ -625,11 +758,15 @@ app.post('/api/ai/stt', async (c) => {
         upstream.status === 401
           ? 'The AI provider rejected its key.'
           : `The AI provider returned HTTP ${upstream.status}.`;
+      await refundDailyQuota(userId, 'stt');
       return c.json({ error: 'upstream-failed', message: `${detail} Try again later.` }, 502);
     }
     const data = (await upstream.json().catch(() => null)) as { text?: string } | null;
     const text = String(data?.text ?? '').trim();
     if (!text) {
+      // The provider still transcribed (and billed) the silence. Refunding it
+      // would make repeated silent uploads free provider spend, so the slot
+      // stays spent; the message invites a retry with better audio.
       return c.json(
         { error: 'empty-transcript', message: "I couldn't catch that — try again or type instead." },
         422
@@ -638,17 +775,25 @@ app.post('/api/ai/stt', async (c) => {
     return c.json({ text });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
+      if (clientAbort.signal.aborted) {
+        // No refund: the provider was already asked (see the chat route).
+        return c.body(null, 204);
+      }
+      await refundDailyQuota(userId, 'stt');
       return c.json(
         { error: 'upstream-timeout', message: 'Transcription took too long — try again.' },
         504
       );
     }
+    await refundDailyQuota(userId, 'stt');
     return c.json(
       { error: 'upstream-failed', message: 'Voice service hit a problem — try again.' },
       502
     );
   } finally {
     clearTimeout(timer);
+    clientAbort.signal.removeEventListener('abort', forwardCancel);
+    c.req.raw.signal?.removeEventListener('abort', onClientGone);
   }
 });
 

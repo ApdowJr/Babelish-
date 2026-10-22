@@ -95,7 +95,13 @@ export default function ForgotPasswordScreen() {
         </Text>
       ) : null}
 
-      <Pressable onPress={() => router.replace('/login')} style={styles.back} hitSlop={8}>
+      <Pressable
+        onPress={() => router.replace('/login')}
+        style={styles.back}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Back to sign in"
+      >
         <Ionicons name="chevron-back" size={16} color={colors.primary} />
             <Text style={styles.backText}>Back to sign in</Text>
       </Pressable>

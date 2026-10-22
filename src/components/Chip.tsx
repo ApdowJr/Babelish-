@@ -20,7 +20,15 @@ export function Chip({ label, onPress, selected = false, icon }: Props) {
   if (!onPress) return content;
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      // The pill is ~36pt tall; grow the touch area to the 44pt guideline
+      // without changing the visual rhythm.
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+    >
       {content}
     </Pressable>
   );

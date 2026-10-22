@@ -9,6 +9,7 @@ import { ProfileProvider } from '@/state/profile';
 import { AnalyticsProvider } from '@/state/analytics';
 import { SubscriptionProvider } from '@/state/subscription';
 import { AlertProvider } from '@/components/AlertProvider';
+import { CrashScreen, ErrorBoundary as ScreenBoundary } from '@/components/ErrorBoundary';
 import { Logo } from '@/components/Logo';
 import { colors } from '@/theme/tokens';
 import { validateConfigurationAtStartup } from '@/lib/config';
@@ -29,7 +30,11 @@ export default function RootLayout() {
               <SubscriptionProvider>
                 <AlertProvider>
                   <StatusBar style="dark" />
-                  <RootNavigator />
+                  {/* Keeps a render error on one screen instead of a blank app.
+                      Nothing here touches storage or auth: progress survives. */}
+                  <ScreenBoundary onHome={() => router.replace('/')}>
+                    <RootNavigator />
+                  </ScreenBoundary>
                 </AlertProvider>
               </SubscriptionProvider>
             </AnalyticsProvider>
@@ -126,3 +131,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * Expo Router's route-level boundary: a crash inside the layout itself (before
+ * the screen boundary exists) still lands on the same readable screen. `retry`
+ * remounts the segment; progress is untouched either way.
+ */
+export function ErrorBoundary({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry: () => Promise<void> | void;
+}) {
+  return (
+    <CrashScreen
+      error={error}
+      onRetry={() => {
+        void retry();
+      }}
+      onHome={() => router.replace('/')}
+    />
+  );
+}

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { runChat, probeEngines } from '../src/lib/models/chat';
 import { readAudioBytes } from '../src/lib/models/audio';
 import { DEFAULT_SETTINGS, type ModelSettings } from '../src/lib/models/config';
-import { EngineFailed } from '../src/lib/models/types';
+import { EngineFailed, QuotaExceeded } from '../src/lib/models/types';
 
 const base: ModelSettings = {
   ...DEFAULT_SETTINGS,
@@ -163,6 +163,49 @@ test('the local OpenAI-compatible adapter uses /chat/completions', async () => {
     assert.ok(answer);
     assert.equal(answer.runtime, 'openai');
     assert.equal(stub.calls[0].url, 'http://192.168.1.9:1234/v1/chat/completions');
+  } finally {
+    stub.restore();
+  }
+});
+
+test('a spent daily budget is its own error, with the server’s dated message', async () => {
+  const message =
+    'You’ve used today’s tutor messages for learners. It resets at 00:00 UTC — lessons, review and the phrasebook keep working.';
+  const stub = stubFetch(() =>
+    json({ error: 'daily-limit', message, resetsAt: '2026-10-23T00:00:00.000Z' }, 429)
+  );
+  try {
+    await assert.rejects(
+      () =>
+        runChat(
+          { ...base, mode: 'server', ollamaUrl: '', browser: { ...base.browser, enabled: true } },
+          call,
+          { gatewayBase: 'https://api.example.org', jwt: 'jwt-token', browserSupported: true }
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof QuotaExceeded, 'must not be a generic EngineFailed');
+        const quota = err as QuotaExceeded;
+        assert.equal(quota.resetsAt, '2026-10-23T00:00:00.000Z');
+        assert.match(quota.message, /00:00 UTC/);
+        return true;
+      }
+    );
+    assert.equal(stub.calls.length, 1, 'a spent budget is not retried on another runtime');
+  } finally {
+    stub.restore();
+  }
+});
+
+test('the per-minute rate limit stays a plain failure (it is not a daily cap)', async () => {
+  const stub = stubFetch(() => json({ error: 'rate-limited', message: 'Try again shortly.' }, 429));
+  try {
+    await assert.rejects(
+      () =>
+        runChat({ ...base, mode: 'server', ollamaUrl: '' }, call, {
+          gatewayBase: 'https://api.example.org',
+        }),
+      (err: unknown) => err instanceof EngineFailed && !(err instanceof QuotaExceeded)
+    );
   } finally {
     stub.restore();
   }
