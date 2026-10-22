@@ -877,6 +877,7 @@ export default function SpeakScreen() {
 
       <FlatList
         ref={listRef}
+        accessibilityLabel="Conversation with your tutor"
         data={messages}
         keyExtractor={(_, index) => String(index)}
         contentContainerStyle={styles.listContent}
@@ -922,6 +923,7 @@ export default function SpeakScreen() {
                         void saveModelSettings({ level: option });
                       }}
                       style={[styles.levelChip, on && styles.levelChipOn]}
+                      hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: on }}
                       accessibilityLabel={option === 'auto' ? 'Level follows your progress' : `Level ${option}`}
@@ -968,7 +970,11 @@ export default function SpeakScreen() {
         }
         ListFooterComponent={
           busy ? (
-            <View style={styles.typingRow}>
+            <View
+              style={styles.typingRow}
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={`${language.name} is thinking`}
+            >
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.typingText}>{language.name} is thinking…</Text>
             </View>
@@ -1054,9 +1060,13 @@ export default function SpeakScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
+        {voiceError ? (
+          <Text style={styles.voiceError} accessibilityLiveRegion="polite">
+            {voiceError}
+          </Text>
+        ) : null}
         {quotaNote ? (
-          <View style={styles.quotaStrip}>
+          <View style={styles.quotaStrip} accessibilityLiveRegion="polite">
             <Ionicons name="time-outline" size={15} color={colors.warning} />
             <Text style={styles.quotaStripText}>{quotaNote}</Text>
           </View>
@@ -1187,8 +1197,18 @@ export default function SpeakScreen() {
         animationType="fade"
         onRequestClose={() => setPicker(null)}
       >
-        <Pressable style={styles.pickerBackdrop} onPress={() => setPicker(null)}>
-          <Pressable style={styles.pickerCard} onPress={() => undefined}>
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setPicker(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Close the picker"
+        >
+          <Pressable
+            style={styles.pickerCard}
+            onPress={() => undefined}
+            accessible={false}
+            accessibilityViewIsModal
+          >
             <Text style={styles.pickerTitle}>
               {picker === 'explain' ? 'Explain in' : 'Practise which language?'}
             </Text>

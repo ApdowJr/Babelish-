@@ -115,3 +115,30 @@ npx expo export --platform web
 
 plus one **live** check that cannot be faked: a real tutor reply from the
 deployed Function, and a screenshot of it in the app.
+
+---
+
+## Progress — 2026-10-22 (branch `arena/ebb1335f-babelish`)
+
+| P0 | Status | Where |
+|---|---|---|
+| 1 · Deploy gate | **Done** (code) — live deploy still unverified | `scripts/check-tutor.mjs`, `npm run deploy:tutor` |
+| 2 · Daily quota | **Done** — atomic claims, dated refusal, refunds only for provider-free failures | `src/lib/quota.ts`, `functions/api/quotaStore.ts` |
+| 3 · Cancel | **Done** — Stop button, AbortSignal end to end, upstream abort without refund | `RequestCancelled`, `speak.tsx` |
+| 4 · Persist conversations | **Done** — per-owner books, capped, expiring, offline-safe | `src/lib/conversations.ts` |
+| 5 · Lesson grounding | **Done** — lesson id → server-side lookup → prompt section | `findBundledLesson`, `lessonGrounding` |
+| 6 · Stream tokens | **Not doing in 3.1** — see below | — |
+| 7 · Error boundary | **Done** — in-tree + router-level crash screen | `src/components/ErrorBoundary.tsx` |
+| 8 · Barge-in | **Done** — mic stops playback; one audio channel | `toggleSpeechTarget` |
+| 9 · Accessibility pass | **Done (static)** — device screen-reader verification still open | `docs/A11Y_3_1.md` |
+
+### Why streaming is not in 3.1
+
+The tutor's contract is a single validated JSON object per turn: the server parses
+`{reply, translation, tip}`, rejects an empty or wrong-script reply, and only then
+answers the client. Streaming tokens would either expose partial JSON
+(`{"reply":"Ho…`) or bypass that guardrail, and it would need SSE through the Neon
+Function, a second client parse path, and different quota accounting for
+abandoned streams. That is a real feature, not a flag — it belongs in its own
+change with the guardrail redesigned (e.g. plain-text reply plus a separate
+translation call), not smuggled in at the end of a hardening pass.

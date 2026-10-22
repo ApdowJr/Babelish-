@@ -24,6 +24,14 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **Accessibility pass (static).** Every tappable element in `src` now has an
+  accessible name or an explicit decorative opt-out, every modal can be
+  dismissed without its close button, the language picker is marked modal, the
+  conversation list is a labelled region, and status changes (thinking, voice
+  errors, the daily-limit note) are polite live regions. Chips and level
+  filters gained hit slop to reach the 44 pt guideline. Two automated guards
+  fail the suite if this regresses; device screen-reader checks are still open
+  and listed in `docs/A11Y_3_1.md`.
 - **Barge-in and one audio channel.** Opening the mic (chat or phrase practice)
   stops the tutor mid-sentence, so the reply never plays into the recording and
   the learner can answer immediately — the interrupt is a tap, not an
