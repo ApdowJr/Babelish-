@@ -36,7 +36,11 @@ function requireSupport(
   settings: ModelSettings,
   languageId: string | undefined
 ): void {
-  if (!languageId) return;
+  if (!languageId || runtime === 'gateway') return;
+  // The gateway owns model selection and enforces its own script validation.
+  // "server" is a transport label, not a catalogue model, so checking it here
+  // would incorrectly block every server-backed language unless users opted
+  // into unverified models in Settings.
   const support = languageSupport(model, languageId, settings.allowUnverified);
   if (support === 'ok') return;
   const language = getLanguage(languageId);
