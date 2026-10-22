@@ -27,7 +27,9 @@ import { useSubscription } from '@/state/subscription';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { progressForLanguage } from '@/lib/catalog';
 import { computeStreak } from '@/lib/analytics';
-import { fetchAiStatus, isAIConfigured, type AiStatus } from '@/lib/ai';
+import { fetchAiStatus, type AiStatus } from '@/lib/ai';
+import { useModelSettings } from '@/lib/models/settings';
+import { MODE_LABEL, RUNTIME_SHORT } from '@/lib/models/config';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { isNeonConfigured, NEON_API_URL } from '@/lib/neon';
 import { levelForXp, todayXp } from '@/lib/xp';
@@ -70,6 +72,7 @@ export default function ProfileScreen() {
   const { wordsMastered, lastSyncedAt, progress, vocab } = useLearning();
   const { profile, updateProfile } = useProfile();
   const { state: analytics } = useAnalytics();
+  const { settings } = useModelSettings();
   const { plan, redeem, resetToFree } = useSubscription();
   const target = getLanguage(targetLanguageId);
 
@@ -91,11 +94,26 @@ export default function ProfileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken]);
+    // Settings changes (Settings → AI model) trigger a fresh, real probe.
+  }, [getAccessToken, settings]);
 
-  const tutorLive = isAIConfigured || aiStatus?.chat === true;
-  const voiceLive = isAIConfigured || aiStatus?.stt === true;
-  const aiSource = aiStatus?.source ?? (isAIConfigured ? 'direct' : 'none');
+  const tutorLive = aiStatus?.chat === true;
+  const voiceLive = aiStatus?.stt === true;
+  const aiSource = aiStatus?.source ?? 'none';
+  const aiValue =
+    aiStatus === null
+      ? 'Checking…'
+      : !aiStatus.chat
+        ? 'Offline coach'
+        : aiSource === 'gateway'
+          ? 'App server'
+          : aiSource === 'browser'
+            ? 'This browser'
+            : 'This device';
+  const aiDetail =
+    aiStatus === null
+      ? 'Probing the configured engines…'
+      : aiStatus.detail || `${MODE_LABEL[settings.mode]} · no model answered.`;
 
   const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
   useEffect(() => {
@@ -560,24 +578,37 @@ export default function ProfileScreen() {
         <Button label="Delete account" variant="danger" onPress={deleteMyAccount} />
       </View>
 
+      <SectionHeader title="AI model" icon="hardware-chip-outline" />
+      <View style={styles.card}>
+        <View style={styles.freeTop}>
+          <Pill
+            label={tutorLive ? 'OPEN-SOURCE · LIVE' : 'OFFLINE COACH'}
+            tone={tutorLive ? 'free' : 'muted'}
+            icon={tutorLive ? 'flash' : 'cloud-offline-outline'}
+          />
+          <Text style={styles.freeTier}>{MODE_LABEL[settings.mode]}</Text>
+        </View>
+        <Text style={styles.freeBody}>
+          {tutorLive
+            ? `${RUNTIME_SHORT[aiStatus?.chatRuntime ?? 'gateway']} · ${aiStatus?.model ?? 'model'}. No paid AI API is used for tutoring.`
+            : 'No language model is answering, so the bundled phrase coach is used. Lessons, reviews, phrasebook and audio still work.'}
+        </Text>
+        <Text style={styles.hint}>{aiDetail}</Text>
+        <Button
+          label="Model settings"
+          variant="secondary"
+          onPress={() => router.push('/settings/ai')}
+        />
+      </View>
+
       <SectionHeader title="Status" icon="pulse-outline" />
       <View style={styles.card}>
-        <StatusRow
-          ok={tutorLive}
-          label="AI tutor"
-          value={tutorLive ? (aiSource === 'proxy' ? 'Live (app backend)' : 'Connected') : 'Demo mode'}
-        />
+        <StatusRow ok={tutorLive} label="AI tutor" value={aiValue} />
         <View style={styles.rowDivider} />
         <StatusRow
           ok={voiceLive}
           label="Voice input"
-          value={
-            voiceLive
-              ? aiSource === 'proxy'
-                ? 'Live (app backend)'
-                : 'Connected'
-              : 'Not configured'
-          }
+          value={voiceLive ? (aiSource === 'gateway' ? 'App server' : 'On-device') : 'Not configured'}
         />
         <View style={styles.rowDivider} />
         <StatusRow
@@ -601,13 +632,9 @@ export default function ProfileScreen() {
           }
         />
         <Text style={styles.hint}>
-          {isNeon
-            ? tutorLive
-              ? 'Everything is connected. Go say hi to your tutor in the Speak tab.'
-              : 'Neon backend connected: real accounts + cloud progress sync. The AI tutor runs in labeled demo mode until AI_API_KEY is set on the api Function (production) or an EXPO_PUBLIC_AI_* key is added for development.'
-            : isDemo
-              ? 'This build runs without a backend (EXPO_PUBLIC_NEON_DISABLED=1): accounts and progress stay on this device, and the AI tutor needs an EXPO_PUBLIC_AI_* key.'
-              : 'Everything is connected. Go say hi to your tutor in the Speak tab.'}
+          {tutorLive
+            ? 'A real model is answering in the Speak tab. Switch engines any time in Model settings.'
+            : 'The tutor is running the offline coach. Add Ollama, a local server or a browser model in Model settings — no paid API is required.'}
         </Text>
       </View>
 

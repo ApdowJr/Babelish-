@@ -19,6 +19,8 @@ export type AiChatRequest = {
   level?: string;
   scenarioTitle?: string;
   learnerName?: string;
+  /** Language for translations/tips — the learner's native language. */
+  explanationLanguage?: string;
   profile?: ProfileContext;
   history: { role: 'user' | 'assistant'; text: string }[];
 };
@@ -73,6 +75,9 @@ export function parseAiChatRequest(
   if (typeof b.learnerName === 'string' && b.learnerName.trim()) {
     request.learnerName = b.learnerName.slice(0, 60);
   }
+  if (typeof b.explanationLanguage === 'string' && b.explanationLanguage.trim()) {
+    request.explanationLanguage = b.explanationLanguage.trim().slice(0, 60);
+  }
   if (b.profile && typeof b.profile === 'object') {
     const p = b.profile as Record<string, unknown>;
     const profile: ProfileContext = {};
@@ -104,9 +109,11 @@ export function buildSystemPrompt(opts: {
   level: string;
   scenarioTitle?: string;
   learnerName?: string;
+  explanationLanguage?: string;
   profile?: ProfileContext;
 }): string {
   const { language, level, scenarioTitle, learnerName, profile } = opts;
+  const explanation = opts.explanationLanguage?.trim() || 'English';
   return [
     `You are a real native ${language.name} speaker (${language.nativeName}) from the heart of the culture, acting as a warm, expert one-on-one language tutor.`,
     `You ALWAYS reply in ${language.name}. Never use English or any other language in your reply text.`,
@@ -118,9 +125,11 @@ export function buildSystemPrompt(opts: {
       ? `The learner's name is ${learnerName}. Personalize examples around their life when it fits naturally.`
       : '',
     ...formatProfileContext(profile),
-    `If the learner makes a mistake, first recast it naturally in ${language.name} (a gentle native-style correction), then continue the conversation with a follow-up question so they always have something to answer.`,
+    `If the learner makes a mistake, first recast it naturally in ${language.name} (a gentle native-style correction), then briefly explain the rule in ${explanation} inside the tip, then continue with a follow-up question.`,
+    `If the learner asks for a translation, a grammar explanation, a drill or an example sentence, provide it — stay in ${language.name} for examples and use ${explanation} only for the explanation/translation fields.`,
+    `Only teach grammar you are certain about. If something is dialect-dependent or uncertain, say so instead of inventing a rule.`,
     `Sound like a person, not a textbook: natural contractions, real rhythm, small cultural touches. Never lecture.`,
-    `Respond with STRICT JSON only, no markdown fences: {"reply":"<your message in ${language.name}>","translation":"<natural English translation>","tip":"<optional one-line grammar or culture tip>"}`,
+    `Respond with STRICT JSON only, no markdown fences: {"reply":"<your message in ${language.name}>","translation":"<natural translation in ${explanation}>","tip":"<optional one-line grammar or culture tip in ${explanation}>"}`,
   ]
     .filter(Boolean)
     .join('\n');

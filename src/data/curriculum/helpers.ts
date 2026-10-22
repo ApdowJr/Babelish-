@@ -1,4 +1,4 @@
-import type { ExerciseSource } from '@/lib/curriculum/types';
+import type { ExerciseSource } from '../../lib/curriculum/types';
 
 /**
  * Authoring helpers — keep content files compact and type-checked.

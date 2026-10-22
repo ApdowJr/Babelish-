@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -20,12 +22,11 @@ import { usePreferences, languageName } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
-import { getLanguage } from '@/data/languages';
+import { getLanguage, LANGUAGES } from '@/data/languages';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
   fetchAiStatus,
-  isAIConfigured,
   setSpeechErrorListener,
   speakNative,
   transcribeSpeech,
@@ -33,6 +34,8 @@ import {
   type AiStatus,
   type TutorMessage,
 } from '@/lib/ai';
+import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
+import { MODE_LABEL, RUNTIME_SHORT } from '@/lib/models/config';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -41,7 +44,12 @@ import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
 import { flushReportQueue, sendReport } from '@/lib/reports';
 import { colors, radii, spacing, typography } from '@/theme/tokens';
 
-type ChatMessage = TutorMessage & { fromVoice?: boolean };
+type ChatMessage = TutorMessage & {
+  fromVoice?: boolean;
+  tip?: string;
+  runtime?: string;
+  model?: string;
+};
 
 type PracticeState =
   | { phraseId: string; phase: 'recording' }
@@ -66,7 +74,9 @@ const SLOW_RATE = 0.55;
 
 export default function SpeakScreen() {
   const { user, getAccessToken } = useAuth();
-  const { targetLanguageId, nativeLanguageId } = usePreferences();
+  const { targetLanguageId, nativeLanguageId, setTargetLanguage, setNativeLanguage } =
+    usePreferences();
+  const { settings } = useModelSettings();
   const { lessonsCompleted } = useLearning();
   const { profile } = useProfile();
   const { logSpeakingScore } = useAnalytics();
@@ -82,6 +92,8 @@ export default function SpeakScreen() {
   const [practice, setPractice] = useState<PracticeState | null>(null);
   const [chatRecording, setChatRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // One picker for both tutor selectors: target language and explanation language.
+  const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // Server-reported AI capability (backend proxy probe) — null until the
   // first probe resolves. See tutorLive/voiceLive below.
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
@@ -99,14 +111,20 @@ export default function SpeakScreen() {
     goals: profile.goals,
     nativeLanguageName: languageName(nativeLanguageId),
   };
-  const level = suggestLevel(lessonsCompleted);
+  // CEFR: follow progress automatically, or honour the learner's override.
+  const level = settings.level === 'auto' ? suggestLevel(lessonsCompleted) : settings.level;
+  const explanationLanguage = languageName(nativeLanguageId);
 
   // Honest capability gates: "live" only when either transport can actually
   // serve it — the backend proxy (key lives server-side) or a direct
   // EXPO_PUBLIC_AI_* config. A null aiStatus means the probe hasn't resolved:
   // fall back to build-time knowledge, never claim live from wishful thinking.
-  const tutorLive = isAIConfigured || aiStatus?.chat === true;
-  const voiceLive = isAIConfigured || aiStatus?.stt === true;
+  // null = still probing. Never claim "live" before a real probe answered.
+  const tutorLive = aiStatus ? aiStatus.chat : null;
+  const voiceLive = aiStatus ? aiStatus.stt : null;
+  // A browser model is available but not *loaded* until the first answer, so
+  // it must not be shown with the same "live" dot as a running server.
+  const browserPending = aiStatus?.chatRuntime === 'browser';
 
   /** Transport for AI calls: JWT for the backend proxy when available. */
   async function aiIo() {
@@ -140,11 +158,19 @@ export default function SpeakScreen() {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken]);
+    // Re-probe whenever the model settings change (e.g. after Settings → AI model),
+    // so the badge never keeps an outdated "offline" claim.
+  }, [getAccessToken, settings]);
 
   useEffect(() => {
     setSpeechErrorListener(setVoiceError);
     return () => setSpeechErrorListener(null);
+  }, []);
+
+  // Model settings live in an external store; load them once per mount so the
+  // UI reflects a change made in Settings as soon as this screen regains focus.
+  useEffect(() => {
+    void loadModelSettings();
   }, []);
 
   // Speaking stats (best score per phrase) persist locally.
@@ -170,14 +196,24 @@ export default function SpeakScreen() {
             language,
             history: [],
             learnerName,
+            scenarioId: scenario?.id,
             scenarioTitle: scenario?.title,
             profile: tutorProfile,
             level,
+            explanationLanguage,
           },
           await aiIo()
         );
         if (!cancelled) {
-          setMessages([{ role: 'assistant', text: reply.text, translation: reply.translation }]);
+          setMessages([
+            {
+              role: 'assistant',
+              text: reply.text,
+              translation: reply.translation,
+              runtime: reply.runtime,
+              model: reply.model,
+            },
+          ]);
         }
       } catch (error) {
         if (!cancelled) {
@@ -210,15 +246,24 @@ export default function SpeakScreen() {
           language,
           history,
           learnerName,
+          scenarioId: scenario?.id,
           scenarioTitle: scenario?.title,
           profile: tutorProfile,
           level,
+          explanationLanguage,
         },
         await aiIo()
       );
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: reply.text, translation: reply.translation },
+        {
+          role: 'assistant',
+          text: reply.text,
+          translation: reply.translation,
+          tip: reply.tip,
+          runtime: reply.runtime,
+          model: reply.model,
+        },
       ]);
     } catch (error) {
       // Real-mode failures surface as themselves (rate limits, timeouts,
@@ -523,7 +568,7 @@ export default function SpeakScreen() {
               >
                 {active.score.percent}%
               </Text>
-              <Text style={styles.scoreCaption}>pronunciation</Text>
+              <Text style={styles.scoreCaption}>word match</Text>
             </View>
             <View style={styles.wordChipRow}>
               {active.score.tokens.map((token, i) => {
@@ -546,6 +591,10 @@ export default function SpeakScreen() {
               <Text style={styles.scoreExtra}>You also said: {active.score.extras.join(' ')}</Text>
             ) : null}
             <Text style={styles.scoreHeard}>I heard: “{active.transcript}”</Text>
+            <Text style={styles.scoreDisclaimer}>
+              Scored from the transcript against the target words — this is word accuracy, not
+              acoustic pronunciation scoring.
+            </Text>
             <View style={styles.scoreActions}>
               {voiceLive ? (
                 <Pressable
@@ -629,6 +678,42 @@ export default function SpeakScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.modelBar}>
+        <View
+          style={[
+            styles.modelDot,
+            {
+              backgroundColor: tutorLive
+                ? browserPending
+                  ? colors.warning
+                  : colors.success
+                : tutorLive === null
+                  ? colors.warning
+                  : colors.textFaint,
+            },
+          ]}
+        />
+        <Text style={styles.modelText} numberOfLines={1}>
+          {tutorLive === null
+            ? 'Checking for a language model…'
+            : tutorLive
+              ? browserPending
+                ? `Browser model · loads on first use · ${aiStatus?.model ?? 'model'}`
+                : `${RUNTIME_SHORT[aiStatus?.chatRuntime ?? 'gateway']} · ${aiStatus?.model ?? 'model'}`
+              : `Offline coach · ${MODE_LABEL[settings.mode]}`}
+        </Text>
+        <Pressable
+          onPress={() => router.push('/settings/ai')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open AI model settings"
+          style={styles.modelLink}
+        >
+          <Ionicons name="settings-outline" size={13} color={colors.primary} />
+          <Text style={styles.modelLinkText}>Model</Text>
+        </Pressable>
+      </View>
+
       <FlatList
         ref={listRef}
         data={messages}
@@ -637,6 +722,58 @@ export default function SpeakScreen() {
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={
           <View>
+            <View style={styles.levelCard}>
+              <View style={styles.levelTop}>
+                <Text style={styles.levelLabel}>TUTOR SETUP</Text>
+                <Text style={styles.levelExplain} numberOfLines={1}>
+                  {language.flag} {language.name}
+                </Text>
+              </View>
+              <View style={styles.selectorRow}>
+                <Pressable
+                  onPress={() => setPicker('target')}
+                  style={styles.selectorChip}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Target language: ${language.name}. Change it`}
+                >
+                  <Ionicons name="language-outline" size={14} color={colors.primary} />
+                  <Text style={styles.selectorText}>{language.name}</Text>
+                  <Ionicons name="chevron-down" size={12} color={colors.textFaint} />
+                </Pressable>
+                <Pressable
+                  onPress={() => setPicker('explain')}
+                  style={styles.selectorChip}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Explanations in ${explanationLanguage}. Change it`}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
+                  <Text style={styles.selectorText}>Explain in {explanationLanguage}</Text>
+                  <Ionicons name="chevron-down" size={12} color={colors.textFaint} />
+                </Pressable>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.levelRow}>
+                {(['auto', 'A1', 'A2', 'B1', 'B2'] as const).map((option) => {
+                  const on = settings.level === option;
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() => {
+                        void saveModelSettings({ level: option });
+                      }}
+                      style={[styles.levelChip, on && styles.levelChipOn]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={option === 'auto' ? 'Level follows your progress' : `Level ${option}`}
+                    >
+                      <Text style={[styles.levelChipText, on && styles.levelChipTextOn]}>
+                        {option === 'auto' ? 'Auto' : option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
             <View style={styles.scenarios}>
               <Chip
                 label="Free chat"
@@ -683,6 +820,7 @@ export default function SpeakScreen() {
               {item.translation && (showTranslation || revealed.includes(index)) ? (
                 <Text style={styles.aiTranslation}>{item.translation}</Text>
               ) : null}
+              {item.tip ? <Text style={styles.tipText}>{item.tip}</Text> : null}
               <View style={styles.aiActions}>
                 <Pressable
                   onPress={() => speakNative(item.text, language.ttsLocale)}
@@ -747,16 +885,29 @@ export default function SpeakScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
-        {!tutorLive ? (
-          <Text style={styles.demoNote}>
-            Demo tutor — live AI is off on this deployment. Set AI_API_KEY on the api Function, or
-            EXPO_PUBLIC_AI_API_URL + EXPO_PUBLIC_AI_API_KEY in .env for development.
-          </Text>
+        {aiStatus && !aiStatus.chat ? (
+          <View style={styles.offlineBox}>
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.accent} />
+            <View style={styles.offlineBody}>
+              <Text style={styles.offlineTitle}>Offline coach</Text>
+              <Text style={styles.offlineText} numberOfLines={3}>
+                {aiStatus.detail || 'No language model is configured. Bundled phrases only.'}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => router.push('/settings/ai')}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={styles.offlineCta}
+            >
+              <Text style={styles.offlineCtaText}>Set up</Text>
+            </Pressable>
+          </View>
         ) : null}
         <View style={styles.inputBar}>
           <Pressable
             style={[styles.micButton, chatRecording && styles.micButtonRecording]}
-            disabled={busy || recorder.isBusy}
+            disabled={busy || recorder.isBusy || voiceLive === false}
             accessibilityLabel={chatRecording ? 'Stop recording' : 'Speak your reply'}
             onPress={() => {
               void toggleChatMic();
@@ -800,6 +951,64 @@ export default function SpeakScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={picker !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPicker(null)}
+      >
+        <Pressable style={styles.pickerBackdrop} onPress={() => setPicker(null)}>
+          <Pressable style={styles.pickerCard} onPress={() => undefined}>
+            <Text style={styles.pickerTitle}>
+              {picker === 'explain' ? 'Explain in' : 'Practise which language?'}
+            </Text>
+            <Text style={styles.pickerHint}>
+              {picker === 'explain'
+                ? 'Translations and grammar tips are written in this language. The tutor still speaks only the target language.'
+                : 'Switching language starts a new conversation with a fresh opening line.'}
+            </Text>
+            <ScrollView style={styles.pickerList} contentContainerStyle={styles.pickerListContent}>
+              {LANGUAGES.map((option) => {
+                const selected =
+                  picker === 'explain'
+                    ? option.id === nativeLanguageId
+                    : option.id === targetLanguageId;
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => {
+                      if (picker === 'explain') setNativeLanguage(option.id);
+                      else setTargetLanguage(option.id);
+                      setPicker(null);
+                    }}
+                    style={[styles.pickerRow, selected && styles.pickerRowOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={option.name}
+                  >
+                    <Text style={styles.pickerFlag}>{option.flag}</Text>
+                    <Text style={styles.pickerName}>{option.name}</Text>
+                    {option.nativeName !== option.name ? (
+                      <Text style={styles.pickerNative}>{option.nativeName}</Text>
+                    ) : null}
+                    {selected ? (
+                      <Ionicons name="checkmark" size={16} color={colors.primary} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable
+              onPress={() => setPicker(null)}
+              style={styles.pickerClose}
+              accessibilityRole="button"
+            >
+              <Text style={styles.pickerCloseText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -831,6 +1040,112 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   translateLabel: { ...typography.micro, color: colors.textFaint },
+  modelBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceTint,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modelDot: { width: 7, height: 7, borderRadius: 4 },
+  modelText: { ...typography.caption, color: colors.textMuted, flex: 1 },
+  modelLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  modelLinkText: { ...typography.micro, color: colors.primary },
+  levelCard: { marginBottom: spacing.md },
+  levelTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  levelLabel: { ...typography.micro, color: colors.textFaint },
+  levelExplain: { ...typography.caption, color: colors.textMuted, flexShrink: 1 },
+  levelRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
+  selectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  selectorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  selectorText: { ...typography.micro, color: colors.text },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20, 24, 33, 0.45)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  pickerCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  pickerTitle: { ...typography.title, color: colors.text },
+  pickerHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    lineHeight: 18,
+  },
+  pickerList: { marginTop: spacing.md },
+  pickerListContent: { paddingBottom: spacing.sm },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+  },
+  pickerRowOn: { backgroundColor: colors.surfaceTint },
+  pickerFlag: { fontSize: 20 },
+  pickerName: { ...typography.body, color: colors.text, flex: 1 },
+  pickerNative: { ...typography.caption, color: colors.textFaint },
+  pickerClose: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  pickerCloseText: { ...typography.bodyStrong, color: colors.primary },
+  levelChip: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  levelChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  levelChipText: { ...typography.micro, color: colors.textMuted },
+  levelChipTextOn: { color: colors.onDark },
+  tipText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
+    lineHeight: 18,
+  },
+  offlineBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.accentSoft,
+  },
+  offlineBody: { flex: 1 },
+  offlineTitle: { ...typography.bodyStrong, color: colors.text, fontSize: 13 },
+  offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
+  offlineCta: { paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  offlineCtaText: { ...typography.micro, color: colors.accent },
   translateLabelOn: { color: colors.accent },
   listContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   scenarios: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
@@ -899,6 +1214,12 @@ const styles = StyleSheet.create({
   },
   scoreHeaderRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   scorePercent: { fontSize: 30, fontWeight: '800' },
+  scoreDisclaimer: {
+    ...typography.micro,
+    color: colors.textFaint,
+    lineHeight: 15,
+    marginTop: spacing.xs,
+  },
   scoreCaption: { ...typography.caption, color: colors.textMuted },
   wordChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   wordChip: { borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },

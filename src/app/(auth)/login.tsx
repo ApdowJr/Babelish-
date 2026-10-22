@@ -56,7 +56,7 @@ export default function LoginScreen() {
       <AuthHero
         eyebrow="WELCOME BACK"
         title="Speak like a native."
-        subtitle="Real conversations, real pronunciation, and a tutor that never switches to your language."
+        subtitle="Real conversations, real voices, and a tutor that never switches to your language."
         perks={['24 languages', 'Every lesson free', 'Works offline']}
       />
 

@@ -7,9 +7,9 @@
  *
  * Pure, so the screen can filter instantly and tests can assert coverage.
  */
-import { getLanguage } from '@/data/languages';
-import { starterWords } from '@/data/starters';
-import type { Chapter } from '@/lib/curriculum/types';
+import { getLanguage } from '../data/languages';
+import { starterWords } from '../data/starters';
+import type { Chapter } from './curriculum/types';
 
 export type PhraseCategory = 'essentials' | 'numbers' | 'curriculum';
 

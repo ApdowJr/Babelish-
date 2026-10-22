@@ -58,7 +58,7 @@ export default function PrivacyRoute() {
 
       <Text style={styles.h2}>Microphone audio</Text>
       <View style={styles.ul}>
-        <Text style={styles.li}>• Pronunciation scoring happens on your device.</Text>
+        <Text style={styles.li}>• Word-match feedback is computed on your device from the transcript; it is not acoustic pronunciation scoring.</Text>
         <Text style={styles.li}>
           • Optional cloud speech-to-text (only if an OpenAI-compatible endpoint is configured)
           receives the audio for transcription only; the audio is discarded immediately and only the

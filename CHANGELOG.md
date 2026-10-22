@@ -3,6 +3,50 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.0.0] — 2026-10-22
+
+### Added
+
+- **Open-source AI layer** (`src/lib/models/*`): replaceable adapters for Ollama,
+  any OpenAI-compatible server, Babelish's self-hosted gateway and
+  Transformers.js in the browser, plus a bundled offline coach. No paid API is
+  required for any core feature and none is used by default.
+- **Model catalogue with honest coverage**: Qwen2.5 (15 documented languages),
+  Llama 3.2, Aya Expanse, Whisper large-v3-turbo/base, Kokoro-82M and Piper,
+  each with licence, commercial-use flag, size and hardware notes. Unverified
+  languages are blocked unless the learner opts in.
+- **Settings → AI model**: runtime modes (auto · this device/LAN · app server ·
+  in this browser · offline), engine check with real probes, per-language
+  coverage card, server URLs and model ids, speech model picker, browser toggle,
+  hardware/cost table and reset.
+- **Tutor upgrades**: CEFR level chips, explanations and tips in the learner's
+  native language, scenario role-play, strict JSON contract, target-script
+  guard with one corrective retry.
+- **Voice pipeline**: permission on demand → recording → Whisper (gateway, LAN
+  or browser) → tutor → TTS with replay and 0.55× slow mode, with actionable
+  error states and typing always available.
+- **Real starter courses for 23 languages**: 4 chapters · 8 lessons · 66
+  exercises each (1,518 exercises) covering choose, type, listen and speak,
+  built from verified starter words. Spanish keeps its 5-chapter authored course.
+- **Course tier labels** (`src/lib/curriculum/status.ts`) so a starter course is
+  never presented as a complete CEFR path.
+- **Rebuilt review screen**: due-card queue both ways, typed recall, Leitner box
+  movement, real session stats and a weakest-skill recommendation.
+- Tests for model config/adapters, the offline coach, course data and review
+  maths (14 files, 105 tests), and `docs/AI_ARCHITECTURE.md`.
+
+### Changed
+
+- The gateway (`functions/api`) now defaults to a **self-hosted, keyless**
+  OpenAI-compatible endpoint and reports 503 `ai-not-configured` unless the owner
+  explicitly opts in. `AI_MODEL` defaults to `qwen2.5:1.5b`,
+  `AI_STT_MODEL` to `whisper-large-v3-turbo`.
+- Speak, Profile and the status rows name the runtime and model that actually
+  answered; "Checking…" is shown until a probe resolves.
+- Pronunciation chips are labelled **word match** and explicitly described as
+  transcript accuracy, not acoustic scoring.
+- App/package version bumped to 3.0.0.
+
 ## [2.0.0] — 2026-10-22
 
 ### Added
