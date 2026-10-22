@@ -24,6 +24,13 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **A crash screen instead of a blank one.** Any unexpected render error now
+  lands on a readable screen with Try again and Back to Learn, wired both
+  inside the provider tree and as Expo Router's route-level boundary. It never
+  clears storage, signs anyone out or touches progress — lessons and reviews
+  are written as they finish, so the copy can honestly say nothing completed
+  is lost. The one-line detail is redacted (`sk-…`, Bearer, JWT, long opaque
+  keys) and clipped before display.
 - **Answers grounded in the learner's current lesson.** Speak resolves the
   first unfinished lesson of the target language from the bundled curriculum
   and sends only its id. The proxy (or a local/browser adapter) looks that id
