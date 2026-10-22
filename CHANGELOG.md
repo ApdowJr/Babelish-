@@ -51,6 +51,20 @@ stores ask for before a first submission.
   content rating, ads), paste-ready listing copy, screenshot list and the
   iOS notes.
 
+### 3.3.0 additions (second pass)
+
+- **First-run profile.** Onboarding gained a "Say hello" step: name, avatar and
+  why you are learning, saved before the first lesson so the tutor's very first
+  reply can use them. Skippable, like every other step.
+- **Reset progress.** Settings → Data & storage can clear lessons, words, XP
+  and the streak while keeping the account, profile and preferences — the reset
+  also pushes the empty state to the server, so a sync cannot restore what was
+  just cleared. The boundary is pinned by `tests/resetProgress.test.ts`.
+- **Send a test reminder.** Proves the notification permission and channel work
+  now, instead of waiting until 18:00 to discover they do not.
+- **Send feedback.** Opens the learner's email app with version, platform and
+  course pre-filled — no in-app tracking, no silent telemetry.
+
 ## [3.2.0] — 2026-10-22
 
 ### Added

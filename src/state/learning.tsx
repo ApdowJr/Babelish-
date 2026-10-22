@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
+  clearLearningStorage,
   loadProgress,
   loadVocab,
   saveProgress,
@@ -43,6 +44,12 @@ type LearningValue = {
     completedToday: boolean;
   }) => Promise<{ score: number; xpEarned: number }>;
   reviewWord: (itemKey: string, correct: boolean) => Promise<void>;
+  /**
+   * Forgets every lesson and word (and pushes the empty state to the server
+   * when signed in). The account, profile and preferences are untouched —
+   * "Reset progress" in Settings, not account deletion.
+   */
+  resetLearning: () => Promise<void>;
   /** Saves a phrase from the phrasebook into the review queue (due now). */
   addWord: (seed: { languageId: string; target: string; translation: string }) => Promise<boolean>;
 };
@@ -259,6 +266,22 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     [vocab, progress, pushState]
   );
 
+  /**
+   * Clears progress locally and on the server.
+   *
+   * The cloud write matters: without it the next sync would merge the old
+   * server copy straight back, and the learner would watch their reset undo
+   * itself a second later.
+   */
+  const resetLearning = useCallback<LearningValue['resetLearning']>(async () => {
+    setProgress({});
+    setVocab({});
+    setDueCount(0);
+    setLastSyncedAt(null);
+    await clearLearningStorage();
+    await pushState({}, {});
+  }, [pushState]);
+
   const value = useMemo<LearningValue>(() => {
     const vocabList = Object.values(vocab);
     const lessonsCompleted = Object.values(progress).filter((p) => p.score >= 70).length;
@@ -273,8 +296,19 @@ export function LearningProvider({ children }: { children: ReactNode }) {
       recordLesson,
       reviewWord,
       addWord,
+      resetLearning,
     };
-  }, [ready, progress, vocab, dueCount, lastSyncedAt, recordLesson, reviewWord, addWord]);
+  }, [
+    ready,
+    progress,
+    vocab,
+    dueCount,
+    lastSyncedAt,
+    recordLesson,
+    reviewWord,
+    addWord,
+    resetLearning,
+  ]);
 
   return <LearningContext.Provider value={value}>{children}</LearningContext.Provider>;
 }

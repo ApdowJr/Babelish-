@@ -26,9 +26,13 @@ import {
   type Language,
 } from '@/data/languages';
 import { DAILY_GOALS, dailyGoalXp, usePreferences } from '@/state/preferences';
+import { useProfile } from '@/state/profile';
+import { useAuth } from '@/context/AuthContext';
+import { Avatar } from '@/components/Avatar';
+import { AVATAR_EMOJIS, GOAL_OPTIONS, LIMITS, toggleChip } from '@/lib/learnerProfile';
 import { colors, layout, radii, shadows, spacing, typography } from '@/theme/tokens';
 
-const STEPS = 3;
+const STEPS = 4;
 
 export default function OnboardingScreen() {
   const {
@@ -40,6 +44,9 @@ export default function OnboardingScreen() {
     setDailyGoal,
     completeOnboarding,
   } = usePreferences();
+
+  const { user } = useAuth();
+  const { profile, updateProfile } = useProfile();
 
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState('');
@@ -178,6 +185,87 @@ export default function OnboardingScreen() {
 
           {step === 2 ? (
             <View>
+              <Text style={styles.kicker}>SAY HELLO</Text>
+              <Text style={styles.title}>What should your tutor call you?</Text>
+              <Text style={styles.subtitle}>
+                A name and a face make the first conversation feel like yours. You can change both
+                any time in your profile.
+              </Text>
+
+              <View style={styles.identityRow}>
+                <Avatar
+                  name={profile.displayName || user?.displayName}
+                  emoji={profile.avatar}
+                  color={profile.avatarColor}
+                  size={64}
+                />
+                <View style={styles.flex}>
+                  <TextInput
+                    value={profile.displayName}
+                    onChangeText={(text) => updateProfile({ displayName: text })}
+                    placeholder={user?.displayName ?? 'Your name'}
+                    placeholderTextColor={colors.textFaint}
+                    maxLength={LIMITS.displayName}
+                    autoCapitalize="words"
+                    style={styles.nameInput}
+                    accessibilityLabel="Your name"
+                  />
+                  <Text style={styles.hint}>Used in greetings, never shown publicly.</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.fieldLabel, styles.nativeLabel]}>PICK AN AVATAR</Text>
+              <View style={styles.avatarGrid}>
+                <Pressable
+                  onPress={() => updateProfile({ avatar: '' })}
+                  style={[styles.avatarCell, profile.avatar === '' && styles.avatarCellOn]}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Use my initials"
+                  accessibilityState={{ selected: profile.avatar === '' }}
+                >
+                  <Text style={styles.avatarInitials}>
+                    {(profile.displayName || user?.displayName || 'B').slice(0, 1).toUpperCase()}
+                  </Text>
+                </Pressable>
+                {AVATAR_EMOJIS.map((emoji) => (
+                  <Pressable
+                    key={emoji}
+                    onPress={() => updateProfile({ avatar: emoji })}
+                    style={[styles.avatarCell, profile.avatar === emoji && styles.avatarCellOn]}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Avatar ${emoji}`}
+                    accessibilityState={{ selected: profile.avatar === emoji }}
+                  >
+                    <Text style={styles.avatarEmoji}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={[styles.fieldLabel, styles.nativeLabel]}>I’M LEARNING FOR…</Text>
+              <View style={styles.goalChips}>
+                {GOAL_OPTIONS.map((goal) => {
+                  const on = profile.goals.includes(goal);
+                  return (
+                    <Pressable
+                      key={goal}
+                      onPress={() => updateProfile({ goals: toggleChip(profile.goals, goal) })}
+                      style={[styles.goalChip, on && styles.goalChipOn]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                    >
+                      <Text style={[styles.goalChipText, on && styles.goalChipTextOn]}>{goal}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.hint}>
+                This is how the tutor decides which examples to use — a trip, a job, an exam.
+              </Text>
+            </View>
+          ) : null}
+
+          {step === 3 ? (
+            <View>
               <Text style={styles.kicker}>MAKE IT YOURS</Text>
               <Text style={styles.title}>A habit that fits your day.</Text>
               <Text style={styles.subtitle}>
@@ -274,7 +362,13 @@ export default function OnboardingScreen() {
           </Pressable>
         ) : null}
         <Button
-          label={step === 0 ? 'Let’s go' : step === STEPS - 1 ? `Start learning ${selected.name}` : 'Continue'}
+          label={
+            step === 0
+              ? 'Let’s go'
+              : step === STEPS - 1
+                ? `Start learning ${selected.name}`
+                : 'Continue'
+          }
           onPress={next}
           style={styles.cta}
         />
@@ -381,6 +475,43 @@ const styles = StyleSheet.create({
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   skip: { ...typography.bodyStrong, color: colors.textMuted },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xl },
+  nameInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    ...typography.heading,
+    color: colors.text,
+  },
+  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  avatarCell: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  avatarCellOn: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  avatarEmoji: { fontSize: 22 },
+  avatarInitials: { ...typography.bodyStrong, color: colors.textMuted },
+  goalChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  goalChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+  },
+  goalChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  goalChipText: { ...typography.caption, color: colors.textMuted, fontWeight: '600' },
+  goalChipTextOn: { color: colors.onDark },
   consent: {
     ...typography.caption,
     color: colors.textMuted,

@@ -97,3 +97,47 @@ export async function isReminderScheduled(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Fires one notification a few seconds from now, so a learner can prove the
+ * permission and the channel actually work instead of waiting until 18:00.
+ *
+ * Deliberately a separate call from `scheduleDailyReminder`: a test must never
+ * punch a hole in the recurring reminder, and it must not cancel it either.
+ */
+export async function sendTestReminder(): Promise<ReminderResult> {
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+        name: 'Daily practice reminder',
+        description: 'One calm reminder at the time you chose',
+        importance: 5 /* AndroidImportance.DEFAULT */,
+        vibrationPattern: [0, 150],
+      });
+    }
+    const current = await Notifications.getPermissionsAsync();
+    const granted =
+      current.granted ||
+      (await Notifications.requestPermissionsAsync({
+        ios: { allowAlert: true, allowBadge: false, allowSound: false },
+      })).granted;
+    if (!granted) return 'denied';
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'This is your reminder',
+        body: 'It will arrive at your chosen time, quietly. Nothing else is sent.',
+        sound: false,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 5,
+        repeats: false,
+        channelId: CHANNEL_ID,
+      },
+    });
+    return 'scheduled';
+  } catch {
+    return 'error';
+  }
+}

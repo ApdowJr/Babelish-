@@ -27,13 +27,13 @@ import { DAILY_GOALS, VOICE_SPEEDS } from '@/lib/preferenceRules';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { filterSettings } from '@/lib/settingsSearch';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
-import { cancelDailyReminder, scheduleDailyReminder } from '@/lib/notifications';
+import { cancelDailyReminder, scheduleDailyReminder, sendTestReminder } from '@/lib/notifications';
 import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
 import { clearConversations } from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
 import { deleteAccount } from '@/lib/neonApi';
 import { buildPack, formatPackSize } from '@/lib/offline';
-import { loadCurriculum } from '@/lib/curriculum/store';
+import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
 import { fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { NEON_API_URL } from '@/lib/neon';
 import { colors, radii, shadows, spacing, typography } from '@/theme/tokens';
@@ -71,9 +71,9 @@ export default function SettingsScreen() {
   const prefs = usePreferences();
   const { setDailyGoal, setNativeLanguage, setReminderKey, setShowTranslation, setVoiceSpeed, setAutoSpeak, setReduceMotion } =
     prefs;
-  const { progress, vocab } = useLearning();
+  const { progress, vocab, resetLearning } = useLearning();
   const { profile } = useProfile();
-  const { state: analytics } = useAnalytics();
+  const { state: analytics, resetAnalytics } = useAnalytics();
 
   const [query, setQuery] = useState('');
   const [languagePicker, setLanguagePicker] = useState(false);
@@ -226,6 +226,70 @@ export default function SettingsScreen() {
     );
   }
 
+  async function testReminder() {
+    const result = await sendTestReminder();
+    if (result === 'scheduled') {
+      showAlert(
+        'Test reminder sent',
+        'It arrives in about five seconds. If you do not see it, notifications are probably switched off for Babelish in your system settings.'
+      );
+    } else if (result === 'denied') {
+      showAlert(
+        'Notifications are off',
+        'Allow notifications for Babelish in your system settings, then try again.'
+      );
+    } else {
+      showAlert('Could not send a test', 'This device refused to schedule a local notification.');
+    }
+  }
+
+  function sendFeedback() {
+    // Version, platform and the course being studied — enough to reproduce a
+    // bug, and nothing that identifies the learner.
+    const body = [
+      '',
+      '',
+      '---',
+      `App: Babelish ${version}`,
+      `Platform: ${Platform.OS} ${Platform.Version}`,
+      `Learning: ${target.name} (${prefs.targetLanguageId})`,
+    ].join('\n');
+    const url = `mailto:support@zelvoca.app?subject=${encodeURIComponent(
+      `Babelish ${version} feedback`
+    )}&body=${encodeURIComponent(body)}`;
+    Linking.openURL(url).catch(() =>
+      showAlert('No email app found', 'Write to support@zelvoca.app from any email app.')
+    );
+  }
+
+  function confirmResetProgress() {
+    showAlert(
+      'Reset all progress?',
+      'Lessons, saved words, XP and your streak will be cleared on this device and in your account. Your profile, settings and account stay. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              // Raw stores first (speaking stats and the report queue are not
+              // owned by a provider), then the providers, which also push the
+              // empty state to the server so a sync cannot restore it.
+              await clearLearningStorage();
+              await resetLearning();
+              await resetAnalytics();
+              showAlert(
+                'Progress reset',
+                'You are starting from the first lesson. Your account and profile are unchanged.'
+              );
+            })();
+          },
+        },
+      ]
+    );
+  }
+
   const groups: Group[] = (() => {
     const reminderOptions = REMINDER_SLOTS.map((slot) => {
       const key = slotKey(slot.hour, slot.minute);
@@ -297,6 +361,15 @@ export default function SettingsScreen() {
               : 'Off — pick a time for one calm reminder.',
             keywords: 'notification alarm time nudge',
             options: reminderOptions,
+          },
+          {
+            id: 'test-reminder',
+            kind: 'nav',
+            icon: 'notifications-circle-outline',
+            label: 'Send a test reminder',
+            hint: 'Checks the permission without waiting for your reminder time',
+            keywords: 'notification test try check',
+            onPress: () => void testReminder(),
           },
           {
             id: 'translation',
@@ -429,6 +502,16 @@ export default function SettingsScreen() {
             onPress: exportMyData,
           },
           {
+            id: 'reset-progress',
+            kind: 'nav',
+            icon: 'refresh-outline',
+            label: 'Reset progress',
+            hint: 'Start from lesson one — keeps your account and profile',
+            keywords: 'start over clear xp streak lessons restart',
+            danger: true,
+            onPress: confirmResetProgress,
+          },
+          {
             id: 'clear-chats',
             kind: 'nav',
             icon: 'trash-outline',
@@ -468,6 +551,15 @@ export default function SettingsScreen() {
                 'Your voice',
                 'Audio is captured only while you hold the mic, sent for transcription when a transcriber is configured, and never written to storage. There is no pronunciation score without a real transcript to compare against.'
               ),
+          },
+          {
+            id: 'feedback',
+            kind: 'nav',
+            icon: 'mail-outline',
+            label: 'Send feedback',
+            hint: 'Opens your email app — no in-app tracking',
+            keywords: 'contact support help bug report email',
+            onPress: sendFeedback,
           },
           {
             id: 'privacy',

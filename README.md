@@ -23,6 +23,8 @@ needed a model at all.
 | **Terms** | `/terms`, linked from Settings and from a consent line in onboarding |
 | **Store readiness** | Bundle ids, version codes, permissions, iOS plist keys, `eas.json`, Play icon + feature graphic, notification icon |
 | **Release gate** | `npm run check:release` blocks the mistakes that cost a build cycle |
+| **First-run profile** | Name, avatar and goal asked during onboarding, before the first lesson |
+| **Start over** | Settings → Reset progress clears learning data but keeps the account |
 
 ## What's new in 3.2
 

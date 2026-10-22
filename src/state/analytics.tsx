@@ -27,6 +27,11 @@ type AnalyticsValue = {
   logLessonCompleted: (xp: number) => void;
   /** Coarse activity event for streaks and insights (XP only for mapped names). */
   logEvent: (name: string) => void;
+  /**
+   * Forgets XP, skill tallies and activity (streak). Part of "Reset progress";
+   * the account and everything in Settings are untouched.
+   */
+  resetAnalytics: () => Promise<void>;
 };
 
 /** Activity events that also earn XP (rules stay published in `@/lib/xp`). */
@@ -103,6 +108,14 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   const value: AnalyticsValue = {
     state,
     xp: state.xp,
+    resetAnalytics: async () => {
+      setState(EMPTY_ANALYTICS);
+      try {
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // Best effort: the ledger is already empty for this session.
+      }
+    },
     logSkillResult: (type, correct) => {
       const skill = skillForExerciseType(type);
       if (!skill || skill === 'speak') return;
