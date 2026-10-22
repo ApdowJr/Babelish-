@@ -87,8 +87,7 @@ needed a model at all.
 **Languages in the atlas:** Spanish, French, German, Italian, Portuguese, Dutch,
 Swedish, Polish, Russian, Ukrainian, Greek, Turkish, Arabic, Hebrew, Persian,
 Hindi, Bengali, Mandarin Chinese, Japanese, Korean, Vietnamese, Thai,
-Indonesian, Swahili. (Somali is not included — see
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §3 for why we did not fake it.)
+Indonesian, Swahili and Somali (Soomaali). Somali has a starter course; AI and speech-model coverage remains unverified until confirmed.
 
 ## Run it
 
