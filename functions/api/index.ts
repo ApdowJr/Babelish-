@@ -33,6 +33,7 @@ import {
 } from '../../src/lib/aiCore';
 import { getLanguage } from '../../src/data/languages';
 import { findBundledLesson } from '../../src/data/curriculum';
+import { normalizeClientIp } from '../../src/lib/clientIp';
 
 /**
  * Babelish API — the mobile app's backend, running on the same branch as the
@@ -112,9 +113,14 @@ async function adminGate(c: Context): Promise<Response | null> {
       503
     );
   }
-  // Fail-open when the platform exposes no client IP: better to serve the
-  // admin than to collapse every operator into one shared bucket.
-  const clientIp = (c.req.header('x-forwarded-for') ?? '').split(',')[0].trim();
+  // Only a well-formed address is rate-limited. When the platform exposes no
+  // usable client IP we fail open: collapsing every operator into one shared
+  // `unknown` bucket would let anyone lock the real admin out with 10 tries.
+  const rawIp = normalizeClientIp(
+    c.req.header('x-forwarded-for'),
+    c.req.header('x-real-ip')
+  );
+  const clientIp = rawIp === 'unknown' ? '' : rawIp;
   if (clientIp && adminFailLimiter.blocked(clientIp)) {
     return c.text('Too many failed attempts — try again in 10 minutes.', 429);
   }
@@ -187,10 +193,14 @@ const ANON_AI = /^\/api\/ai\/(chat|stt|status)$/;
 app.use('/api/*', async (c, next) => {
   const auth = c.req.header('authorization');
   const anonymous = () => {
-    const ip =
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-      c.req.header('x-real-ip') ||
-      'unknown';
+    // The header is attacker-controlled: normalise it to a bounded address (or
+    // `unknown`) so it can never become an unbounded database key. Spoofing a
+    // different address only buys another guest allowance — the server-wide
+    // daily budget is what actually caps spend.
+    const ip = normalizeClientIp(
+      c.req.header('x-forwarded-for'),
+      c.req.header('x-real-ip')
+    );
     c.set('userId', `anon:${ip}`);
   };
 
@@ -552,6 +562,10 @@ app.post('/api/ai/chat', async (c) => {
   c.req.raw.signal?.addEventListener('abort', onClientGone);
 
   let lastDetail = '';
+  // One corrective retry for the whole turn (not per model), so a model that
+  // answers in the wrong script costs one quota slot — not two — and the
+  // learner does not see an error the server can fix itself.
+  let correctiveUsed = false;
   for (const model of CHAT_MODELS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 55_000);
@@ -595,17 +609,47 @@ app.post('/api/ai/chat', async (c) => {
 
       // Strict validation: an empty reply or one in the wrong script is an
       // ERROR here — never replaced with scripted demo content in real mode.
-      let reply: { text: string; translation: string; tip?: string };
+      let reply: { text: string; translation: string; tip?: string } | null = null;
+      let replyError = `The tutor replied in the wrong language for ${language.name} — try again.`;
       try {
         reply = extractTutorReply(raw, language);
       } catch (err) {
-        return c.json(
-          {
-            error: 'bad-reply',
-            message: err instanceof Error ? err.message : 'The tutor returned an invalid reply.',
-          },
-          502
-        );
+        if (err instanceof Error && err.message) replyError = err.message;
+        const wrongScript = /wrong script/i.test(replyError);
+        if (wrongScript && !correctiveUsed) {
+          correctiveUsed = true;
+          const retry = await fetch(`${AI_URL}/chat/completions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', ...upstreamHeaders() },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model,
+              temperature: 0.6,
+              messages: [
+                ...messages,
+                {
+                  role: 'system',
+                  content: `Your previous answer was not in ${language.name}. Reply again, ONLY in ${language.name}, and keep the JSON shape.`,
+                },
+              ],
+              ...(IS_OPENROUTER ? { max_tokens: 600 } : {}),
+            }),
+          }).catch(() => null);
+          if (retry?.ok) {
+            const retryData = (await retry.json().catch(() => null)) as {
+              choices?: { message?: { content?: string } }[];
+            } | null;
+            const retryRaw = retryData?.choices?.[0]?.message?.content ?? '';
+            try {
+              reply = extractTutorReply(retryRaw, language);
+            } catch {
+              reply = null;
+            }
+          }
+        }
+      }
+      if (!reply) {
+        return c.json({ error: 'bad-reply', message: replyError }, 502);
       }
       return c.json({
         reply: reply.text,

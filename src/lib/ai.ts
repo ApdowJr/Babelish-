@@ -207,8 +207,12 @@ export async function tutorReply(
   }
 
   // Wrong-script guardrail: one corrective retry, then fail honestly.
-  // Never retry a turn the learner already cancelled.
+  // The gateway already retries inside the same request (one quota slot), so
+  // retrying here would charge the learner twice — surface it instead.
   if (opts.signal?.aborted) throw new RequestCancelled(answer.runtime);
+  if (answer.runtime === 'gateway') {
+    throw new Error(`The tutor replied in the wrong language for ${opts.language.name} — try again.`);
+  }
   const retry = await runChat(
     settings,
     {
