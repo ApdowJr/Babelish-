@@ -93,7 +93,7 @@ Create the app, then fill **App content**. Each answer below is what the code ac
 **Short description** (≤ 80 chars):
 
 ```
-Learn 24 languages by talking — free AI tutor, offline lessons, no ads
+Learn 25 languages by talking — free AI tutor, offline lessons, no ads
 ```
 
 **Full description** (≤ 4000 chars):
@@ -109,7 +109,7 @@ working through — not a generic textbook.
 ── 24 LANGUAGES, REAL COURSES ──
 Spanish, French, Arabic, Hindi, Swahili, Bengali, Urdu, Persian, Turkish, Indonesian,
 Japanese, Korean, Mandarin, German, Portuguese, Italian, Russian, Dutch, Swedish, Polish,
-Ukrainian, Greek, Hebrew and Somali. 97 chapters, 204 lessons and 1,678 exercises ship
+Ukrainian, Greek, Hebrew and Somali. 101 chapters, 212 lessons and 1,744 exercises ship
 inside the app and work offline.
 
 ── A REAL VOICE ──
