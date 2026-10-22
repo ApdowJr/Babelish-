@@ -45,3 +45,6 @@ yarn-error.*
 .env.*
 !.env.example
 .neon
+
+# Scratch ESM build produced by scripts/local-api-smoke.mjs on Node 20
+.smoke-build/

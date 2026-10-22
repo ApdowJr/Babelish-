@@ -51,10 +51,13 @@
     "build": "expo export --platform android --platform ios",
     "build:web": "expo export --platform web",
     "check:functions": "tsc -p functions/tsconfig.json --noEmit",
-    "neon:e2e": "node --experimental-strip-types scripts/neon-e2e.mjs",
-    "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs",
+    "neon:e2e": "node scripts/run-node22.mjs scripts/neon-e2e.mjs",
+    "review:dashboard": "node scripts/run-node22.mjs scripts/review-dashboard.mjs",
     "test": "node scripts/test.mjs",
     "smoke:local": "node scripts/local-api-smoke.mjs"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.13.0"
+  }
 }

@@ -31,48 +31,139 @@
  * Fixtures only: the fake provider key and admin password are LOCAL test
  * values, never real credentials. Nothing here prints secrets.
  */
-import { registerHooks } from 'node:module';
+import { createRequire } from 'node:module';
+import { register } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 
 // Extension-resolving hook: the app's sources use Metro-style extensionless
 // relative imports (./admin, ../../src/lib/aiCore) that plain Node ESM
-// rejects. Resolves them to .ts; everything else passes through untouched.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    try {
-      return nextResolve(specifier, context);
-    } catch (err) {
-      if (
-        (specifier.startsWith('./') || specifier.startsWith('../')) &&
-        !/\.[cm]?[jt]s$/.test(specifier)
-      ) {
-        for (const suffix of ['.ts', '/index.ts', '.js', '.mjs']) {
-          try {
-            return nextResolve(specifier + suffix, context);
-          } catch {
-            /* try the next suffix */
-          }
-        }
-      }
-      throw err;
-    }
-  },
-});
+// rejects. The loader lives in scripts/smoke-resolve-hook.mjs and resolves
+// them to .ts; everything else passes through untouched.
+//
+// Why `register()` instead of `module.registerHooks()`: registerHooks only
+// exists on Node >= 22.15. `module.register` is available on every supported
+// runtime here — it is unflagged since Node 20.6 and runs even under
+// --experimental-strip-types (the child phases need both). The hooks execute
+// on a separate loader thread, which also keeps this parent process free of
+// TS-source import side effects.
+register(
+  pathToFileURL(resolve(dirname(fileURLToPath(import.meta.url)), 'smoke-resolve-hook.mjs')).href,
+  import.meta.url
+);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(import.meta.url);
 
 function loadEnvLocal() {
   const env = {};
-  for (const line of readFileSync(resolve(root, '.env.local'), 'utf8').split('\n')) {
+  let text = '';
+  try {
+    text = readFileSync(resolve(root, '.env.local'), 'utf8');
+  } catch {
+    // .env.local is OPTIONAL. The harness self-provisions everything it
+    // needs: a throwaway local Postgres cluster (smoke-db.sh) and a locally
+    // minted JWT/JWKS served from localhost. Real values in .env.local still
+    // override (e.g. pointing the smoke at a Neon branch's DATABASE_URL).
+  }
+  for (const line of text.split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
     if (m) env[m[1]] = m[2].replace(/^"(.*)"$/, '$1');
   }
   return env;
+}
+
+/* ── TS loading: compile the REAL sources with the project's own TypeScript ─
+ * Node 20.11 (and any runtime without --experimental-strip-types) cannot run
+ * .ts directly, and Node >= 22.6 can run them natively. To keep the harness
+ * deterministic on BOTH, we transpile functions/api + src/lib + src/data to
+ * an ESM scratch build using the repo's typescript dependency — zero new
+ * dependencies, and it exercises the same source files as a deploy would.
+ */
+
+function hasNativeTypeStripping() {
+  const run = spawnSync(process.execPath, ['--experimental-strip-types', '-e', 'void 0'], {
+    stdio: 'ignore',
+  });
+  return run.status === 0;
+}
+
+function compileSmokeBuild() {
+  const ts = require('typescript');
+  const fs = require('node:fs/promises');
+  const outDir = resolve(root, '.smoke-build');
+  const groups = [
+    { from: resolve(root, 'functions/api'), to: 'functions/api' },
+    { from: resolve(root, 'src/lib'), to: 'src/lib' },
+    { from: resolve(root, 'src/data'), to: 'src/data' },
+  ];
+
+  async function* walk(dir) {
+    for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+      const p = resolve(dir, e.name);
+      if (e.isDirectory()) yield* walk(p);
+      else if (e.name.endsWith('.ts') && !e.name.endsWith('.d.ts')) yield p;
+    }
+  }
+
+  return (async () => {
+    await fs.rm(outDir, { recursive: true, force: true });
+    for (const g of groups) {
+      for await (const file of walk(g.from)) {
+        const rel = file.slice(root.length + 1);
+        const srcText = await fs.readFile(file, 'utf8');
+        const { outputText } = ts.transpileModule(srcText, {
+          fileName: file,
+          compilerOptions: { target: 'es2022', module: ts.ModuleKind.ESNext },
+        });
+        // Metro-style extensionless relative imports → explicit .js in the
+        // compiled ESM build (the smoke loader hook also tolerates either).
+        const fixed = outputText.replace(
+          /(from\s+['"])(\.\.?\/[^'"]*?)(['"])/g,
+          (m, a, spec, b) => (/\.[cm]?js$/.test(spec) ? m : `${a}${spec}.js${b}`)
+        );
+        const dest = resolve(outDir, rel).replace(/\.ts$/, '.js');
+        await fs.mkdir(dirname(dest), { recursive: true });
+        await fs.writeFile(dest, fixed);
+      }
+    }
+    return outDir;
+  })();
+}
+
+/* ── optional local Postgres provisioning (deterministic, no cloud) ─────── */
+
+function provisionLocalPostgres() {
+  if (process.env.DATABASE_URL || process.env.SMOKE_DB_URL) return null;
+  const script = resolve(root, 'scripts', 'smoke-db.sh');
+  const run = spawnSync('bash', [script], { encoding: 'utf8' });
+  if (run.status !== 0) {
+    console.error(
+      'No DATABASE_URL set and local Postgres provisioning failed.\n' +
+        (run.stderr ?? '') +
+        '\nSet DATABASE_URL in .env.local (an isolated NON-PRODUCTION branch only).'
+    );
+    process.exit(2);
+  }
+  const url = run.stdout.trim().split('\n').at(-1);
+  // Apply the repo's own idempotent schema (CREATE TABLE IF NOT EXISTS …) to
+  // the disposable DB so routes that genuinely query tables can run. This
+  // NEVER executes against a cloud URL — it only runs for the freshly
+  // provisioned local fixture.
+  const psql = spawnSync(
+    'psql',
+    [url, '-v', 'ON_ERROR_STOP=1', '-q', '-f', resolve(root, 'neon', 'schema.sql')],
+    { encoding: 'utf8' }
+  );
+  if (psql.status !== 0) {
+    console.error(`smoke: applying neon/schema.sql to the local fixture failed:\n${psql.stderr}`);
+    process.exit(2);
+  }
+  return url;
 }
 
 /* ── shared assertion helpers (child phases) ─────────────────────────────── */
@@ -518,6 +609,17 @@ async function phaseDeadProvider(app, jwt) {
 async function runPhase(phase) {
   const env = loadEnvLocal();
   for (const [k, v] of Object.entries(env)) process.env[k] = v;
+  // The parent provisions/locates the throwaway Postgres and hands the URL
+  // down; children must never spin up their own cluster.
+  if (process.env.SMOKE_DB_URL && !process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.SMOKE_DB_URL;
+  }
+  // The app reads NEON_AUTH_BASE_URL at module load to derive the JWT
+  // issuer — default it when .env.local is absent so `new URL(undefined)`
+  // can't crash the import. Same origin the parent signs the JWT against.
+  if (!process.env.NEON_AUTH_BASE_URL) {
+    process.env.NEON_AUTH_BASE_URL = 'https://babelish.app';
+  }
 
   let fake = null;
   if (phase === 1) {
@@ -546,7 +648,15 @@ async function runPhase(phase) {
     process.env.NEON_AUTH_JWKS_URL = `http://127.0.0.1:${jwksServer.address().port}/jwks.json`;
   }
 
-  const { default: app } = await import('../functions/api/index.ts');
+  // On runtimes with native type-stripping (Node >= 22.6) import the REAL
+  // TypeScript sources directly. Otherwise import the scratch build that the
+  // parent compiled from those same sources with the project's TypeScript —
+  // never pass --experimental-strip-types to a Node 20 child, which rejects
+  // the unknown flag outright.
+  const entry = process.env.SMOKE_USE_TS === '1'
+    ? pathToFileURL(resolve(root, 'functions/api/index.ts')).href
+    : pathToFileURL(resolve(root, '.smoke-build/functions/api/index.js')).href;
+  const { default: app } = await import(entry);
   const jwt = process.env.SMOKE_JWT;
   if (!jwt) throw new Error('SMOKE_JWT missing');
 
@@ -573,11 +683,14 @@ async function runPhase(phase) {
 
 async function parent() {
   const env = loadEnvLocal();
-  const auth = (env.NEON_AUTH_BASE_URL ?? '').replace(/\/+$/, '');
-  if (!auth) {
-    console.error('Missing NEON_AUTH_BASE_URL in .env.local');
+  // Deterministic, self-contained database: provision a throwaway local
+  // Postgres when no DATABASE_URL is configured (never touches the cloud).
+  const dbUrl = env.DATABASE_URL ?? process.env.DATABASE_URL ?? provisionLocalPostgres();
+  if (!dbUrl) {
+    console.error('Missing DATABASE_URL and local provisioning produced nothing.');
     process.exit(2);
   }
+  const auth = (env.NEON_AUTH_BASE_URL ?? 'https://babelish.app').replace(/\/+$/, '');
 
   // Self-contained auth: an EdDSA keypair whose JWKS each child serves on
   // localhost. The issuer string still comes from the real config, so the
@@ -593,7 +706,18 @@ async function parent() {
 
   console.log('── Local api Function smoke (source import, local JWT, no deploy) ──');
 
-  const flags = ['--experimental-strip-types', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'];
+  // Runtime-adaptive child launch: native type-stripping when available,
+  // otherwise a scratch ESM build compiled from the same sources using the
+  // project's own TypeScript dependency. Node 20 must never receive
+  // --experimental-strip-types (unknown flag → hard error).
+  const useTs = hasNativeTypeStripping();
+  if (!useTs) {
+    await compileSmokeBuild();
+  }
+  const flags = [
+    ...(useTs ? ['--experimental-strip-types'] : []),
+    '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON',
+  ];
   const script = fileURLToPath(import.meta.url);
   const results = [];
   for (const phase of [1, 2, 3]) {
@@ -601,8 +725,10 @@ async function parent() {
       env: {
         ...process.env,
         SMOKE_PHASE: String(phase),
+        SMOKE_USE_TS: useTs ? '1' : '0',
         SMOKE_JWT: jwt,
         SMOKE_JWK: JSON.stringify(jwk),
+        SMOKE_DB_URL: dbUrl,
       },
       stdio: 'inherit',
     });
