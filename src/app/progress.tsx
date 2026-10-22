@@ -40,8 +40,9 @@ export default function ProgressScreen() {
   const { wordsMastered } = useLearning();
   const { dailyGoalMinutes } = usePreferences();
 
-  // One clock read per render pass; the calendar and the streak agree by
-  // construction because they use the same instant.
+  // One clock read, taken when the screen opens. The calendar and the streak
+  // share it, so a session that lives past midnight still shows one coherent
+  // picture (and re-opening the screen is what moves the day).
   const now = useMemo(() => new Date(), []);
   const weeks = useMemo(() => calendarWeeks(analytics.events, { now }), [analytics.events, now]);
   const streak = useMemo(() => computeStreak(analytics.events, now), [analytics.events, now]);
