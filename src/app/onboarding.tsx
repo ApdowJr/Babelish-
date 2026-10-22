@@ -279,6 +279,30 @@ export default function OnboardingScreen() {
           style={styles.cta}
         />
       </View>
+
+      {/* Consent, stated before the account is used — the same sentence the
+          stores and the privacy policy use. Links open the real pages. */}
+      <Text style={styles.consent}>
+        By continuing you agree to the{' '}
+        <Text
+          style={styles.consentLink}
+          onPress={() => router.push('/terms')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Terms of Service"
+        >
+          Terms of Service
+        </Text>{' '}
+        and the{' '}
+        <Text
+          style={styles.consentLink}
+          onPress={() => router.push('/privacy')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Privacy Policy"
+        >
+          Privacy Policy
+        </Text>
+        . Your practice stays on this device.
+      </Text>
     </SafeAreaView>
   );
 }
@@ -357,6 +381,15 @@ const styles = StyleSheet.create({
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   skip: { ...typography.bodyStrong, color: colors.textMuted },
+  consent: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    lineHeight: 18,
+  },
+  consentLink: { color: colors.primary, fontWeight: '700', textDecorationLine: 'underline' },
   stepLabel: { ...typography.micro, color: colors.textFaint, marginTop: spacing.sm },
   scroll: {
     width: '100%',

@@ -478,6 +478,15 @@ export default function SettingsScreen() {
             onPress: () => router.push('/privacy'),
           },
           {
+            id: 'terms',
+            kind: 'nav',
+            icon: 'reader-outline',
+            label: 'Terms of Service',
+            hint: 'How the app can be used',
+            keywords: 'legal terms license eula',
+            onPress: () => router.push('/terms'),
+          },
+          {
             id: 'version',
             kind: 'info',
             icon: 'information-circle-outline',

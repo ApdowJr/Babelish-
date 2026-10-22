@@ -45,3 +45,8 @@ yarn-error.*
 .env.*
 !.env.example
 .neon
+
+# Store signing credentials — never commit (Play service account, keystores)
+secrets/
+*.keystore
+*.jks

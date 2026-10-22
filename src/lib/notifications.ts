@@ -16,7 +16,12 @@ import {
  * so enabling replaces any previous reminder instead of stacking them.
  */
 
-const CHANNEL_ID = 'daily-reminder';
+/**
+ * Android notification channel. Must match `defaultChannel` in app.json's
+ * expo-notifications plugin: a mismatch means a reminder scheduled here is
+ * filed under a channel the OS never shows prominently.
+ */
+export const CHANNEL_ID = 'daily-reminder';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
