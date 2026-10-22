@@ -91,12 +91,12 @@ blocked unless the learner flips *Use unverified languages* in Settings.
 | Model | Kind | Size (approx.) | Runtime(s) | Licence | Commercial use | Languages in the atlas documented by its card |
 |---|---|---|---|---|---|---|
 | **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **24 of 25** (Somali is not yet model-verified; Qwen3 documents 119 languages) |
-| Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 15: zh en es fr de it pt ru ja ko vi th ar id tr |
+| Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 14 of 25 atlas languages (English is documented but not an atlas target) |
 | Qwen2.5 3B Instruct | chat | 2 GB | Ollama, gateway | Qwen Research licence | **no** (research only) | same 15 |
 | Llama 3.2 3B Instruct | chat | 2 GB | Ollama, gateway | Llama 3.2 Community | check (700 M MAU cap) | 8: es fr de it pt hi th tr |
 | Aya Expanse 8B | chat | 5 GB | gateway | CC-BY-NC-4.0 | **no** | 20 (no bn/sw/th/vi) |
 | Whisper large-v3-turbo | stt | 1.6 GB | gateway, OpenAI-compatible | MIT | yes | 24 of 25; Somali unverified |
-| Whisper base (Transformers.js) | stt | 0.15 GB | browser | MIT | yes | all 24 |
+| Whisper base (Transformers.js) | stt | 0.15 GB | browser | MIT | yes | 24 of 25; Somali unverified |
 | Kokoro-82M | tts | 0.3 GB | self-hosted TTS server | Apache-2.0 | yes | 7: es fr hi it pt ja zh |
 | Piper | tts | 0.06 GB/voice | self-hosted TTS server | MIT (voices vary) | yes | 16 verified voices (no sv/bn/id) |
 | OS voice (`expo-speech`) | tts | 0 | device | OS | n/a | whatever the device ships; checked at runtime |
@@ -188,9 +188,9 @@ an honest "try again", not a fabricated grade.
 | Tier | Languages | Structure | Honest label |
 |---|---|---|---|
 | Authored | Spanish | 5 chapters · 20 lessons · grammar/culture notes | `A1 · in progress` — A2–B2 not finished |
-| Starter (validated) | 23 | 4 chapters · 8 lessons · 66 exercises each, built from the 22 verified starter words | `Starter course · A1–A2` — no native-reviewed grammar notes |
+| Starter (validated) | 24 | 4 chapters · 8 lessons · curated starter vocabulary and exercises | `Starter course · A1–A2` — no native-reviewed grammar notes |
 
-Totals: **24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528
+Totals: **25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550
 starter words**, all bundled and validated by `tests/courses.test.ts` (unique
 ids, answerable exercises, options containing the answer, all four skills
 present, no placeholder lessons).
@@ -214,8 +214,8 @@ is an operator task, done once.
 
 ### 7.1 Hosted tutor server (recommended — zero setup for learners)
 
-Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints cover all
-24 languages at $0 per token:
+Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints document 24 of 25 atlas languages; Somali remains unverified.
+The free endpoint costs $0 per token while available:
 
 ```bash
 AI_API_KEY=sk-or-... npm run deploy:tutor
