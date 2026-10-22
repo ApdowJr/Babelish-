@@ -563,6 +563,29 @@ export const LANGUAGES: Language[] = [
       { id: 'safari', title: 'On safari', emoji: '🦁' },
       { id: 'greetings', title: 'Greetings & respect', emoji: '🙌' },
     ],
+  },,
+
+  {
+    id: 'so',
+    name: 'Somali',
+    nativeName: 'Soomaali',
+    flag: '🇸🇴',
+    nativeSpeakers: '25M+ speakers',
+    ttsLocale: 'so-SO',
+    script: 'Latin',
+    difficulty: 1,
+    family: 'Afroasiatic (Cushitic)',
+    regions: ['africa'],
+    dialects: ['Northern Somali', 'Benadiri', 'Maay'],
+    blurb:
+      'Learn everyday Soomaali for greetings, family, travel, and connecting across the Horn of Africa and its global diaspora.',
+    greeting: { text: 'Salaan!', meaning: 'Hello!' },
+    featured: true,
+    scenarios: [
+      { id: 'greetings', title: 'Greetings & respect', emoji: '🤝' },
+      { id: 'family', title: 'Family & friends', emoji: '👨‍👩‍👧‍👦' },
+      { id: 'market', title: 'At the market', emoji: '🧺' },
+    ],
   },
 ];
 
