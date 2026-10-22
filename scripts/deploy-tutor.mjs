@@ -10,7 +10,7 @@
  *   AI_API_KEY=sk-or-... npm run deploy:tutor
  *
  * Optional overrides (defaults target OpenRouter's free Qwen3 endpoints, which
- * document all 24 Babelish languages):
+ * document 24 of 25 Babelish languages; Somali is not yet verified):
  *   AI_API_URL   https://openrouter.ai/api/v1
  *   AI_MODELS    qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct
  *   AI_STT_ENABLED  false  (server transcription is metered per second of audio)

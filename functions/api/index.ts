@@ -416,7 +416,7 @@ const CHAT_MODELS = CONFIGURED_MODELS.length
   ? CONFIGURED_MODELS
   : IS_OPENROUTER
     ? [
-        // Qwen3 covers all 24 Babelish languages (119-language table).
+        // Qwen3 documents 24 of 25 Babelish languages; Somali remains unverified (119-language table).
         'qwen/qwen3-next-80b-a3b-instruct:free',
         'qwen/qwen3-next-80b-a3b-instruct',
         'openai/gpt-oss-120b:free',

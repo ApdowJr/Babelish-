@@ -51,7 +51,7 @@ Set once, preserved across deploys (only pass `--env KEY=VALUE` to change one):
 
 The app has **no model screen**: learners open Speak and the tutor answers. The
 only configuration is server-side, in the Function environment. OpenRouter's
-free Qwen3 endpoints cover all 24 Babelish languages:
+free Qwen3 endpoints document 24 of 25 Babelish languages; Somali remains unverified for this model:
 
 ```bash
 # key stays on the server; rotate it if it was ever pasted into a chat

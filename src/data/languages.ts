@@ -2,7 +2,7 @@
  * Seed language data — real languages with their real native names, speaker
  * counts, scripts, dialect coverage, and starter scenarios.
  *
- * 2.0 widened the atlas from 10 to 24 languages. Every language here ships a
+ * 2.0 widened the atlas from 10 to 24 languages; the Somali starter course was added in 3.4. Every language here ships a
  * bundled, fully playable starter pack (see `src/data/starters.ts`), so the
  * "free forever" promise is literal: nothing below is a locked preview.
  */
