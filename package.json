@@ -1,6 +1,6 @@
 {
   "name": "babelish",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~58.0.14",
@@ -54,7 +54,8 @@
     "neon:e2e": "node --experimental-strip-types scripts/neon-e2e.mjs",
     "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs",
     "test": "node scripts/test.mjs",
-    "smoke:local": "node scripts/local-api-smoke.mjs"
+    "smoke:local": "node scripts/local-api-smoke.mjs",
+    "deploy:tutor": "node scripts/deploy-tutor.mjs"
   },
   "private": true
 }

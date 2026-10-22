@@ -217,6 +217,14 @@ Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints cover all
 24 languages at $0 per token:
 
 ```bash
+AI_API_KEY=sk-or-... npm run deploy:tutor
+```
+
+`scripts/deploy-tutor.mjs` wraps the CLI call below and refuses to print the
+key; `AI_API_URL`, `AI_MODELS`, `AI_STT_ENABLED` and `AI_STT_MODEL` can be
+overridden as env vars.
+
+```bash
 neon functions deploy api --src functions/api/index.ts \
   --env "AI_API_KEY=$OPENROUTER_API_KEY" \
   --env AI_API_URL=https://openrouter.ai/api/v1 \
@@ -225,7 +233,8 @@ neon functions deploy api --src functions/api/index.ts \
 ```
 
 No app rebuild is needed — the client discovers the tutor by probing
-`GET /api/ai/status` through the same backend URL it already uses.
+`GET /api/ai/status` through the same backend URL it already uses, and the
+Speak screen's **Retry** action re-probes without a reload.
 
 **Fallback chain.** `AI_MODELS` is tried in order. Free endpoints are retired
 without notice, so when one disappears the server moves to the next; a bad key,

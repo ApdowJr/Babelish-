@@ -76,12 +76,11 @@ learner a live tutor, configure the **server** once — no app rebuild, nothing
 for the learner to install:
 
 ```bash
-neon functions deploy api --src functions/api/index.ts \
-  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
-  --env AI_API_URL=https://openrouter.ai/api/v1 \
-  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
-  --env AI_STT_ENABLED=false --wait
+AI_API_KEY=sk-or-... npm run deploy:tutor
 ```
+
+That one command deploys the `api` Function with the model chain in its
+environment — the key stays on the server, the app is untouched.
 
 Free Qwen3 endpoints cover all 24 atlas languages. Prefer your own hardware?
 Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see

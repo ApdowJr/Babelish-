@@ -3,6 +3,34 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.0.2] — 2026-10-22
+
+### Fixed
+
+- **"Speech playback failed — try again." on Android Chrome.** The web speech
+  path went through expo-speech, whose shim reports `interrupted` / `canceled`
+  (normal when a new line replaces an old one) as errors. Web playback now uses
+  the Web Speech API directly: replacement events are silent, real failures get
+  specific advice (blocked audio, busy speaker, missing locale voice), the
+  utterance is held against garbage collection, Chrome's long-speech pause is
+  nudged, and a "nothing started" check catches blocked embeds.
+- **The user's message text was invisible** on the dark green bubble — it used
+  the body ink instead of the on-dark colour. The "Voice" chip had the same
+  contrast bug.
+- **Three stacked banners** (error, coach notice, voice help) covered half the
+  Speak screen. Coach mode is now a one-line strip with a **Retry** action, the
+  voice explanation only appears after tapping the mic and disappears on typing,
+  and the offer to run Whisper in the browser is only made on desktop-sized
+  browsers — not on a phone's data plan.
+- The mic button now shows a muted icon when voice input is unavailable, instead
+  of looking active and doing nothing.
+
+### Added
+
+- `npm run deploy:tutor` — one command that deploys the `api` Function with the
+  model chain in its environment. The key is read from `AI_API_KEY`, never
+  printed, and never enters the app bundle.
+
 ## [3.0.1] — 2026-10-22
 
 ### Changed
