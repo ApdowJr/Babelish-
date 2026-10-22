@@ -17,6 +17,22 @@ export type VoiceLike = {
   localService?: boolean;
 };
 
+/**
+ * Browsers expose `SpeechSynthesisVoice` as `{name, lang, localService}`, but
+ * `matchVoice` works on `{identifier, language}`. Passing the raw objects
+ * silently matched nothing (and produced a false "no voice installed" note),
+ * so every call goes through this mapping.
+ */
+export function toVoiceLike(
+  list: readonly { name?: string; lang?: string; localService?: boolean }[]
+): VoiceLike[] {
+  return list.map((voice) => ({
+    identifier: voice.name,
+    language: voice.lang,
+    localService: voice.localService,
+  }));
+}
+
 /** `en_US` / `EN-us` → `en-us`. */
 export function normalizeLocale(tag: string | undefined): string {
   return (tag ?? '').trim().toLowerCase().replace(/_/g, '-');

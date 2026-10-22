@@ -103,7 +103,7 @@ export default function ProfileScreen() {
     aiStatus === null
       ? 'Checking…'
       : !aiStatus.chat
-        ? 'Offline coach'
+        ? 'Coach mode'
         : aiSource === 'gateway'
           ? 'App server'
           : aiSource === 'browser'

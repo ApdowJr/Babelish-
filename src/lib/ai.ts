@@ -30,6 +30,7 @@ import {
   matchVoice,
   releaseUtterance,
   speechErrorMessage,
+  toVoiceLike,
   type VoiceLike,
 } from '@/lib/speech';
 
@@ -286,14 +287,14 @@ export async function speakNative(text: string, ttsLocale: string, rate = 0.92):
 /** Resolves when voices are listed; some browsers populate them lazily. */
 function loadVoices(synthesis: SpeechSynthesis): Promise<VoiceLike[]> {
   const immediate = synthesis.getVoices();
-  if (immediate.length > 0) return Promise.resolve(immediate as unknown as VoiceLike[]);
+  if (immediate.length > 0) return Promise.resolve(toVoiceLike(immediate));
   return new Promise((resolve) => {
     let settled = false;
     const done = () => {
       if (settled) return;
       settled = true;
       synthesis.removeEventListener('voiceschanged', done);
-      resolve(synthesis.getVoices() as unknown as VoiceLike[]);
+      resolve(toVoiceLike(synthesis.getVoices()));
     };
     synthesis.addEventListener('voiceschanged', done);
     setTimeout(done, 1_200);
@@ -325,8 +326,7 @@ function speakInBrowser(text: string, locale: string, rate: number): Promise<voi
       // Speak in the same tick as the tap when the voice list is already
       // populated: Android Chrome can refuse an utterance whose activation
       // went stale during a long await.
-      const known = synthesis.getVoices();
-      const voices = known.length > 0 ? (known as unknown as VoiceLike[]) : await loadVoices(synthesis);
+      const voices = await loadVoices(synthesis);
       const voice = matchVoice(voices, locale);
 
       // Only cancel when something is actually playing — an unconditional
@@ -340,14 +340,10 @@ function speakInBrowser(text: string, locale: string, rate: number): Promise<voi
       utterance.lang = locale;
       utterance.rate = Math.min(2, Math.max(0.5, rate));
       utterance.pitch = 1;
-      if (voice) {
-        const installed = synthesis
-          .getVoices()
-          .find(
-            (item) =>
-              item.name === voice.identifier ||
-              (item.lang === voice.language && typeof voice.identifier !== 'string')
-          );
+      if (voice?.identifier) {
+        // Browser voices are keyed by `name`, which `toVoiceLike` stored as
+        // the identifier — this is the actual voice the learner will hear.
+        const installed = synthesis.getVoices().find((item) => item.name === voice.identifier);
         if (installed) utterance.voice = installed;
       }
 

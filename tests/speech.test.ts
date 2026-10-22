@@ -13,6 +13,7 @@ import {
   matchVoice,
   normalizeLocale,
   speechErrorMessage,
+  toVoiceLike,
 } from '../src/lib/speech';
 
 const voices = [
@@ -36,6 +37,21 @@ test('the exact region wins, then the language family', () => {
   assert.equal(matchVoice(voices, 'ja-JP')?.identifier, 'Kyoko');
   assert.equal(matchVoice(voices, 'hi-IN')?.identifier, 'Google हिन्दी');
   assert.equal(matchVoice(voices, 'ar-EG'), null);
+});
+
+test('browser-shaped voices map to the fields matchVoice understands', () => {
+  // Real SpeechSynthesisVoice objects use {name, lang} — passing them straight
+  // to matchVoice matched nothing and produced a false "no voice" warning.
+  const browserShaped = toVoiceLike([
+    { name: 'Japanese (Japan)', lang: 'ja-JP', localService: true },
+    { name: 'Google 日本語', lang: 'ja-JP', localService: false },
+    { name: 'Ting-Ting', lang: 'zh-CN', localService: true },
+  ]);
+  assert.equal(browserShaped[0].identifier, 'Japanese (Japan)');
+  assert.equal(browserShaped[0].language, 'ja-JP');
+  assert.equal(matchVoice(browserShaped, 'ja-JP')?.identifier, 'Japanese (Japan)');
+  assert.equal(matchVoice(browserShaped, 'ja')?.language, 'ja-JP');
+  assert.equal(matchVoice(toVoiceLike([{ name: 'X', lang: 'ar-EG' }]), 'ar-EG')?.identifier, 'X');
 });
 
 test('an offline voice is preferred when both exist', () => {

@@ -4,8 +4,8 @@
  * This is *not* fake AI. It is a deterministic phrase coach built from the
  * content the learner already has: curated scenario phrases when they exist,
  * otherwise the language's starter pack. Every reply says so in its tip line,
- * and the UI labels the source "Offline coach" so a learner is never misled
- * into thinking a model answered.
+ * and the UI labels it "Coach mode" so a learner is never misled into
+ * thinking a model answered.
  *
  * It also powers the app's lowest-bandwidth mode: text-only, no downloads,
  * no network, works on any phone.
@@ -70,7 +70,7 @@ export function offlineTutorReply(input: {
     return {
       text: language.greeting.text,
       translation: `${language.greeting.meaning} (${language.name})`,
-      tip: 'Offline coach — no model is running and this language has no bundled cards yet.',
+      tip: 'Coach mode — the tutor server isn’t available and this language has no bundled cards yet.',
       source: 'starter',
       index: 0,
       total: 0,
@@ -80,10 +80,9 @@ export function offlineTutorReply(input: {
   const index = Math.max(0, input.turn) % cards.length;
   const card = cards[index];
   const label = source === 'scenario' ? 'your scenario' : 'your starter pack';
-  const base = `Offline coach — card ${index + 1} of ${cards.length} from ${label}.`;
-  const tip = card.roman
-    ? `${base} Say it as “${card.roman}”. No language model is running, so I can’t correct or explain yet.`
-    : `${base} The tutor server isn’t available, so I can only show bundled phrases right now — no corrections or explanations.`;
+  const base = `Coach mode · card ${index + 1} of ${cards.length} from ${label}.`;
+  const reason = 'Tutor server unavailable — no corrections or explanations yet.';
+  const tip = card.roman ? `${base} Say it as “${card.roman}”. ${reason}` : `${base} ${reason}`;
 
   return {
     text: card.target,

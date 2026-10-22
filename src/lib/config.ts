@@ -32,7 +32,7 @@ export function configurationReport(): ServiceState[] {
       : settings.mode === 'server'
         ? { service: 'tutor', mode: 'server', label: 'App inference server' }
         : settings.mode === 'offline'
-          ? { service: 'tutor', mode: 'offline', label: 'Offline coach (bundled content)' }
+          ? { service: 'tutor', mode: 'offline', label: 'Coach mode (bundled content)' }
           : {
               service: 'tutor',
               mode: 'local',

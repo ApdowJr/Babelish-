@@ -243,6 +243,9 @@ export default function SpeakScreen() {
               role: 'assistant',
               text: reply.text,
               translation: reply.translation,
+              // The opening line must carry the same label as later turns:
+              // an unlabelled coach card looks like a real model reply.
+              tip: reply.tip,
               runtime: reply.runtime,
               model: reply.model,
             },
