@@ -90,12 +90,12 @@ blocked unless the learner flips *Use unverified languages* in Settings.
 
 | Model | Kind | Size (approx.) | Runtime(s) | Licence | Commercial use | Languages in the atlas documented by its card |
 |---|---|---|---|---|---|---|
-| **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **all 24** (Qwen3 documents 119 languages) |
+| **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **24 of 25** (Somali is not yet model-verified; Qwen3 documents 119 languages) |
 | Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 15: zh en es fr de it pt ru ja ko vi th ar id tr |
 | Qwen2.5 3B Instruct | chat | 2 GB | Ollama, gateway | Qwen Research licence | **no** (research only) | same 15 |
 | Llama 3.2 3B Instruct | chat | 2 GB | Ollama, gateway | Llama 3.2 Community | check (700 M MAU cap) | 8: es fr de it pt hi th tr |
 | Aya Expanse 8B | chat | 5 GB | gateway | CC-BY-NC-4.0 | **no** | 20 (no bn/sw/th/vi) |
-| Whisper large-v3-turbo | stt | 1.6 GB | gateway, OpenAI-compatible | MIT | yes | all 24 |
+| Whisper large-v3-turbo | stt | 1.6 GB | gateway, OpenAI-compatible | MIT | yes | 24 of 25; Somali unverified |
 | Whisper base (Transformers.js) | stt | 0.15 GB | browser | MIT | yes | all 24 |
 | Kokoro-82M | tts | 0.3 GB | self-hosted TTS server | Apache-2.0 | yes | 7: es fr hi it pt ja zh |
 | Piper | tts | 0.06 GB/voice | self-hosted TTS server | MIT (voices vary) | yes | 16 verified voices (no sv/bn/id) |
@@ -108,12 +108,12 @@ pretend to offer it.
 
 ### What is *not* covered
 
-- **Somali (`so`) is not in the atlas.** The 24 shipped languages are
+- **Somali (`so`) is in the atlas as a starter course, but is not yet verified for the listed AI models.** The 24 previously shipped languages are
   `es fr de it pt nl sv pl ru uk el tr ar he fa hi bn zh ja ko vi th id sw`.
   Adding Somali requires a curated starter pack — guessing vocabulary would
   break the honesty rule, so it is left out rather than faked. Swahili (`sw`)
   is the nearest East African course and is covered by Whisper.
-- The default hosted Qwen3 model documents all 24 atlas languages, including
+- The default hosted Qwen3 model documents 24 of 25 atlas languages, including
   Swahili, Bengali, Hebrew and Persian. If you swap in Qwen2.5 instead, nine
   languages (`nl sv pl uk el he fa hi bn sw`) are listed as unverified and are
   blocked unless you opt in — that is the catalogue being honest, not a bug.
@@ -261,7 +261,7 @@ neon functions deploy api --src functions/api/index.ts \
 ```
 
 Any OpenAI-compatible server works the same way (llama.cpp, LM Studio, vLLM,
-LocalAI). Qwen2.5 documents 15 of the 24 languages; the other nine show as
+LocalAI). Qwen2.5 documents 14 of the 25 atlas languages; the other ten show as
 unverified rather than being silently guessed at.
 
 ### 7.3 Voice input
@@ -367,8 +367,8 @@ Automated (`npm test`, 16 files, 116 tests):
   `ai-not-configured` both fall through to the coach instead of an error;
 - **microphone copy** (new): iframe, browser denial, insecure origin, missing
   device, busy device and native denial each produce their own actionable text;
-- offline coach for all 24 languages (labels, counts, scripts, scenarios);
-- course data: 24 courses, unique ids, answerable exercises, four skills,
+- offline coach for all 25 languages (labels, counts, scripts, scenarios);
+- course data: 25 courses, unique ids, answerable exercises, four skills,
   tier labels, catalogue totals;
 - review maths: grading, due order, grouping, clamping, Leitner intervals.
 
