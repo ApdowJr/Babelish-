@@ -620,17 +620,19 @@ function RowView({ row }: { row: Row }) {
         style={({ pressed }) => [pressed && styles.rowPressed]}
       >
         {body(
-          <Switch
-            value={row.value}
-            onValueChange={row.onChange}
-            trackColor={{ false: colors.borderStrong, true: colors.primary }}
-            thumbColor={colors.white}
-            ios_backgroundColor={colors.borderStrong}
-            // The whole row is the control; the switch is visual only so a
-            // screen reader does not announce two switches for one setting.
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          />
+          // The row is the control. The switch is visual only: a second tap
+          // handler here would toggle twice on web (input click + row press),
+          // and a screen reader would announce one setting as two switches.
+          <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Switch
+              value={row.value}
+              trackColor={{ false: colors.borderStrong, true: colors.primary }}
+              thumbColor={colors.white}
+              ios_backgroundColor={colors.borderStrong}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+          </View>
         )}
       </Pressable>
     );
