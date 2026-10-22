@@ -24,6 +24,11 @@ project uses semantic versioning.
   transcript does not consume the learner's allowance; only turns that actually
   produced something count.
 
+- **Barge-in and one audio channel.** Opening the mic (chat or phrase practice)
+  stops the tutor mid-sentence, so the reply never plays into the recording and
+  the learner can answer immediately — the interrupt is a tap, not an
+  always-listening microphone. Starting any line stops the previous one, and
+  tapping the line that is playing turns its button into Stop.
 - **A crash screen instead of a blank one.** Any unexpected render error now
   lands on a readable screen with Try again and Back to Learn, wired both
   inside the provider tree and as Expo Router's route-level boundary. It never

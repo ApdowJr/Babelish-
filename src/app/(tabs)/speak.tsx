@@ -25,13 +25,14 @@ import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
 import { getLanguage, LANGUAGES } from '@/data/languages';
 import { bundledCurriculum } from '@/data/curriculum';
-import { isMobileWeb } from '@/lib/speech';
+import { isMobileWeb, toggleSpeechTarget } from '@/lib/speech';
 import { CHAR_BASED_LANGUAGES, getPracticePhrases, type PracticePhrase } from '@/data/practice';
 import { suggestLevel } from '@/lib/adaptive';
 import {
   fetchAiStatus,
   setSpeechErrorListener,
   speakNative,
+  stopSpeaking,
   transcribeSpeech,
   tutorReply,
   type AiStatus,
@@ -112,6 +113,9 @@ export default function SpeakScreen() {
   // Spent daily budget: a dated pause, not an error. Kept separate from
   // `voiceError` because nothing went wrong and there is nothing to retry.
   const [quotaNote, setQuotaNote] = useState<string | null>(null);
+  // Which line is playing right now (`msg-3`, `phrase-cafe-1`, …). One at a
+  // time: starting another stops this one, so two lines never overlap.
+  const [speakingKey, setSpeakingKey] = useState<string | null>(null);
   // One picker for both tutor selectors: target language and explanation language.
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // A fixable voice problem (with a button that actually fixes it), as opposed
@@ -397,6 +401,29 @@ export default function SpeakScreen() {
     }
   }
 
+  /**
+   * Plays one line, or stops it if it is already playing.
+   *
+   * Barge-in, honestly: the learner interrupts by tapping the mic or another
+   * line — nothing listens in the background. Any new sound stops the old one
+   * first, which is also what keeps two utterances from overlapping.
+   */
+  async function speakLine(key: string, text: string, rate = 0.92) {
+    const toggle = toggleSpeechTarget(speakingKey, key);
+    if (toggle.action === 'stop') {
+      stopSpeaking();
+      setSpeakingKey(null);
+      return;
+    }
+    stopSpeaking();
+    setSpeakingKey(toggle.next);
+    try {
+      await speakNative(text, language.ttsLocale, rate);
+    } finally {
+      setSpeakingKey((current) => (current === key ? null : current));
+    }
+  }
+
   /** Stop the turn in flight — chat or voice — without inventing a reply. */
   function stopTurn() {
     abortRef.current?.abort();
@@ -464,6 +491,10 @@ export default function SpeakScreen() {
         if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
+      // Barge-in: talking over the tutor is the natural way to interrupt, so
+      // opening the mic stops playback first (and keeps TTS out of the take).
+      stopSpeaking();
+      setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
         setVoiceError(mic.message);
@@ -534,6 +565,9 @@ export default function SpeakScreen() {
         explainVoiceUnavailable();
         return;
       }
+      // Barge-in here too: practising a phrase means speaking over the tutor.
+      stopSpeaking();
+      setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
         setVoiceError(mic.message);
@@ -609,17 +643,26 @@ export default function SpeakScreen() {
 
         <View style={styles.phraseActions}>
           <Pressable
-            onPress={() => speakNative(phrase.target, language.ttsLocale)}
+            onPress={() => void speakLine(`phrase-${phrase.id}`, phrase.target)}
             style={styles.phraseAction}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel="Listen to this phrase"
+            accessibilityState={{ selected: speakingKey === `phrase-${phrase.id}` }}
+            accessibilityLabel={
+              speakingKey === `phrase-${phrase.id}` ? 'Stop this phrase' : 'Listen to this phrase'
+            }
           >
-            <Ionicons name="volume-medium-outline" size={15} color={colors.accent} />
-            <Text style={styles.phraseActionLabel}>Listen</Text>
+            <Ionicons
+              name={speakingKey === `phrase-${phrase.id}` ? 'stop' : 'volume-medium-outline'}
+              size={15}
+              color={colors.accent}
+            />
+            <Text style={styles.phraseActionLabel}>
+              {speakingKey === `phrase-${phrase.id}` ? 'Stop' : 'Listen'}
+            </Text>
           </Pressable>
           <Pressable
-            onPress={() => speakNative(phrase.target, language.ttsLocale, SLOW_RATE)}
+            onPress={() => void speakLine(`phrase-${phrase.id}-slow`, phrase.target, SLOW_RATE)}
             style={styles.phraseAction}
             hitSlop={6}
             accessibilityRole="button"
@@ -941,17 +984,26 @@ export default function SpeakScreen() {
               {item.tip ? <Text style={styles.tipText}>{item.tip}</Text> : null}
               <View style={styles.aiActions}>
                 <Pressable
-                  onPress={() => speakNative(item.text, language.ttsLocale)}
+                  onPress={() => void speakLine(`msg-${index}`, item.text)}
                   style={styles.listenRow}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="Listen to this sentence"
+                  accessibilityState={{ selected: speakingKey === `msg-${index}` }}
+                  accessibilityLabel={
+                    speakingKey === `msg-${index}` ? 'Stop reading this sentence' : 'Listen to this sentence'
+                  }
                 >
-                  <Ionicons name="volume-medium-outline" size={15} color={colors.accent} />
-                  <Text style={styles.listenLabel}>Listen</Text>
+                  <Ionicons
+                    name={speakingKey === `msg-${index}` ? 'stop' : 'volume-medium-outline'}
+                    size={15}
+                    color={colors.accent}
+                  />
+                  <Text style={styles.listenLabel}>
+                    {speakingKey === `msg-${index}` ? 'Stop' : 'Listen'}
+                  </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => speakNative(item.text, language.ttsLocale, SLOW_RATE)}
+                  onPress={() => void speakLine(`msg-${index}-slow`, item.text, SLOW_RATE)}
                   style={styles.listenRow}
                   hitSlop={8}
                   accessibilityRole="button"

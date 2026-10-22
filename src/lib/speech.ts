@@ -112,3 +112,17 @@ export function releaseUtterance(utterance: object): void {
 export function isMobileWeb(userAgent: string | undefined): boolean {
   return /android|iphone|ipad|ipod|mobile|opera mini/i.test(userAgent ?? '');
 }
+
+/**
+ * What a second tap on the same line should do.
+ *
+ * One line plays at a time; tapping the playing line stops it, tapping any
+ * other line replaces it. Kept pure so the "no overlapping audio" rule has a
+ * test even though the player itself needs a device.
+ */
+export function toggleSpeechTarget(
+  current: string | null,
+  key: string
+): { action: 'speak' | 'stop'; next: string | null } {
+  return current === key ? { action: 'stop', next: null } : { action: 'speak', next: key };
+}
