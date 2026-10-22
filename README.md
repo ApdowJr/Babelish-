@@ -15,6 +15,15 @@ needed a model at all.
 > 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
 > bundled offline. Every lesson playable on the free plan.
 
+## What's new in 3.2
+
+| Area | 3.2 |
+|---|---|
+| **Brand** | A new mark — a parchment bubble with a written line, answered by a tangerine bubble — replaces the template icon. Generated from `scripts/brand/generate-icons.py`, rebuilt from views in `BrandMark` |
+| **Splash** | The native splash hands off to an animated overlay (mark settles, wordmark rises, hairline progress) and fades onto the ready app. Honours "Reduce motion" |
+| **Settings** | A real settings screen: searchable groups (account, learning, languages, tutor, accessibility, data, about, danger) with switches, segmented choices and a language sheet |
+| **Preferences** | Show translations, voice speed (slow / normal / fast), read replies aloud, reduce motion — validated once and applied everywhere |
+
 ## What's new in 3.0
 
 | Area | 3.0 |

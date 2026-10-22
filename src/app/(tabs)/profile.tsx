@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
@@ -390,7 +391,7 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
         <Text style={styles.footerText}>
-          Babelish v2.0.0 · {LANGUAGES.length} languages · free
+          Babelish v{Constants.expoConfig?.version ?? '3.2.0'} · {LANGUAGES.length} languages · free
         </Text>
       </View>
       <Text style={styles.footerSub}>Made for curious people everywhere.</Text>
