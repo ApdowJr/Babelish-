@@ -16,7 +16,14 @@ import { readAudioBytes } from './audio';
 import { browserTranscribe } from './browser';
 import { languageSupport, sttCandidates, sttModelForRuntime, type EngineContext, type ModelSettings } from './config';
 import type { RuntimeId, TranscribeAnswer } from './types';
-import { EngineFailed, EngineUnavailable, classifyFetchError, linkedAbort } from './types';
+import { isQuotaResponse } from '../quota';
+import {
+  EngineFailed,
+  EngineUnavailable,
+  QuotaExceeded,
+  classifyFetchError,
+  linkedAbort,
+} from './types';
 
 async function transcribeViaForm(input: {
   url: string;
@@ -44,6 +51,9 @@ async function transcribeViaForm(input: {
       error?: string | { message?: string };
       message?: string;
     } | null;
+    if (res.status === 429 && isQuotaResponse(json)) {
+      throw new QuotaExceeded(json.message, json.resetsAt, input.runtime);
+    }
     if (!res.ok) {
       const detail =
         typeof json?.error === 'string' ? json.error : json?.error?.message ?? json?.message;

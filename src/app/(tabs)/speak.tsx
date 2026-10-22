@@ -37,6 +37,7 @@ import {
   type TutorMessage,
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
+import { QuotaExceeded } from '@/lib/models/types';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -93,6 +94,9 @@ export default function SpeakScreen() {
   const [practice, setPractice] = useState<PracticeState | null>(null);
   const [chatRecording, setChatRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // Spent daily budget: a dated pause, not an error. Kept separate from
+  // `voiceError` because nothing went wrong and there is nothing to retry.
+  const [quotaNote, setQuotaNote] = useState<string | null>(null);
   // One picker for both tutor selectors: target language and explanation language.
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
   // A fixable voice problem (with a button that actually fixes it), as opposed
@@ -175,6 +179,7 @@ export default function SpeakScreen() {
     setRevealed([]);
     setPractice(null);
     setVoiceError(null);
+    setQuotaNote(null);
     setBusy(true);
   }
 
@@ -253,16 +258,23 @@ export default function SpeakScreen() {
         }
       } catch (error) {
         if (!cancelled) {
-          setMessages([
-            {
-              role: 'assistant',
-              text: '…',
-              translation:
-                error instanceof Error && error.message
-                  ? error.message
-                  : 'Could not reach the tutor — try again.',
-            },
-          ]);
+          if (error instanceof QuotaExceeded) {
+            // The budget message names the reset time; printing it as a fake
+            // "…" tutor turn would be both ugly and misleading.
+            setQuotaNote(error.message);
+            setMessages([]);
+          } else {
+            setMessages([
+              {
+                role: 'assistant',
+                text: '…',
+                translation:
+                  error instanceof Error && error.message
+                    ? error.message
+                    : 'Could not reach the tutor — try again.',
+              },
+            ]);
+          }
         }
       } finally {
         if (!cancelled) setBusy(false);
@@ -290,6 +302,7 @@ export default function SpeakScreen() {
         },
         await aiIo()
       );
+      setQuotaNote(null);
       setMessages((prev) => [
         ...prev,
         {
@@ -302,8 +315,13 @@ export default function SpeakScreen() {
         },
       ]);
     } catch (error) {
-      // Real-mode failures surface as themselves (rate limits, timeouts,
-      // wrong-script, missing key) — never replaced by scripted content.
+      // Real-mode failures surface as themselves (timeouts, wrong-script,
+      // missing key) — never replaced by scripted content. A spent daily
+      // budget is not a failure: it is a dated pause, shown in its own strip.
+      if (error instanceof QuotaExceeded) {
+        setQuotaNote(error.message);
+        return;
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -361,6 +379,10 @@ export default function SpeakScreen() {
         await respond(history);
       } catch (error) {
         setBusy(false);
+        if (error instanceof QuotaExceeded) {
+          setQuotaNote(error.message);
+          return;
+        }
         setVoiceError(
           error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
         );
@@ -412,6 +434,10 @@ export default function SpeakScreen() {
         finishPractice(phrase, transcript);
       } catch (error) {
         setPractice(null);
+        if (error instanceof QuotaExceeded) {
+          setQuotaNote(error.message);
+          return;
+        }
         setVoiceError(
           error instanceof Error
             ? error.message
@@ -893,6 +919,12 @@ export default function SpeakScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         {voiceError ? <Text style={styles.voiceError}>{voiceError}</Text> : null}
+        {quotaNote ? (
+          <View style={styles.quotaStrip}>
+            <Ionicons name="time-outline" size={15} color={colors.warning} />
+            <Text style={styles.quotaStripText}>{quotaNote}</Text>
+          </View>
+        ) : null}
         {aiStatus && !aiStatus.chat ? (
           <View style={styles.coachStrip}>
             <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
@@ -1173,6 +1205,18 @@ const styles = StyleSheet.create({
   },
   coachStripText: { ...typography.micro, color: colors.textMuted, flex: 1, lineHeight: 14 },
   coachRetry: { ...typography.micro, color: colors.primary },
+  quotaStrip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.warningSoft,
+  },
+  quotaStripText: { ...typography.micro, color: colors.text, flex: 1, lineHeight: 16 },
   offlineBody: { flex: 1 },
   offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   voiceHelpBox: {

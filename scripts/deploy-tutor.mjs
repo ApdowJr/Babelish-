@@ -16,6 +16,11 @@
  *   AI_STT_ENABLED  false  (server transcription is metered per second of audio)
  *
  * Requires an authenticated Neon CLI (`neon auth` or NEON_API_KEY).
+ *
+ * After the deploy it runs the tutor gate (scripts/check-tutor.mjs) against the
+ * live Function: a deploy that leaves `chat:false` — or a key the provider
+ * rejects — fails here instead of being discovered by a learner. Set
+ * SKIP_TUTOR_GATE=1 to deploy without the check.
  */
 import { spawnSync } from 'node:child_process';
 
@@ -79,7 +84,36 @@ if (run.status !== 0) {
   process.exit(run.status ?? 1);
 }
 
+// A deploy is not a working tutor until something answers. Probe the live
+// Function before declaring success; the app has no way to fix this later.
+if (process.env.SKIP_TUTOR_GATE === '1') {
+  console.log('\nDeployed. Tutor gate skipped (SKIP_TUTOR_GATE=1).');
+  process.exit(0);
+}
+
+console.log('\nChecking the deployed tutor…');
+const gate = spawnSync(process.execPath, ['scripts/check-tutor.mjs'], {
+  stdio: 'inherit',
+  env: { ...process.env, TUTOR_URL: process.env.TUTOR_URL ?? undefined },
+});
+
+if (gate.status === 3) {
+  // Configured correctly, but today's shared budget is already spent. The
+  // deploy was fine; the check simply cannot prove a reply until the reset.
+  console.log('\nDeployed. The tutor is configured, but today\'s budget is spent —');
+  console.log('the gate could not exercise a reply. Re-run it after the reset.');
+  process.exit(0);
+}
+if (gate.status !== 0) {
+  console.error(
+    '\n✘ Deployed, but the tutor gate failed — the model is not usable from the app.\n' +
+      '  Fix the key/model chain on the Function and deploy again:\n' +
+      '    AI_API_KEY=sk-or-... npm run deploy:tutor'
+  );
+  process.exit(gate.status ?? 1);
+}
+
 console.log(
-  '\nDone. Open the app → Speak: the strip should show live answers within a few seconds\n' +
-    '(tap Retry if it still says Coach mode). Nothing needs to be installed on a phone.'
+  '\nDone. Open the app → Speak: live answers should appear within a few seconds\n' +
+    '(tap Retry if it still says Coach mode). Nothing is installed on a phone.'
 );

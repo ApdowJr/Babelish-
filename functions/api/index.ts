@@ -23,6 +23,8 @@ import {
 } from './admin';
 import * as league from './league';
 import { createFailureLimiter, createLimiter } from './rateLimit';
+import { consumeQuota, ensureUsageSchema, quotaStatus, refundQuota } from './quotaStore';
+import { limitsFromEnv, type QuotaKind } from '../../src/lib/quota';
 import { buildSystemPrompt, extractTutorReply, parseAiChatRequest } from '../../src/lib/aiCore';
 import { getLanguage } from '../../src/data/languages';
 
@@ -427,6 +429,43 @@ const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minut
 const anonChatLimiter = createLimiter(6, 60_000); // signed-out, per IP
 const anonSttLimiter = createLimiter(2, 60_000); // signed-out, per IP
 
+/* Daily budget: the per-minute limiters protect one burst, these protect the
+ * provider's day. Both are needed — 20/min is 28,800/day. */
+const QUOTA = limitsFromEnv(process.env);
+
+/** Counts one turn; returns a ready-to-send 429 when the day is spent. */
+async function takeDailyQuota(
+  c: Context<Env>,
+  kind: QuotaKind
+): Promise<{ ok: true } | { ok: false; response: Response }> {
+  const userId = c.get('userId');
+  const tier = userId.startsWith('anon:') ? 'guest' : 'learner';
+  const outcome = await consumeQuota(q, { userId, tier, kind, limits: QUOTA });
+  if (outcome.allowed) return { ok: true };
+  c.header('Retry-After', String(outcome.retryAfterSeconds ?? 60));
+  c.header('X-Quota-Source', outcome.source);
+  return {
+    ok: false,
+    response: c.json(
+      {
+        error: outcome.reason === 'budget' ? 'daily-budget' : 'daily-limit',
+        message: outcome.message,
+        resetsAt: outcome.resetsAt,
+        used: outcome.used,
+        limit: outcome.limit,
+        tier,
+        source: outcome.source,
+      },
+      429
+    ),
+  };
+}
+
+/** Our fault, not the learner's: hand the message back. */
+async function refundDailyQuota(userId: string, kind: QuotaKind): Promise<void> {
+  await refundQuota(q, { userId, kind }).catch(() => undefined);
+}
+
 /** Capability report for the client's status rows — booleans only, no secrets. */
 app.get('/api/ai/status', (c) =>
   c.json({
@@ -439,6 +478,8 @@ app.get('/api/ai/status', (c) =>
     keyless: AI_CONFIGURED && !AI_KEY,
     /** Audio transcription availability, decided by the owner's config. */
     sttEnabled: AI_STT_ENABLED,
+    /** Daily budgets so the app can explain a 429 without guessing. */
+    quota: quotaStatus(QUOTA),
   })
 );
 
@@ -467,6 +508,9 @@ app.post('/api/ai/chat', async (c) => {
   if (!language) {
     return c.json({ error: 'invalid-request', message: 'Unknown language.' }, 400);
   }
+
+  const allowance = await takeDailyQuota(c, 'chat');
+  if (!allowance.ok) return allowance.response;
 
   const sys = buildSystemPrompt({
     language,
@@ -516,6 +560,7 @@ app.post('/api/ai/chat', async (c) => {
             : upstream.status === 429
               ? 'The model is rate-limited right now — try again in a minute.'
               : `The tutor provider returned HTTP ${upstream.status}.`;
+        await refundDailyQuota(userId, 'chat');
         return c.json({ error: 'upstream-failed', message: detail }, 502);
       }
       const data = (await upstream.json().catch(() => null)) as {
@@ -529,6 +574,7 @@ app.post('/api/ai/chat', async (c) => {
       try {
         reply = extractTutorReply(raw, language);
       } catch (err) {
+        await refundDailyQuota(userId, 'chat');
         return c.json(
           {
             error: 'bad-reply',
@@ -545,6 +591,7 @@ app.post('/api/ai/chat', async (c) => {
       });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
+        await refundDailyQuota(userId, 'chat');
         return c.json(
           { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
           504
@@ -556,6 +603,7 @@ app.post('/api/ai/chat', async (c) => {
     }
   }
 
+  await refundDailyQuota(userId, 'chat');
   return c.json(
     {
       error: 'upstream-failed',
@@ -605,6 +653,9 @@ app.post('/api/ai/stt', async (c) => {
       ? (file as File).name
       : 'speech.webm';
 
+  const allowance = await takeDailyQuota(c, 'stt');
+  if (!allowance.ok) return allowance.response;
+
   const outbound = new FormData();
   outbound.append('file', file, filename);
   outbound.append('model', AI_STT_MODEL);
@@ -625,11 +676,14 @@ app.post('/api/ai/stt', async (c) => {
         upstream.status === 401
           ? 'The AI provider rejected its key.'
           : `The AI provider returned HTTP ${upstream.status}.`;
+      await refundDailyQuota(userId, 'stt');
       return c.json({ error: 'upstream-failed', message: `${detail} Try again later.` }, 502);
     }
     const data = (await upstream.json().catch(() => null)) as { text?: string } | null;
     const text = String(data?.text ?? '').trim();
     if (!text) {
+      // Silence is not a transcription the learner should pay a slot for.
+      await refundDailyQuota(userId, 'stt');
       return c.json(
         { error: 'empty-transcript', message: "I couldn't catch that — try again or type instead." },
         422
@@ -638,11 +692,13 @@ app.post('/api/ai/stt', async (c) => {
     return c.json({ text });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
+      await refundDailyQuota(userId, 'stt');
       return c.json(
         { error: 'upstream-timeout', message: 'Transcription took too long — try again.' },
         504
       );
     }
+    await refundDailyQuota(userId, 'stt');
     return c.json(
       { error: 'upstream-failed', message: 'Voice service hit a problem — try again.' },
       502

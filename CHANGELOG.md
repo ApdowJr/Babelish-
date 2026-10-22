@@ -3,6 +3,34 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.1.0] — 2026-10-22
+
+### Added
+
+- **A release gate for the tutor.** `npm run check:tutor` asks the deployed
+  Function for `/api/ai/status` and then sends one real turn, so "deployed" and
+  "working" stop being the same word. A wrong key, a retired free model or an
+  empty reply fails with an actionable message instead of leaving learners on
+  Coach mode. `npm run deploy:tutor` runs the gate automatically after every
+  deploy (`SKIP_TUTOR_GATE=1` to skip).
+- **A daily budget, honestly stated.** Tutor messages and voice transcriptions
+  have separate per-learner allowances (30 / 12 by default) plus a server-wide
+  chat budget (45), because free model endpoints are not infinite. When a cap is
+  reached the Speak screen shows a dated note ("resets at 00:00 UTC") in its own
+  strip — not a generic error, not a fake tutor turn — and lessons, review and
+  the phrasebook keep working. Signed-in learners get a larger allowance than
+  guests; usage is counted per UTC day in `public.ai_usage`.
+- **Refunds for our failures.** A timeout, a 502 from the provider or an empty
+  transcript does not consume the learner's allowance; only turns that actually
+  produced something count.
+
+### Changed
+
+- `/api/ai/status` now reports `quota` (limits, used, reset time, and whether
+  the store is database-backed or in-memory) alongside `chat`/`stt`.
+- `QuotaExceeded` is its own error class, so a spent budget is never retried
+  against another runtime and never dressed up as a connection problem.
+
 ## [3.0.3] — 2026-10-22
 
 ### Fixed

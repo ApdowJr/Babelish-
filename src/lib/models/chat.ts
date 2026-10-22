@@ -20,7 +20,14 @@ import {
   type ModelSettings,
 } from './config';
 import type { ChatAnswer, ChatCall, ChatMeta, ChatTurn, RuntimeId } from './types';
-import { EngineFailed, EngineUnavailable, classifyFetchError, linkedAbort } from './types';
+import { isQuotaResponse } from '../quota';
+import {
+  EngineFailed,
+  EngineUnavailable,
+  QuotaExceeded,
+  classifyFetchError,
+  linkedAbort,
+} from './types';
 
 function requireSupport(
   runtime: RuntimeId,
@@ -378,7 +385,11 @@ async function runGateway(
       error?: string;
       message?: string;
       model?: string;
+      resetsAt?: string;
     } | null;
+    if (res.status === 429 && isQuotaResponse(json)) {
+      throw new QuotaExceeded(json.message, json.resetsAt, 'gateway');
+    }
     if (res.status === 503 && json?.error === 'ai-not-configured') {
       throw new EngineUnavailable('The tutor server has no model configured.', 'gateway');
     }

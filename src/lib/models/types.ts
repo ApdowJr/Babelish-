@@ -117,6 +117,25 @@ export class EngineFailed extends Error {
   }
 }
 
+/**
+ * The day's tutor budget is spent.
+ *
+ * Deliberately its own class: this is not a failure to apologise for, and it
+ * must not be retried against the next runtime (each retry would spend another
+ * slot or hit the same wall). The message already names the reset time, so the
+ * UI shows it verbatim instead of inventing "try again".
+ */
+export class QuotaExceeded extends EngineFailed {
+  constructor(
+    message: string,
+    readonly resetsAt?: string,
+    runtime?: RuntimeId
+  ) {
+    super(message, runtime);
+    this.name = 'QuotaExceeded';
+  }
+}
+
 /** Normalises an abort/timeout/network error into one of the two classes. */
 export function classifyFetchError(err: unknown, runtime: RuntimeId, what: string): Error {
   if (err instanceof EngineUnavailable || err instanceof EngineFailed) return err;
