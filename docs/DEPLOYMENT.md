@@ -43,31 +43,58 @@ Set once, preserved across deploys (only pass `--env KEY=VALUE` to change one):
 | `NEON_AUTH_ADMIN_EMAIL`, `NEON_AUTH_ADMIN_PASSWORD` | Ops admin for auth-user deletion | for account deletion |
 | `AI_API_KEY` | Enables live tutor chat; transcription additionally requires a compatible provider | optional |
 | `AI_API_URL` | OpenAI-compatible base URL (default `https://api.openai.com/v1`) | optional |
-| `AI_MODEL`, `AI_STT_MODEL` | Chat / transcription models | optional |
+| `AI_MODELS` | Comma-separated chat fallback chain (defaults to OpenRouter free Qwen3 when the URL is OpenRouter) | optional |
+| `AI_MODEL`, `AI_STT_MODEL` | Single chat model (legacy) / transcription model | optional |
 | `AI_STT_ENABLED` | Explicitly enables transcription when using a custom `AI_API_URL` that supports `/audio/transcriptions` | optional |
 
-### Enabling live AI
+### Enabling the tutor (one configuration for every learner)
 
-For OpenRouter's free-model router, use chat-only configuration. Replace the placeholder with a **new, rotated** OpenRouter key locally; never commit it or put it in `EXPO_PUBLIC_*`:
+The app has **no model screen**: learners open Speak and the tutor answers. The
+only configuration is server-side, in the Function environment. OpenRouter's
+free Qwen3 endpoints cover all 24 Babelish languages:
 
 ```bash
-read -rsp "New OpenRouter API key: " OPENROUTER_API_KEY; echo
+# key stays on the server; rotate it if it was ever pasted into a chat
+read -rsp "OpenRouter API key: " AI_API_KEY; echo
 neon functions deploy api --src functions/api/index.ts \
-  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
+  --env "AI_API_KEY=$AI_API_KEY" \
   --env AI_API_URL=https://openrouter.ai/api/v1 \
-  --env AI_MODEL=openrouter/free --wait
-unset OPENROUTER_API_KEY
+  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
+  --env AI_STT_ENABLED=false --wait
+unset AI_API_KEY
 ```
 
-With a custom `AI_API_URL`, speech-to-text is reported as unavailable unless `AI_STT_ENABLED=true` is explicitly set. OpenRouter free chat configuration alone does not enable transcription. The default OpenAI endpoint keeps the existing `whisper-1` transcription path.
+`AI_MODELS` is a **fallback chain**: free endpoints rotate, so the server tries
+each id in order and only moves on when a model has disappeared; a bad key, a
+rate limit or a timeout is reported as itself, never masked.
 
-Until `AI_API_KEY` is set, the backend is deliberately honest:
+Voice input, free and on-device: leave `AI_STT_ENABLED=false` and web users get
+Whisper in the browser (one tap, ~150 MB, downloaded once). Setting
+`AI_STT_ENABLED=true` with `AI_STT_MODEL=openai/whisper-large-v3-turbo` routes
+audio through the server instead — accurate and fast, but **metered per second
+of audio** by the provider. That is a real cost, not free.
+
+Self-hosted alternative (no account, no bill, your own electricity):
+
+```bash
+neon functions deploy api --src functions/api/index.ts \
+  --env AI_API_URL=http://127.0.0.1:11434/v1 \
+  --env AI_MODEL=qwen2.5:1.5b --env AI_STT_ENABLED=false --wait
+```
+
+Signed-out learners can use the tutor too (guest budget: 6 chats and 2
+transcriptions per minute per IP); anyone can sign in for the normal budget of
+20 chats and 10 transcriptions per minute. Nothing about the tutor requires a
+session in demo mode.
+
+Until `AI_API_KEY` (or `AI_API_URL`) is set, the backend is deliberately honest:
 
 - `GET /api/ai/status` → `{ "chat": false, "stt": false }`
 - `POST /api/ai/chat` → `503 { "error": "ai-not-configured" }`
-- `POST /api/ai/stt` → `503 { "error": "ai-not-configured" }`; custom chat-only providers return `503 { "error": "ai-stt-not-configured" }`
+- `POST /api/ai/stt` → `503 { "error": "ai-not-configured" }`; chat-only providers return `503 { "error": "ai-stt-not-configured" }`
 
-The app then shows clearly-labeled demo lines — it never fakes a live reply.
+The app then shows the labelled coach — it never fakes a live reply, and it
+never tells the learner to configure anything they cannot reach.
 
 ### Verify after deploy
 

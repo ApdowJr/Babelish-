@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -35,7 +36,6 @@ import {
   type TutorMessage,
 } from '@/lib/ai';
 import { loadModelSettings, saveModelSettings, useModelSettings } from '@/lib/models/settings';
-import { MODE_LABEL, RUNTIME_SHORT } from '@/lib/models/config';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { NEON_API_URL } from '@/lib/neon';
@@ -94,8 +94,13 @@ export default function SpeakScreen() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   // One picker for both tutor selectors: target language and explanation language.
   const [picker, setPicker] = useState<null | 'target' | 'explain'>(null);
+  // A fixable voice problem (with a button that actually fixes it), as opposed
+  // to `voiceError`, which is just a message.
+  const [voiceHelp, setVoiceHelp] = useState<
+    null | { message: string; action?: 'browser-stt' | 'open-settings' }
+  >(null);
   // Server-reported AI capability (backend proxy probe) — null until the
-  // first probe resolves. See tutorLive/voiceLive below.
+  // first probe resolves. See voiceLive below.
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -120,11 +125,11 @@ export default function SpeakScreen() {
   // EXPO_PUBLIC_AI_* config. A null aiStatus means the probe hasn't resolved:
   // fall back to build-time knowledge, never claim live from wishful thinking.
   // null = still probing. Never claim "live" before a real probe answered.
-  const tutorLive = aiStatus ? aiStatus.chat : null;
   const voiceLive = aiStatus ? aiStatus.stt : null;
-  // A browser model is available but not *loaded* until the first answer, so
-  // it must not be shown with the same "live" dot as a running server.
-  const browserPending = aiStatus?.chatRuntime === 'browser';
+  // Voice needs both a speech model and the mic permission — two different
+  // problems with two different fixes, so they are reported separately.
+  const browserSpeechPossible =
+    Platform.OS === 'web' && typeof WebAssembly === 'object';
 
   /** Transport for AI calls: JWT for the backend proxy when available. */
   async function aiIo() {
@@ -158,7 +163,7 @@ export default function SpeakScreen() {
     return () => {
       cancelled = true;
     };
-    // Re-probe whenever the model settings change (e.g. after Settings → AI model),
+    // Re-probe whenever the tutor settings change,
     // so the badge never keeps an outdated "offline" claim.
   }, [getAccessToken, settings]);
 
@@ -302,9 +307,23 @@ export default function SpeakScreen() {
     // While start() prepares, a second tap must be able to stop that same
     // clip — only reject it when there is nothing (yet) being recorded.
     if (!chatRecording && recorder.isBusy) return;
-    // Known-unavailable voice input: don't record a clip we can't transcribe.
+    // No speech model: explain what would fix it instead of recording a clip
+    // that cannot be transcribed (and never point to a settings screen that
+    // does not exist in this build).
     if (aiStatus && !voiceLive) {
-      setVoiceError('Voice input is not configured on this deployment yet — type your reply instead.');
+      setVoiceError(null);
+      setVoiceHelp(
+        browserSpeechPossible
+          ? {
+              message:
+                'Voice input needs a speech model. Babelish can run Whisper inside this browser — about 150 MB, downloaded once.',
+              action: 'browser-stt',
+            }
+          : {
+              message:
+                'Voice input needs a speech model on the tutor server. Typing works right now — no download required.',
+            }
+      );
       return;
     }
     if (chatRecording) {
@@ -328,11 +347,14 @@ export default function SpeakScreen() {
         );
       }
     } else {
-      if (!(await ensureRecordingReady())) {
-        setVoiceError('Microphone access is off — enable it in Settings to speak.');
+      const mic = await ensureRecordingReady();
+      if (!mic.ok) {
+        setVoiceError(mic.message);
+        setVoiceHelp(mic.canOpenSettings ? { message: mic.message, action: 'open-settings' } : null);
         return;
       }
       setVoiceError(null);
+      setVoiceHelp(null);
       setChatRecording(true);
       try {
         await recorder.start();
@@ -379,11 +401,30 @@ export default function SpeakScreen() {
       }
     } else {
       if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
-      if (!(await ensureRecordingReady())) {
-        setVoiceError('Microphone access is off — enable it in Settings to speak.');
+      if (aiStatus && !voiceLive) {
+        setVoiceError(null);
+        setVoiceHelp(
+          browserSpeechPossible
+            ? {
+                message:
+                  'Voice input needs a speech model. Babelish can run Whisper inside this browser — about 150 MB, downloaded once.',
+                action: 'browser-stt',
+              }
+            : {
+                message:
+                  'Voice input needs a speech model on the tutor server. Typing works right now — no download required.',
+              }
+        );
+        return;
+      }
+      const mic = await ensureRecordingReady();
+      if (!mic.ok) {
+        setVoiceError(mic.message);
+        setVoiceHelp(mic.canOpenSettings ? { message: mic.message, action: 'open-settings' } : null);
         return;
       }
       setVoiceError(null);
+      setVoiceHelp(null);
       setPractice({ phraseId: phrase.id, phase: 'recording' });
       try {
         await recorder.start();
@@ -469,34 +510,30 @@ export default function SpeakScreen() {
           >
             <Text style={styles.phraseActionLabel}>🐢 Slow</Text>
           </Pressable>
-          {voiceLive ? (
-            <Pressable
-              onPress={() => togglePracticeMic(phrase)}
+          <Pressable
+            onPress={() => togglePracticeMic(phrase)}
+            style={[
+              styles.phraseAction,
+              active?.phase === 'recording' && styles.phraseActionRecording,
+            ]}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={active?.phase === 'recording' ? 'Stop recording' : 'Say this phrase'}
+          >
+            <Ionicons
+              name={active?.phase === 'recording' ? 'stop-circle' : 'mic-outline'}
+              size={16}
+              color={active?.phase === 'recording' ? colors.danger : colors.accent}
+            />
+            <Text
               style={[
-                styles.phraseAction,
-                active?.phase === 'recording' && styles.phraseActionRecording,
+                styles.phraseActionLabel,
+                active?.phase === 'recording' && { color: colors.danger },
               ]}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={
-                active?.phase === 'recording' ? 'Stop recording' : 'Say this phrase'
-              }
             >
-              <Ionicons
-                name={active?.phase === 'recording' ? 'stop-circle' : 'mic-outline'}
-                size={16}
-                color={active?.phase === 'recording' ? colors.danger : colors.accent}
-              />
-              <Text
-                style={[
-                  styles.phraseActionLabel,
-                  active?.phase === 'recording' && { color: colors.danger },
-                ]}
-              >
-                {active?.phase === 'recording' ? 'Stop' : 'Say it'}
-              </Text>
-            </Pressable>
-          ) : null}
+              {active?.phase === 'recording' ? 'Stop' : 'Say it'}
+            </Text>
+          </Pressable>
           {active?.phase !== 'typing' ? (
             <Pressable
               onPress={() => setPractice({ phraseId: phrase.id, phase: 'typing', draft: '' })}
@@ -678,42 +715,6 @@ export default function SpeakScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.modelBar}>
-        <View
-          style={[
-            styles.modelDot,
-            {
-              backgroundColor: tutorLive
-                ? browserPending
-                  ? colors.warning
-                  : colors.success
-                : tutorLive === null
-                  ? colors.warning
-                  : colors.textFaint,
-            },
-          ]}
-        />
-        <Text style={styles.modelText} numberOfLines={1}>
-          {tutorLive === null
-            ? 'Checking for a language model…'
-            : tutorLive
-              ? browserPending
-                ? `Browser model · loads on first use · ${aiStatus?.model ?? 'model'}`
-                : `${RUNTIME_SHORT[aiStatus?.chatRuntime ?? 'gateway']} · ${aiStatus?.model ?? 'model'}`
-              : `Offline coach · ${MODE_LABEL[settings.mode]}`}
-        </Text>
-        <Pressable
-          onPress={() => router.push('/settings/ai')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Open AI model settings"
-          style={styles.modelLink}
-        >
-          <Ionicons name="settings-outline" size={13} color={colors.primary} />
-          <Text style={styles.modelLinkText}>Model</Text>
-        </Pressable>
-      </View>
-
       <FlatList
         ref={listRef}
         data={messages}
@@ -889,25 +890,54 @@ export default function SpeakScreen() {
           <View style={styles.offlineBox}>
             <Ionicons name="cloud-offline-outline" size={18} color={colors.accent} />
             <View style={styles.offlineBody}>
-              <Text style={styles.offlineTitle}>Offline coach</Text>
+              <Text style={styles.offlineTitle}>Coach mode</Text>
               <Text style={styles.offlineText} numberOfLines={3}>
-                {aiStatus.detail || 'No language model is configured. Bundled phrases only.'}
+                The tutor server isn’t answering, so bundled phrases are used. Typing and the rest
+                of the app work normally.
               </Text>
             </View>
-            <Pressable
-              onPress={() => router.push('/settings/ai')}
-              hitSlop={8}
-              accessibilityRole="button"
-              style={styles.offlineCta}
-            >
-              <Text style={styles.offlineCtaText}>Set up</Text>
-            </Pressable>
+          </View>
+        ) : null}
+        {voiceHelp ? (
+          <View style={styles.voiceHelpBox}>
+            <Ionicons name="mic-outline" size={17} color={colors.accent} />
+            <View style={styles.offlineBody}>
+              <Text style={styles.offlineText}>{voiceHelp.message}</Text>
+              {voiceHelp.action === 'browser-stt' ? (
+                <Pressable
+                  onPress={() => {
+                    setVoiceHelp(null);
+                    void saveModelSettings({
+                      browser: { ...settings.browser, enabled: true },
+                      // Server mode keeps chat on the tutor server; enabling
+                      // the browser model makes free on-device Whisper the
+                      // speech fallback when the server has no audio.
+                    });
+                  }}
+                  style={styles.voiceHelpAction}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.voiceHelpActionText}>Enable browser voice</Text>
+                </Pressable>
+              ) : null}
+              {voiceHelp.action === 'open-settings' ? (
+                <Pressable
+                  onPress={() => {
+                    void Linking.openSettings().catch(() => undefined);
+                  }}
+                  style={styles.voiceHelpAction}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.voiceHelpActionText}>Open system settings</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         ) : null}
         <View style={styles.inputBar}>
           <Pressable
             style={[styles.micButton, chatRecording && styles.micButtonRecording]}
-            disabled={busy || recorder.isBusy || voiceLive === false}
+            disabled={busy || recorder.isBusy}
             accessibilityLabel={chatRecording ? 'Stop recording' : 'Speak your reply'}
             onPress={() => {
               void toggleChatMic();
@@ -916,7 +946,7 @@ export default function SpeakScreen() {
             <Ionicons
               name={chatRecording ? 'stop' : 'mic-outline'}
               size={20}
-              color={chatRecording ? colors.white : voiceLive ? colors.accent : colors.textFaint}
+              color={chatRecording ? colors.white : colors.accent}
             />
           </Pressable>
           <TextInput
@@ -1040,20 +1070,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   translateLabel: { ...typography.micro, color: colors.textFaint },
-  modelBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceTint,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modelDot: { width: 7, height: 7, borderRadius: 4 },
-  modelText: { ...typography.caption, color: colors.textMuted, flex: 1 },
-  modelLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  modelLinkText: { ...typography.micro, color: colors.primary },
   levelCard: { marginBottom: spacing.md },
   levelTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   levelLabel: { ...typography.micro, color: colors.textFaint },
@@ -1144,8 +1160,20 @@ const styles = StyleSheet.create({
   offlineBody: { flex: 1 },
   offlineTitle: { ...typography.bodyStrong, color: colors.text, fontSize: 13 },
   offlineText: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
-  offlineCta: { paddingHorizontal: spacing.sm, paddingVertical: 4 },
-  offlineCtaText: { ...typography.micro, color: colors.accent },
+  voiceHelpBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceTint,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  voiceHelpAction: { alignSelf: 'flex-start', marginTop: 6 },
+  voiceHelpActionText: { ...typography.micro, color: colors.primary },
   translateLabelOn: { color: colors.accent },
   listContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   scenarios: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },

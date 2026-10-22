@@ -3,6 +3,38 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [3.0.1] — 2026-10-22
+
+### Changed
+
+- **The learner never configures a model.** The `Settings → AI model` screen,
+  the "OPEN-SOURCE AI / Models, not middlemen" copy and the Speak model bar are
+  gone. The tutor is a server-side concern: the app probes its own backend and
+  starts talking.
+- Default mode is now `server`; nothing probes `localhost` or offers a download
+  on first run. Local/LAN/browser adapters remain in code for self-hosters.
+- The tutor server fronts a **fallback chain** (`AI_MODELS`,
+  comma-separated). Defaults to OpenRouter's free Qwen3-Next endpoints, which
+  document all 24 atlas languages; a retired free model moves to the next
+  instead of failing the turn.
+- `GET /api/ai/status` also reports `models[]` and `sttEnabled`.
+- Guest access: `/api/ai/chat` and `/api/ai/stt` now work without a session
+  under a tighter per-IP budget (6 chats + 2 transcriptions per minute), so
+  demo mode has a real tutor. Every other `/api/*` route still requires a JWT.
+
+### Fixed
+
+- **"Microphone access is off — enable it in Settings to speak" is gone.** That
+  message conflated four different failures and pointed at a screen browsers do
+  not have. `src/lib/mic.ts` keeps the real cause and gives actionable advice:
+  embedded frame → open in a tab; denied → address-bar lock icon; insecure
+  origin → use HTTPS; no device; device busy; native denial → an Open-settings
+  button that actually works.
+- The mic button no longer disables itself silently when no speech model is
+  configured — tapping explains the options, including one-tap browser Whisper.
+- Gateway adapters tolerate a missing session (no Authorization header) and
+  treat 401/403 as "coach mode" instead of an error mid-conversation.
+
 ## [3.0.0] — 2026-10-22
 
 ### Added

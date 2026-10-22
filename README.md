@@ -3,10 +3,14 @@
 **Learn any of 24 languages free — with an open-source tutor you can host yourself.**
 
 Babelish is an AI language tutor that talks to you *only* in your target
-language. 3.0 rebuilds the AI layer around open-weight models: Qwen-class chat,
-Whisper-class speech, a bundled offline coach, and optional browser or
-self-hosted inference. **No paid AI API is required for any core feature** — and
-the app never quietly reaches for one.
+language. **You do not configure a model, download weights or paste a key** —
+open Speak and the tutor answers.
+
+Behind it, the app calls its own tutor server, which fronts open-weight models
+(Qwen3-Next 80B on free endpoints by default). Voice input can run Whisper in
+the browser for free, and a labelled coach keeps every screen usable when the
+server is unreachable. Courses, review, the phrasebook and device audio never
+needed a model at all.
 
 > 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
 > bundled offline. Every lesson playable on the free plan.
@@ -15,14 +19,14 @@ the app never quietly reaches for one.
 
 | Area | 3.0 |
 |---|---|
-| **Open-source AI** | Model adapters for Ollama, any OpenAI-compatible server, a self-hosted gateway and Transformers.js in the browser. No paid API in the default path |
-| **Honest availability** | Every runtime is probed before the UI says "live". The badge, model bar and Profile rows name the actual runtime and model |
+| **Zero-setup tutor** | No model screen, no downloads, no keys. The app probes its tutor server and starts talking |
+| **Open-weight models** | The server runs Qwen3-Next 80B on free endpoints by default, with a fallback chain when a free model is retired; any OpenAI-compatible server (Ollama, llama.cpp, vLLM) also works |
+| **Honest availability** | A real probe decides between "Tutor server" and "Coach mode" — the UI never claims a live model it did not reach |
 | **Tutor** | Strict JSON contract, target-script guardrail, one corrective retry, CEFR level chips (Auto/A1/A2/B1/B2), explanations in your native language, scenario role-play |
-| **Voice** | Mic permission on demand → record → Whisper (server, LAN or browser) → tutor → TTS with replay and 0.55× slow mode. Word-match feedback is labelled as transcript accuracy, not phonetics |
-| **Offline coach** | With no model and no network, a labelled phrase coach keeps conversations possible; lessons, reviews and phrasebook never needed a model |
+| **Voice** | Mic permission on demand → record → Whisper (server or browser) → tutor → TTS with replay and 0.55× slow mode. Failures say what to fix (permission, iframe, no device, HTTPS) |
+| **Offline coach** | With no server and no network, a labelled phrase coach keeps conversations possible; lessons, reviews and phrasebook never needed a model |
 | **Courses** | Real 4-chapter starter courses for all 23 non-Spanish languages (66 exercises each), tier-labelled honestly; Spanish keeps its 5-chapter authored course |
 | **Review** | Rebuilt review screen: due-word flashcards both ways, typed recall, Leitner box movement, real session stats, weakest-skill recommendation |
-| **Settings** | New `Settings → AI model`: modes, model catalogue, coverage per language, licences, server URLs, browser toggle, hardware table, reset |
 | **Docs** | `docs/AI_ARCHITECTURE.md` — architecture, coverage, setup, hardware, privacy, limitations |
 
 ## What works today
@@ -37,13 +41,12 @@ the app never quietly reaches for one.
 | **Lesson player** — choose · type · listen · speak with native TTS | ✅ Accent-lenient grading, XP + completion |
 | **Chapter unlocking** — chapter N opens at 70%+ on N−1 | ✅ Per-lesson scores on the language page |
 | **Spaced repetition** — missed words enter a Leitner queue (1/2/4/8/15 days) | ✅ Rebuilt review screen + Words tab |
-| **AI tutor** — conversation in 24 languages, level-aware | ✅ Ollama · local server · self-hosted gateway · browser · offline coach |
-| **Voice input** — record → Whisper → tutor reply | ✅ Server, LAN or in-browser Whisper; typing always available |
+| **AI tutor** — conversation in 24 languages, level-aware | ✅ Hosted tutor server (zero setup) · coach fallback |
+| **Voice input** — record → Whisper → tutor reply | ✅ Server or in-browser Whisper; typing always available; failures explain themselves |
 | **Native TTS** — hear every reply in a locale voice (`es-ES`, `ar-EG`, `ja-JP`…) | ✅ expo-speech, with replay + slow mode |
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
 | **Translations** — toggle English under every AI message | ✅ Explanation language follows your native language |
 | **Learner profile** — name, job, interests, goals, native language | ✅ Feeds every AI prompt |
-| **Model settings** — local/LAN/server/browser/offline, per-language coverage | ✅ `Settings → AI model` |
 | **Adaptive difficulty** — per-skill analytics pick the weakest skill | ✅ Tutor level auto-rises A1 → B2 |
 | **Daily plan** — “~10 min” card tuned to due reviews + weak spots | ✅ Includes a real streak counter |
 | **Review dashboard** — AI drafts need human approval to publish | ✅ `/admin` (deployed) + `npm run review:dashboard` (local) |
@@ -67,18 +70,22 @@ npx expo start          # scan the QR with Expo Go (SDK 58)
 npx expo start --web    # or run it in the browser
 ```
 
-The app is fully usable with **no model at all**: lessons, reviews, phrasebook
-and device audio work offline, and the tutor answers through the labelled
-offline coach. Want a real tutor? Point it at a local model — no key needed:
+The app is usable with **no model at all**: lessons, reviews, phrasebook and
+device audio work offline and the tutor shows the labelled coach. To give every
+learner a live tutor, configure the **server** once — no app rebuild, nothing
+for the learner to install:
 
 ```bash
-ollama pull qwen2.5:1.5b
-OLLAMA_ORIGINS='*' ollama serve     # dev only; restrict the origin in production
+neon functions deploy api --src functions/api/index.ts \
+  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
+  --env AI_API_URL=https://openrouter.ai/api/v1 \
+  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
+  --env AI_STT_ENABLED=false --wait
 ```
 
-Then open **Settings → AI model → Check**. For a phone on the same Wi-Fi, use
-the computer's LAN address (`http://192.168.x.x:11434`) in the Ollama URL field.
-Any OpenAI-compatible server (LM Studio, llama.cpp, vLLM, LocalAI) works too.
+Free Qwen3 endpoints cover all 24 atlas languages. Prefer your own hardware?
+Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see
+[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §7.
 
 Want a fully local preview with no backend? `EXPO_PUBLIC_NEON_DISABLED=1 npx
 expo start --web` runs the whole app in device-local demo mode.
@@ -92,11 +99,12 @@ expo start --web` runs the whole app in device-local demo mode.
    endpoints into `.env.local`; `npm run neon:e2e` proves each service end to end.
 2. **Accounts (Supabase, legacy)** — create a free [Supabase](https://supabase.com)
    project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
-3. **Self-hosted inference gateway (optional)** — deploy the `api` Function and set
-   `AI_API_URL` to an OpenAI-compatible server you host (plus `AI_MODEL`, and
-   `AI_STT_MODEL` if it serves `/audio/transcriptions`). A server key stays in the
-   Function's environment; the app only holds its public URL. If you point it at a
-   paid provider, that is your choice and your bill — nothing defaults to one.
+3. **Tutor server** — the `api` Function proxies chat and speech to the model
+   endpoint you configure (`AI_API_URL`, `AI_KEY`, `AI_MODELS`). The key stays in
+   the Function's environment; the app only holds the public backend URL. Free
+   hosted endpoints cost nothing per token but are rate-limited and rotate;
+   self-hosting costs electricity. Either way the learner sees "Tutor server" or
+   "Coach mode" — never a claim we cannot verify.
 
 The full matrix — local, self-hosted and external — is in
 [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md).
@@ -112,12 +120,12 @@ src/
     language/[id].tsx   # language detail (hero · progress · chapters · phrasebook)
     lesson/[id].tsx     # lesson player (choose · type · listen · speak + native TTS)
     review.tsx          # daily Leitner review with real session stats
-    settings/ai.tsx     # AI model settings (modes · coverage · servers · hardware)
   components/           # Button · TextField · Chip · Logo · Screen · SectionHeader
                         # ProgressBar · StatTile · WeeklyBars · SegmentedControl · Pill
   context/              # AuthContext (Neon Auth · Supabase · demo mode)
   lib/
     ai.ts               # app-facing tutor/voice API (tutorReply · transcribeSpeech · TTS)
+    mic.ts              # microphone failure → actionable message (iframe/permission/device)
     aiCore.ts           # prompt + strict JSON contract + script guard (shared w/ Function)
     models/
       catalog.ts        # model catalogue, language tables, licences
@@ -144,7 +152,7 @@ src/
       samplers.ts       # deterministic 4-chapter starter courses for the other 23
   theme/tokens.ts       # "warm atlas" design tokens
 functions/
-  api/index.ts          # Neon Function: state sync · optional AI gateway · storage · review
+  api/index.ts          # Neon Function: state sync · tutor server (model chain) · storage · review
 neon/schema.sql         # Lakebase Postgres schema (app_state)
 supabase/schema.sql     # legacy tables + RLS
 scripts/                # curriculum drafts · neon e2e · zero-dep tests · local API smoke

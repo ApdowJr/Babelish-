@@ -7,6 +7,7 @@
  * where to send the transcript.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   AudioModule,
   RecordingPresets,
@@ -15,19 +16,50 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { createRecorderControl } from '@/lib/recorderControl';
+import { describeMicFailure, isFramed, type MicResult } from '@/lib/mic';
 
 /** Safety cap — the UI stops recording well before this. */
 const MAX_RECORD_SECONDS = 30;
 
 /**
  * Asks for microphone access and puts the audio session into recording mode.
- * Returns false when permission is denied.
+ *
+ * Returns *why* it failed, not just that it did: expo-audio collapses every
+ * web failure into `granted: false`, so on web we call `getUserMedia`
+ * ourselves and keep the real DOMException name for the message.
  */
-export async function ensureRecordingReady(): Promise<boolean> {
+export async function ensureRecordingReady(): Promise<MicResult> {
+  if (Platform.OS === 'web') {
+    const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
+    const secure =
+      typeof window === 'undefined' ? true : (window.isSecureContext ?? location.protocol === 'https:');
+    const context = { platform: 'web' as const, iframe: isFramed(), secure };
+
+    if (!media?.getUserMedia) {
+      const failure = describeMicFailure(undefined, context);
+      return { ok: false, ...failure };
+    }
+    try {
+      const stream = await media.getUserMedia({ audio: true });
+      // Permission probe only — release the device immediately so the
+      // recorder (and any other tab) can open it.
+      stream.getTracks().forEach((track) => track.stop());
+      return { ok: true };
+    } catch (error) {
+      const name = error instanceof Error ? error.name : undefined;
+      return { ok: false, ...describeMicFailure(name, context) };
+    }
+  }
+
   const permission = await AudioModule.requestRecordingPermissionsAsync();
-  if (!permission.granted) return false;
+  if (!permission.granted) {
+    return {
+      ok: false,
+      ...describeMicFailure('NotAllowedError', { platform: 'native', iframe: false, secure: true }),
+    };
+  }
   await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
-  return true;
+  return { ok: true };
 }
 
 /**

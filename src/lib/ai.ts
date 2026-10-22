@@ -33,9 +33,10 @@ export type { AiStatus } from '@/lib/models/status';
  * AI tutor engine — open-source model layer.
  *
  * Transport order is decided by the learner's settings (`src/lib/models`):
- * a local Ollama/OpenAI-compatible server, the app owner's self-hosted
- * gateway, a browser model via Transformers.js, then the bundled offline
- * coach. No paid third-party inference API is ever called by default.
+ * the app owner's tutor server (which can front any OpenAI-compatible model),
+ * a browser model via Transformers.js, then the bundled offline coach. The
+ * learner never configures a model, and no paid inference API is called by
+ * default.
  *
  * Honesty rules kept from 2.0:
  *   - a model that runs and fails surfaces a visible error — it is never
@@ -54,7 +55,10 @@ export const isAIConfigured = Boolean(
 export type AiTransport = { apiBase: string; jwt?: string | null };
 
 function gatewayContext(io?: AiTransport | null) {
-  const base = io?.apiBase || NEON_API_URL || undefined;
+  // An owner-hosted deployment can point the app at its own gateway without a
+  // rebuild-time backend URL. Public address only — never a credential.
+  const configured = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+  const base = io?.apiBase || configured || NEON_API_URL || undefined;
   return {
     gatewayBase: base || null,
     jwt: io?.jwt ?? null,
@@ -353,7 +357,7 @@ export async function transcribeSpeech(
     throw new Error(
       settings.mode === 'offline'
         ? 'Voice input needs a speech model — the offline coach is text-only. Type your reply instead.'
-        : 'No speech model is configured — add one in Settings → AI model, or type instead.'
+        : 'Voice input is unavailable right now — type your reply instead.'
     );
   }
   // Gate per runtime: the browser uses its own Whisper model id, and a
@@ -376,7 +380,7 @@ export async function transcribeSpeech(
   const answer = await runTranscribe(settings, audioUri, languageId, ctx);
   if (!answer) {
     throw new Error(
-      'Voice input needs a speech model — set one up in Settings → AI model, or type instead.'
+      'Voice input is unavailable right now — type instead.'
     );
   }
   return answer.text;

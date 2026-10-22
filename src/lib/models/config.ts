@@ -36,7 +36,10 @@ export type ModelSettings = {
 };
 
 export const DEFAULT_SETTINGS: ModelSettings = {
-  mode: 'auto',
+  // The tutor server is the product: the learner never configures a model.
+  // Local/LAN/browser remain available in code, but nothing points there by
+  // default, so the app never probes localhost or suggests a download.
+  mode: 'server',
   ollamaUrl: 'http://localhost:11434',
   ollamaModel: 'qwen2.5:1.5b',
   openaiUrl: '',
@@ -195,7 +198,9 @@ export function sttCandidates(settings: ModelSettings, ctx: EngineContext): Runt
     case 'local':
       return [...local, ...browser];
     case 'server':
-      return gateway;
+      // Server chat, but on-device speech is still allowed: a chat-only server
+      // should not force the learner to type.
+      return [...gateway, ...browser];
     case 'browser':
       return browser;
     default:
@@ -233,7 +238,8 @@ export function modelForRuntime(settings: ModelSettings, runtime: RuntimeId): st
     case 'browser':
       return settings.browser.chatModel;
     case 'gateway':
-      return settings.ollamaModel || 'server-configured';
+      // The server owns the choice; never borrow a local model id for it.
+      return 'server';
     default:
       return 'offline';
   }
@@ -278,7 +284,7 @@ export function voiceUnavailableMessage(settings: ModelSettings, ctx: EngineCont
   if (candidates.length === 0) {
     return settings.mode === 'offline'
       ? 'Voice input needs a speech model — the offline coach is text-only. Type your reply instead.'
-      : 'No speech model is configured. Add one in Settings → AI model, or type your reply.';
+      : 'Voice input is unavailable right now — type your reply instead.';
   }
   return 'Voice input is not available right now — type your reply instead.';
 }

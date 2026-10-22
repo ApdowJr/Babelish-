@@ -168,10 +168,29 @@ app.get('/', async (c) => {
   return c.json({ ok: true, service: 'babelish-api', branch: process.env.NEON_BRANCH, now: rows[0].now });
 });
 
-/** Every /api/* route requires a valid Managed Auth JWT. */
+/**
+ * Every /api/* route requires a valid Managed Auth JWT — except the tutor,
+ * which also serves signed-out learners (demo mode / first run) under a
+ * stricter per-IP budget. Anonymous identity is namespaced so it can never
+ * collide with a real user id.
+ */
+const ANON_AI = /^\/api\/ai\/(chat|stt|status)$/;
+
 app.use('/api/*', async (c, next) => {
   const auth = c.req.header('authorization');
+  const anonymous = () => {
+    const ip =
+      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+      c.req.header('x-real-ip') ||
+      'unknown';
+    c.set('userId', `anon:${ip}`);
+  };
+
   if (!auth?.toLowerCase().startsWith('bearer ')) {
+    if (ANON_AI.test(c.req.path)) {
+      anonymous();
+      return next();
+    }
     return c.json({ error: 'Unauthorized' }, 401);
   }
   try {
@@ -179,6 +198,10 @@ app.use('/api/*', async (c, next) => {
     if (!payload.sub) throw new Error('missing sub');
     c.set('userId', payload.sub);
   } catch {
+    if (ANON_AI.test(c.req.path)) {
+      anonymous();
+      return next();
+    }
     return c.json({ error: 'Unauthorized' }, 401);
   }
   await next();
@@ -361,17 +384,48 @@ async function removeAuthUser(userId: string): Promise<AuthRemoval> {
  */
 const AI_URL = (process.env.AI_API_URL ?? 'http://127.0.0.1:11434/v1').replace(/\/+$/, '');
 const AI_KEY = process.env.AI_API_KEY ?? '';
-const AI_MODEL = process.env.AI_MODEL ?? 'qwen2.5:1.5b';
-const AI_STT_MODEL = process.env.AI_STT_MODEL ?? 'whisper-large-v3-turbo';
+const IS_OPENROUTER = /openrouter\.ai/i.test(AI_URL);
+/**
+ * Chat models are a *list*: free endpoints rotate, and a model that vanished
+ * overnight must degrade to the next one instead of failing the learner.
+ * `AI_MODELS=a,b` (or the single `AI_MODEL`) overrides the defaults.
+ */
+const CONFIGURED_MODELS = (process.env.AI_MODELS ?? process.env.AI_MODEL ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+const CHAT_MODELS = CONFIGURED_MODELS.length
+  ? CONFIGURED_MODELS
+  : IS_OPENROUTER
+    ? [
+        // Qwen3 covers all 24 Babelish languages (119-language table).
+        'qwen/qwen3-next-80b-a3b-instruct:free',
+        'qwen/qwen3-next-80b-a3b-instruct',
+        'openai/gpt-oss-120b:free',
+      ]
+    : ['qwen2.5:1.5b'];
+const AI_MODEL = CHAT_MODELS[0];
+const AI_STT_MODEL =
+  process.env.AI_STT_MODEL ?? (IS_OPENROUTER ? 'openai/whisper-large-v3-turbo' : 'whisper-large-v3-turbo');
+// Attribution headers OpenRouter asks for; ignored by every other server.
+const AI_APP_URL = process.env.AI_APP_URL ?? 'https://babelish.app';
+const AI_APP_NAME = process.env.AI_APP_NAME ?? 'Babelish';
+const upstreamHeaders = (): Record<string, string> => ({
+  ...(AI_KEY ? { authorization: `Bearer ${AI_KEY}` } : {}),
+  'HTTP-Referer': AI_APP_URL,
+  'X-Title': AI_APP_NAME,
+});
 // Local OpenAI-compatible servers often ship chat only; owners can turn audio
 // off explicitly, or leave it on and expect /audio/transcriptions to exist.
 const AI_CONFIGURED = Boolean(
-  process.env.AI_API_URL || process.env.AI_API_KEY || process.env.AI_MODEL
+  process.env.AI_API_URL || process.env.AI_API_KEY || process.env.AI_MODEL || process.env.AI_MODELS
 );
 const AI_STT_ENABLED = AI_CONFIGURED && process.env.AI_STT_ENABLED !== 'false';
 
 const chatLimiter = createLimiter(20, 60_000); // messages per user / minute
 const sttLimiter = createLimiter(10, 60_000); // transcriptions per user / minute
+const anonChatLimiter = createLimiter(6, 60_000); // signed-out, per IP
+const anonSttLimiter = createLimiter(2, 60_000); // signed-out, per IP
 
 /** Capability report for the client's status rows — booleans only, no secrets. */
 app.get('/api/ai/status', (c) =>
@@ -380,17 +434,26 @@ app.get('/api/ai/status', (c) =>
     stt: AI_STT_ENABLED,
     // The client shows this as "App server · <model>" — a name, never a key.
     model: AI_CONFIGURED ? AI_MODEL : null,
+    models: AI_CONFIGURED ? CHAT_MODELS : [],
     /** True when the endpoint needs no credential (a local server). */
     keyless: AI_CONFIGURED && !AI_KEY,
+    /** Audio transcription availability, decided by the owner's config. */
+    sttEnabled: AI_STT_ENABLED,
   })
 );
 
 app.post('/api/ai/chat', async (c) => {
   if (!AI_CONFIGURED) return c.json({ error: 'ai-not-configured' }, 503);
   const userId = c.get('userId');
-  if (!chatLimiter.take(userId)) {
+  const limiter = userId.startsWith('anon:') ? anonChatLimiter : chatLimiter;
+  if (!limiter.take(userId)) {
     return c.json(
-      { error: 'rate-limited', message: 'The tutor is busy — wait a minute and try again.' },
+      {
+        error: 'rate-limited',
+        message: userId.startsWith('anon:')
+          ? 'You are chatting as a guest — sign in for a longer session.'
+          : 'The tutor is busy — wait a minute and try again.',
+      },
       429
     );
   }
@@ -414,78 +477,99 @@ app.post('/api/ai/chat', async (c) => {
     profile: parsed.request.profile,
   });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 55_000);
-  try {
-    const upstream = await fetch(`${AI_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(AI_KEY ? { authorization: `Bearer ${AI_KEY}` } : {}),
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: AI_MODEL,
-        temperature: 0.8,
-        messages: [
-          { role: 'system', content: sys },
-          ...parsed.request.history.map((m) => ({ role: m.role, content: m.text })),
-        ],
-      }),
-    });
-    if (!upstream.ok) {
-      const detail =
-        upstream.status === 401
-          ? 'The AI provider rejected its key.'
-          : `The AI provider returned HTTP ${upstream.status}.`;
-      return c.json({ error: 'upstream-failed', message: `${detail} Try again later.` }, 502);
-    }
-    const data = (await upstream.json().catch(() => null)) as {
-      choices?: { message?: { content?: string } }[];
-    } | null;
-    const raw = data?.choices?.[0]?.message?.content ?? '';
-
-    // Strict validation: an empty reply or one in the wrong script is an
-    // ERROR here — never replaced with scripted demo content in real mode.
-    let reply: { text: string; translation: string; tip?: string };
+  // Try the configured chain in order: a free endpoint that disappeared
+  // overnight must not break the tutor. Only "this model is gone" moves on —
+  // a bad key, a rate limit or a timeout is reported as itself.
+  const messages = [
+    { role: 'system', content: sys },
+    ...parsed.request.history.map((m) => ({ role: m.role, content: m.text })),
+  ];
+  let lastDetail = '';
+  for (const model of CHAT_MODELS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 55_000);
     try {
-      reply = extractTutorReply(raw, language);
+      const upstream = await fetch(`${AI_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...upstreamHeaders() },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0.8,
+          messages,
+          ...(IS_OPENROUTER ? { max_tokens: 600 } : {}),
+        }),
+      });
+      if (!upstream.ok) {
+        const bodyText = await upstream.text().catch(() => '');
+        const modelGone =
+          upstream.status === 404 ||
+          /model|endpoint|provider/i.test(bodyText) &&
+            /not found|no endpoints|unavailable|does not exist/i.test(bodyText);
+        if (modelGone) {
+          lastDetail = `model ${model} is unavailable`;
+          continue; // try the next model in the chain
+        }
+        const detail =
+          upstream.status === 401 || upstream.status === 403
+            ? 'The tutor key was rejected — check AI_API_KEY on the server.'
+            : upstream.status === 429
+              ? 'The model is rate-limited right now — try again in a minute.'
+              : `The tutor provider returned HTTP ${upstream.status}.`;
+        return c.json({ error: 'upstream-failed', message: detail }, 502);
+      }
+      const data = (await upstream.json().catch(() => null)) as {
+        choices?: { message?: { content?: string } }[];
+      } | null;
+      const raw = data?.choices?.[0]?.message?.content ?? '';
+
+      // Strict validation: an empty reply or one in the wrong script is an
+      // ERROR here — never replaced with scripted demo content in real mode.
+      let reply: { text: string; translation: string; tip?: string };
+      try {
+        reply = extractTutorReply(raw, language);
+      } catch (err) {
+        return c.json(
+          {
+            error: 'bad-reply',
+            message: err instanceof Error ? err.message : 'The tutor returned an invalid reply.',
+          },
+          502
+        );
+      }
+      return c.json({
+        reply: reply.text,
+        translation: reply.translation,
+        tip: reply.tip,
+        model,
+      });
     } catch (err) {
-      return c.json(
-        {
-          error: 'bad-reply',
-          message: err instanceof Error ? err.message : 'The tutor returned an invalid reply.',
-        },
-        502
-      );
+      if (err instanceof Error && err.name === 'AbortError') {
+        return c.json(
+          { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
+          504
+        );
+      }
+      lastDetail = err instanceof Error ? err.message : 'network error';
+    } finally {
+      clearTimeout(timer);
     }
-    return c.json({
-      reply: reply.text,
-      translation: reply.translation,
-      tip: reply.tip,
-      model: AI_MODEL,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      return c.json(
-        { error: 'upstream-timeout', message: 'The tutor took too long — try again.' },
-        504
-      );
-    }
-    return c.json(
-      { error: 'upstream-failed', message: 'The tutor service hit a problem — try again.' },
-      502
-    );
-  } finally {
-    clearTimeout(timer);
   }
+
+  return c.json(
+    {
+      error: 'upstream-failed',
+      message: `No configured tutor model answered (${lastDetail}). Try again shortly.`,
+    },
+    502
+  );
 });
 
 app.post('/api/ai/stt', async (c) => {
   if (!AI_CONFIGURED) return c.json({ error: 'ai-not-configured' }, 503);
   if (!AI_STT_ENABLED) return c.json({ error: 'ai-stt-not-configured' }, 503);
   const userId = c.get('userId');
-  if (!sttLimiter.take(userId)) {
+  if (!(userId.startsWith('anon:') ? anonSttLimiter : sttLimiter).take(userId)) {
     return c.json(
       { error: 'rate-limited', message: 'Voice service is rate-limited — try again in a moment.' },
       429
@@ -532,7 +616,7 @@ app.post('/api/ai/stt', async (c) => {
   try {
     const upstream = await fetch(`${AI_URL}/audio/transcriptions`, {
       method: 'POST',
-      headers: AI_KEY ? { authorization: `Bearer ${AI_KEY}` } : {},
+      headers: upstreamHeaders(),
       body: outbound,
       signal: controller.signal,
     });
