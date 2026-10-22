@@ -574,7 +574,6 @@ app.post('/api/ai/chat', async (c) => {
       try {
         reply = extractTutorReply(raw, language);
       } catch (err) {
-        await refundDailyQuota(userId, 'chat');
         return c.json(
           {
             error: 'bad-reply',
@@ -682,8 +681,9 @@ app.post('/api/ai/stt', async (c) => {
     const data = (await upstream.json().catch(() => null)) as { text?: string } | null;
     const text = String(data?.text ?? '').trim();
     if (!text) {
-      // Silence is not a transcription the learner should pay a slot for.
-      await refundDailyQuota(userId, 'stt');
+      // The provider still transcribed (and billed) the silence. Refunding it
+      // would make repeated silent uploads free provider spend, so the slot
+      // stays spent; the message invites a retry with better audio.
       return c.json(
         { error: 'empty-transcript', message: "I couldn't catch that — try again or type instead." },
         422

@@ -31,6 +31,24 @@ project uses semantic versioning.
 - `QuotaExceeded` is its own error class, so a spent budget is never retried
   against another runtime and never dressed up as a connection problem.
 
+### Fixed
+
+- **Concurrent requests could overshoot a cap.** Counting was a read followed
+  by an increment, so two simultaneous turns could both take the last slot.
+  Each claim is now one conditional upsert (`insert … on conflict do update …
+  where <cap> returning`), and the shared budget lives in a single row per day
+  (`public.ai_usage_daily`) so the check and the increment cannot interleave.
+  The in-memory fallback never awaits between read and write, so it is atomic
+  per instance for the same reason.
+- **Voice was blocked by the chat budget in the fallback path.** The daily
+  budget covers chat spend only; a busy day of typing must not silence the
+  microphone. The fallback now matches the database path.
+- **Refunds were too generous.** A provider answer — even an unusable or
+  silent one — was billed upstream, so refunding it made repeated junk replies
+  or silent uploads a way to spend the server's provider quota for free.
+  Refunds now apply only when no provider answer was produced (network error,
+  timeout, 5xx).
+
 ## [3.0.3] — 2026-10-22
 
 ### Fixed
