@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Card, SectionHeader } from '@/components/SectionHeader';
 import { ProgressBar } from '@/components/ProgressBar';
-import { StatTile } from '@/components/StatTile';
 import { useAnalytics } from '@/state/analytics';
 import { useLearning } from '@/state/learning';
 import { usePreferences } from '@/state/preferences';
@@ -71,7 +70,9 @@ export default function ProgressScreen() {
           </View>
           <View style={styles.heroDivider} />
           <View style={styles.heroStat}>
-            <Text style={styles.heroValue}>{analytics.xp.lifetime}</Text>
+            <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit>
+              {analytics.xp.lifetime}
+            </Text>
             <Text style={styles.heroLabel}>lifetime XP</Text>
           </View>
         </View>
@@ -119,6 +120,34 @@ export default function ProgressScreen() {
             {daysActive === 0 ? 'No activity yet' : `${daysActive} of 42 days`}
           </Text>
         </View>
+      </Card>
+
+      {/* ── Today ── */}
+      <SectionHeader title="Today" icon="sunny-outline" />
+      <Card>
+        <View style={styles.todayRow}>
+          <View style={styles.flex}>
+            <Text style={styles.todayValue}>
+              {xpToday}
+              <Text style={styles.todayGoal}> / {goalXp} XP</Text>
+            </Text>
+            <Text style={styles.todayHint}>
+              {xpToday >= goalXp
+                ? 'Daily goal done. Anything else today is a bonus.'
+                : `${goalXp - xpToday} XP left of your ${dailyGoalMinutes}-minute goal.`}
+            </Text>
+          </View>
+          <View style={styles.todayWords}>
+            <Text style={styles.todayWordsValue}>{wordsMastered}</Text>
+            <Text style={styles.todayWordsLabel}>words mastered</Text>
+          </View>
+        </View>
+        <ProgressBar
+          value={goalXp === 0 ? 0 : Math.min(1, xpToday / goalXp)}
+          height={8}
+          color={xpToday >= goalXp ? colors.success : colors.primary}
+          trackColor={colors.surfaceHigh}
+        />
       </Card>
 
       {/* ── Level ── */}
@@ -223,12 +252,7 @@ export default function ProgressScreen() {
         </Card>
       )}
 
-      {/* ── Vocabulary + records, only when there is something to say ── */}
-      <View style={styles.tiles}>
-        <StatTile icon="star" value={`${wordsMastered}`} label="WORDS MASTERED" tint={colors.lilacInk} tintSoft={colors.lilacSoft} />
-        <StatTile icon="flame" value={`${streak}`} label="DAY STREAK" tint={colors.accentInk} tintSoft={colors.accentSoft} />
-        <StatTile icon="sparkles" value={`${xpToday}`} label="XP TODAY" tint={colors.sunInk} tintSoft={colors.sunSoft} />
-      </View>
+      <View style={styles.tail} />
     </Screen>
   );
 }
@@ -350,5 +374,12 @@ const createStyles = (c: Palette) => StyleSheet.create({
   emptyCtaText: { ...typography.bodyStrong, color: c.primary },
   pressed: { opacity: 0.85 },
 
-  tiles: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.xxl },
+  todayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  todayValue: { ...typography.title, color: c.text },
+  todayGoal: { ...typography.heading, color: c.textFaint, fontWeight: '700' },
+  todayHint: { ...typography.caption, color: c.textMuted, marginTop: 3, lineHeight: 18 },
+  todayWords: { alignItems: 'flex-end' },
+  todayWordsValue: { ...typography.heading, color: c.lilac },
+  todayWordsLabel: { ...typography.caption, color: c.textFaint, textAlign: 'right', lineHeight: 16 },
+  tail: { height: spacing.xxl },
 });

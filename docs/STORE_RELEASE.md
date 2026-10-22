@@ -15,7 +15,7 @@ Run `npm run check:release` before every upload — it blocks the mistakes that 
 | Android package | `app.zelvoca.babelish` | `app.json` |
 | iOS bundle id | `app.zelvoca.babelish` | `app.json` |
 | Version | `3.2.0` (must match `package.json`) | `app.json`, `package.json` |
-| Android versionCode | `30200` = major·10000 + minor·100 + patch | `app.json` |
+| Android versionCode | `30400` = major·10000 + minor·100 + patch | `app.json` |
 | Permissions | `RECORD_AUDIO`, `POST_NOTIFICATIONS` only | `app.json` |
 | iOS mic string | set | `app.json` → `ios.infoPlist` |
 | Encryption question | answered (`false`) | `app.json` → `ios.infoPlist` |

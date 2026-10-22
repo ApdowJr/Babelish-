@@ -43,22 +43,22 @@ export default function RootLayout() {
         {/* Inside preferences (it reads `themeMode`) and outside everything
             visual, so every screen below can resolve the palette. */}
         <ThemeProvider>
-        <LearningProvider>
-          <ProfileProvider>
-            <AnalyticsProvider>
-              <SubscriptionProvider>
-                <AlertProvider>
-                  <ThemedStatusBar />
-                  {/* Keeps a render error on one screen instead of a blank app.
-                      Nothing here touches storage or auth: progress survives. */}
-                  <ScreenBoundary onHome={() => router.replace('/')}>
-                    <RootNavigator />
-                  </ScreenBoundary>
-                </AlertProvider>
-              </SubscriptionProvider>
-            </AnalyticsProvider>
-          </ProfileProvider>
-        </LearningProvider>
+          <LearningProvider>
+            <ProfileProvider>
+              <AnalyticsProvider>
+                <SubscriptionProvider>
+                  <AlertProvider>
+                    <ThemedStatusBar />
+                    {/* Keeps a render error on one screen instead of a blank app.
+                        Nothing here touches storage or auth: progress survives. */}
+                    <ScreenBoundary onHome={() => router.replace('/')}>
+                      <RootNavigator />
+                    </ScreenBoundary>
+                  </AlertProvider>
+                </SubscriptionProvider>
+              </AnalyticsProvider>
+            </ProfileProvider>
+          </LearningProvider>
         </ThemeProvider>
       </PreferencesProvider>
     </AuthProvider>

@@ -7,15 +7,20 @@ by a smaller tangerine bubble. It says what the product is — a conversation wi
 a tutor — without a flag, a globe or a letterform, and it survives at 48 px
 because the silhouette is two offset rounded shapes.
 
-Palette, taken from `src/theme/tokens.ts` so the icon cannot drift from the UI:
+Palette, taken from `src/theme/palette.ts` so the icon cannot drift from the UI:
 
 | Colour | Hex | Used for |
 |---|---|---|
 | Deep forest | `#0B3A2C` | plate, splash background |
 | Forest | `#1C6852` | gradient middle |
-| Mint | `#2E8B6F` | gradient end |
+| Mint | `#22705A` | gradient end (deepened in 3.4 so white text clears AA) |
 | Parchment | `#F7F4ED` | the answering bubble, splash mark |
 | Tangerine | `#E9764F` | the reply bubble, the accent line |
+
+The app itself has a second palette for dark mode (`darkPalette`: canvas
+`#101512`, surface `#181E1A`, brand green lifted to `#5FBF9B`). The **icon,
+splash and store artwork keep the daylight forest plate in both themes** — a
+brand mark that changes colour with the OS reads as two different apps.
 
 ## Where it lives
 
