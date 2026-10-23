@@ -45,6 +45,8 @@ export function hasWebGpu(): boolean {
   return isBrowser() && typeof navigator !== 'undefined' && 'gpu' in navigator;
 }
 
+const FALLBACK_RUNTIME_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5/+esm';
+
 async function loadRuntime(url: string): Promise<RuntimeModule> {
   if (!isBrowser()) {
     throw new EngineUnavailable('Browser inference is only available in the web build.', 'browser');
@@ -60,10 +62,21 @@ async function loadRuntime(url: string): Promise<RuntimeModule> {
     try {
       mod = await importer(url);
     } catch {
-      throw new EngineUnavailable(
-        'Could not load the browser inference runtime — check your connection or the runtime URL in Settings.',
-        'browser'
-      );
+      if (url !== FALLBACK_RUNTIME_URL) {
+        try {
+          mod = await importer(FALLBACK_RUNTIME_URL);
+        } catch {
+          throw new EngineUnavailable(
+            'Could not load the browser inference runtime — check your connection and try again.',
+            'browser'
+          );
+        }
+      } else {
+        throw new EngineUnavailable(
+          'Could not load the browser inference runtime — check your connection and try again.',
+          'browser'
+        );
+      }
     }
     const runtime = mod as RuntimeModule;
     if (typeof runtime?.pipeline !== 'function') {
@@ -240,6 +253,7 @@ const WHISPER_LANGUAGE: Record<string, string> = {
   th: 'thai',
   id: 'indonesian',
   sw: 'swahili',
+  so: 'somali',
 };
 
 /** Decodes compressed audio and returns 16 kHz mono PCM for Whisper. */

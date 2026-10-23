@@ -34,6 +34,17 @@ test('browser denial explains the address-bar control', () => {
   assert.doesNotMatch(failure.message, /app.s system settings/i);
 });
 
+test('OS-level denial is distinguished when site permission is already granted', () => {
+  const failure = describeMicFailure('NotAllowedError', {
+    ...web,
+    permissionState: 'granted',
+  });
+  assert.equal(failure.reason, 'os-denied');
+  assert.match(failure.message, /allowed for this site/i);
+  assert.match(failure.message, /privacy settings/i);
+  assert.equal(failure.canOpenSettings, false);
+});
+
 test('native denial offers the system settings action', () => {
   const failure = describeMicFailure('NotAllowedError', native);
   assert.equal(failure.reason, 'denied');

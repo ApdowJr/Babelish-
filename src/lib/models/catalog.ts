@@ -313,8 +313,14 @@ MODELS.push(
 
 const INDEX = new Map(MODELS.map((model) => [model.id, model]));
 
+const MODEL_ALIASES: Record<string, string> = {
+  'onnx-community/whisper-base': 'whisper-base',
+  'onnx-community/whisper-small': 'whisper-small',
+  'onnx-community/Qwen2.5-0.5B-Instruct': 'qwen2.5:0.5b',
+};
+
 export function findModel(id: string): ModelSpec | null {
-  return INDEX.get(id) ?? null;
+  return INDEX.get(id) ?? INDEX.get(MODEL_ALIASES[id] ?? '') ?? null;
 }
 
 export function modelsFor(kind: ModelKind): ModelSpec[] {

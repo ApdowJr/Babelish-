@@ -50,6 +50,7 @@ import { ownerIdFor } from '@/lib/conversations';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
+import type { MicResult } from '@/lib/mic';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
 import { flushReportQueue, sendReport } from '@/lib/reports';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
@@ -173,8 +174,13 @@ export default function SpeakScreen() {
   // a page reload (useful right after the server is configured).
   const [probeNonce, setProbeNonce] = useState(0);
   const [voiceHelp, setVoiceHelp] = useState<
-    null | { message: string; action?: 'browser-stt' | 'open-settings' }
+    null | {
+      message: string;
+      action?: 'browser-stt' | 'open-settings' | 'open-new-tab' | 'retry-mic';
+    }
   >(null);
+  const [webSpeechDisabled, setWebSpeechDisabled] = useState(false);
+  const [sttProgress, setSttProgress] = useState<string | null>(null);
   // Server-reported AI capability (backend proxy probe) — null until the
   // first probe resolves. See voiceLive below.
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
@@ -185,6 +191,7 @@ export default function SpeakScreen() {
   const recorder = useVoiceRecorder();
   const webRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const webTranscriptHandledRef = useRef(false);
+  const webRecognitionFailedRef = useRef(false);
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
   const phrases = scenario ? getPracticePhrases(language.id, scenario.id) : [];
 
@@ -218,7 +225,7 @@ export default function SpeakScreen() {
   // EXPO_PUBLIC_AI_* config. A null aiStatus means the probe hasn't resolved:
   // fall back to build-time knowledge, never claim live from wishful thinking.
   // null = still probing. Never claim "live" before a real probe answered.
-  const webSpeechSupported = getWebSpeechConstructor() !== null;
+  const webSpeechSupported = getWebSpeechConstructor() !== null && !webSpeechDisabled;
   const voiceLive = aiStatus ? aiStatus.stt || webSpeechSupported : webSpeechSupported ? true : null;
   // Voice needs both a speech model and the mic permission — two different
   // problems with two different fixes, so they are reported separately.
@@ -228,6 +235,35 @@ export default function SpeakScreen() {
     Platform.OS === 'web' &&
     typeof WebAssembly === 'object' &&
     !isMobileWeb(typeof navigator === 'undefined' ? '' : navigator.userAgent);
+
+  /**
+   * Surfaces an accurate, actionable microphone error without duplicating the
+   * same sentence across both `voiceError` and `voiceHelp`.
+   */
+  function reportMicFailure(mic: Extract<MicResult, { ok: false }>) {
+    if (mic.canOpenSettings) {
+      setVoiceError(null);
+      setVoiceHelp({ message: mic.message, action: 'open-settings' });
+      return;
+    }
+    if (mic.reason === 'iframe') {
+      setVoiceError(null);
+      setVoiceHelp({ message: mic.message, action: 'open-new-tab' });
+      return;
+    }
+    if (
+      mic.reason === 'denied' ||
+      mic.reason === 'os-denied' ||
+      mic.reason === 'busy' ||
+      mic.reason === 'nodevice'
+    ) {
+      setVoiceError(null);
+      setVoiceHelp({ message: mic.message, action: 'retry-mic' });
+      return;
+    }
+    setVoiceHelp(null);
+    setVoiceError(mic.message);
+  }
 
   /**
    * One explanation for "the mic cannot record right now", used by both the
@@ -544,6 +580,82 @@ export default function SpeakScreen() {
   const latestChatRef = useRef({ messages, persist, respond });
   latestChatRef.current = { messages, persist, respond };
 
+  /* ── Voice: Web Speech fallback & recorder orchestration ───────────────── */
+
+  /**
+   * Browser `SpeechRecognition` (`webkitSpeechRecognition`) frequently emits
+   * `not-allowed` or `service-not-allowed` even when microphone permission IS
+   * granted (e.g. Brave, Chromium without Google speech keys, Edge with online
+   * speech off, restricted networks, or unsupported locales like `so-SO`).
+   *
+   * Probing `ensureRecordingReady()` (`getUserMedia`) separates genuine mic
+   * blocks (iframe, HTTP, browser lock-icon deny, OS privacy block) from a
+   * rejected cloud speech service — and when the mic IS allowed, seamlessly
+   * switches to standard `MediaRecorder` + on-device Whisper.
+   */
+  async function recoverFromWebSpeechFailure(
+    target: { kind: 'chat' } | { kind: 'practice'; phrase: PracticePhrase },
+    reason: string
+  ) {
+    if (reason === 'aborted') {
+      if (target.kind === 'chat') setChatRecording(false);
+      else setPractice(null);
+      return;
+    }
+    if (reason === 'no-speech') {
+      if (target.kind === 'chat') {
+        setChatRecording(false);
+        setVoiceError('No speech was detected — try again in a quiet place.');
+      } else {
+        setPractice(null);
+        setVoiceError("Couldn't catch that — try again, or type the phrase instead.");
+      }
+      return;
+    }
+
+    const mic = await ensureRecordingReady();
+    if (!mic.ok) {
+      if (target.kind === 'chat') setChatRecording(false);
+      else setPractice(null);
+      reportMicFailure(mic);
+      return;
+    }
+
+    // Microphone permission IS granted — only the browser's cloud speech API
+    // failed. Disable WebRecognition for this session and record via MediaRecorder.
+    setWebSpeechDisabled(true);
+
+    const canRunLocalWhisper = Platform.OS === 'web' && typeof WebAssembly === 'object';
+    if (!aiStatus?.stt && !canRunLocalWhisper) {
+      if (target.kind === 'chat') setChatRecording(false);
+      else setPractice(null);
+      explainVoiceUnavailable();
+      return;
+    }
+
+    if (!settings.browser.enabled && canRunLocalWhisper) {
+      await saveModelSettings({
+        browser: { ...settings.browser, enabled: true },
+        allowUnverified: true,
+      });
+    }
+
+    setVoiceError(null);
+    setVoiceHelp(null);
+    if (target.kind === 'chat') {
+      setChatRecording(true);
+    } else {
+      setPractice({ phraseId: target.phrase.id, phase: 'recording' });
+    }
+    try {
+      await recorder.start();
+    } catch {
+      if (target.kind === 'chat') setChatRecording(false);
+      else setPractice(null);
+      setVoiceError("Couldn't start recording — check your microphone and try again.");
+    }
+  }
+
   /* ── Voice: chat turns ─────────────────────────────────────────────────── */
 
   async function toggleChatMic() {
@@ -551,9 +663,13 @@ export default function SpeakScreen() {
       return;
     }
 
-    const WebRecognition = !aiStatus?.stt ? getWebSpeechConstructor() : null;
+    const WebRecognition =
+      !aiStatus?.stt && !settings.browser.enabled && !webSpeechDisabled
+        ? getWebSpeechConstructor()
+        : null;
     if (WebRecognition) {
       if (chatRecording && webRecognitionRef.current) {
+        webRecognitionFailedRef.current = true;
         try {
           webRecognitionRef.current.stop();
         } catch {
@@ -569,6 +685,7 @@ export default function SpeakScreen() {
         setVoiceError(null);
         setVoiceHelp(null);
         webTranscriptHandledRef.current = false;
+        webRecognitionFailedRef.current = false;
         const recognition = new WebRecognition();
         recognition.lang = language.ttsLocale;
         recognition.continuous = false;
@@ -588,18 +705,13 @@ export default function SpeakScreen() {
           void current.respond(history);
         };
         recognition.onerror = (event) => {
+          webRecognitionFailedRef.current = true;
           webRecognitionRef.current = null;
-          setChatRecording(false);
           const reason = String(event?.error ?? '');
-          setVoiceError(
-            reason === 'not-allowed' || reason === 'service-not-allowed'
-              ? 'Microphone access was blocked. Allow microphone permission for Babelish in your browser settings.'
-              : reason === 'no-speech'
-                ? 'No speech was detected — try again in a quiet place.'
-                : 'Browser speech recognition failed — try again or type your reply.'
-          );
+          void recoverFromWebSpeechFailure({ kind: 'chat' }, reason);
         };
         recognition.onend = () => {
+          if (webRecognitionFailedRef.current) return;
           webRecognitionRef.current = null;
           setChatRecording(false);
           if (!webTranscriptHandledRef.current) {
@@ -612,9 +724,9 @@ export default function SpeakScreen() {
           recognition.start();
           return;
         } catch {
+          webRecognitionFailedRef.current = true;
           webRecognitionRef.current = null;
-          setChatRecording(false);
-          setVoiceError('Could not start browser speech recognition — check microphone permission or type instead.');
+          void recoverFromWebSpeechFailure({ kind: 'chat' }, 'start-error');
           return;
         }
       }
@@ -643,7 +755,13 @@ export default function SpeakScreen() {
       try {
         const text = await transcribeSpeech(uri, language.id, await aiIo(), {
           signal: controller.signal,
+          onProgress: (p) => {
+            setSttProgress(
+              p.pct > 0 ? `Loading voice model… ${p.pct}%` : 'Loading voice model…'
+            );
+          },
         });
+        setSttProgress(null);
         if (controller.signal.aborted) return;
         const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
         setMessages(history);
@@ -651,6 +769,7 @@ export default function SpeakScreen() {
         setBusy(false);
         await respond(history);
       } catch (error) {
+        setSttProgress(null);
         if (isCancelled(error, controller.signal)) return;
         setBusy(false);
         if (error instanceof QuotaExceeded) {
@@ -661,6 +780,7 @@ export default function SpeakScreen() {
           error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
         );
       } finally {
+        setSttProgress(null);
         if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
@@ -670,8 +790,7 @@ export default function SpeakScreen() {
       setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
-        setVoiceError(mic.message);
-        setVoiceHelp(mic.canOpenSettings ? { message: mic.message, action: 'open-settings' } : null);
+        reportMicFailure(mic);
         return;
       }
       setVoiceError(null);
@@ -701,9 +820,13 @@ export default function SpeakScreen() {
 
   async function togglePracticeMic(phrase: PracticePhrase) {
     if (busy) return;
-    const WebRecognition = !aiStatus?.stt ? getWebSpeechConstructor() : null;
+    const WebRecognition =
+      !aiStatus?.stt && !settings.browser.enabled && !webSpeechDisabled
+        ? getWebSpeechConstructor()
+        : null;
     if (WebRecognition) {
       if (practice?.phase === 'recording' && practice.phraseId === phrase.id && webRecognitionRef.current) {
+        webRecognitionFailedRef.current = true;
         try {
           webRecognitionRef.current.stop();
         } catch {
@@ -719,6 +842,7 @@ export default function SpeakScreen() {
         setVoiceError(null);
         setVoiceHelp(null);
         webTranscriptHandledRef.current = false;
+        webRecognitionFailedRef.current = false;
         const recognition = new WebRecognition();
         recognition.lang = language.ttsLocale;
         recognition.continuous = false;
@@ -732,12 +856,14 @@ export default function SpeakScreen() {
           webRecognitionRef.current = null;
           finishPractice(phrase, transcript);
         };
-        recognition.onerror = () => {
+        recognition.onerror = (event) => {
+          webRecognitionFailedRef.current = true;
           webRecognitionRef.current = null;
-          setPractice(null);
-          setVoiceError("Couldn't catch that — try again, or type the phrase instead.");
+          const reason = String(event?.error ?? '');
+          void recoverFromWebSpeechFailure({ kind: 'practice', phrase }, reason);
         };
         recognition.onend = () => {
+          if (webRecognitionFailedRef.current) return;
           webRecognitionRef.current = null;
           if (!webTranscriptHandledRef.current) {
             setPractice(null);
@@ -750,9 +876,9 @@ export default function SpeakScreen() {
           recognition.start();
           return;
         } catch {
+          webRecognitionFailedRef.current = true;
           webRecognitionRef.current = null;
-          setPractice(null);
-          setVoiceError("Couldn't start recording — check your microphone and try again.");
+          void recoverFromWebSpeechFailure({ kind: 'practice', phrase }, 'start-error');
           return;
         }
       }
@@ -771,10 +897,17 @@ export default function SpeakScreen() {
       try {
         const transcript = await transcribeSpeech(uri, language.id, await aiIo(), {
           signal: controller.signal,
+          onProgress: (p) => {
+            setSttProgress(
+              p.pct > 0 ? `Loading voice model… ${p.pct}%` : 'Loading voice model…'
+            );
+          },
         });
+        setSttProgress(null);
         if (controller.signal.aborted) return;
         finishPractice(phrase, transcript);
       } catch (error) {
+        setSttProgress(null);
         setPractice(null);
         if (isCancelled(error, controller.signal)) return;
         if (error instanceof QuotaExceeded) {
@@ -787,6 +920,7 @@ export default function SpeakScreen() {
             : "Couldn't catch that — try again, or type the phrase instead."
         );
       } finally {
+        setSttProgress(null);
         if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
@@ -800,8 +934,7 @@ export default function SpeakScreen() {
       setSpeakingKey(null);
       const mic = await ensureRecordingReady();
       if (!mic.ok) {
-        setVoiceError(mic.message);
-        setVoiceHelp(mic.canOpenSettings ? { message: mic.message, action: 'open-settings' } : null);
+        reportMicFailure(mic);
         return;
       }
       setVoiceError(null);
@@ -1352,6 +1485,7 @@ export default function SpeakScreen() {
                     setVoiceHelp(null);
                     void saveModelSettings({
                       browser: { ...settings.browser, enabled: true },
+                      allowUnverified: true,
                       // Server mode keeps chat on the tutor server; enabling
                       // the browser model makes free on-device Whisper the
                       // speech fallback when the server has no audio.
@@ -1372,6 +1506,38 @@ export default function SpeakScreen() {
                   accessibilityRole="button"
                 >
                   <Text style={styles.voiceHelpActionText}>Open system settings</Text>
+                </Pressable>
+              ) : null}
+              {voiceHelp.action === 'open-new-tab' ? (
+                <Pressable
+                  onPress={() => {
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                      window.open(window.location.href, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  style={styles.voiceHelpAction}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.voiceHelpActionText}>Open in new tab</Text>
+                </Pressable>
+              ) : null}
+              {voiceHelp.action === 'retry-mic' ? (
+                <Pressable
+                  onPress={() => {
+                    void (async () => {
+                      const mic = await ensureRecordingReady();
+                      if (mic.ok) {
+                        setVoiceHelp(null);
+                        setVoiceError(null);
+                      } else {
+                        reportMicFailure(mic);
+                      }
+                    })();
+                  }}
+                  style={styles.voiceHelpAction}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.voiceHelpActionText}>Retry microphone</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -1400,9 +1566,11 @@ export default function SpeakScreen() {
               if (voiceHelp) setVoiceHelp(null);
             }}
             placeholder={
-              chatRecording
-                ? `Recording… ${Math.round(recorder.durationMs / 1000)}s`
-                : `Reply in ${language.name}…`
+              sttProgress
+                ? sttProgress
+                : chatRecording
+                  ? `Recording… ${Math.round(recorder.durationMs / 1000)}s`
+                  : `Reply in ${language.name}…`
             }
             placeholderTextColor={colors.textFaint}
             returnKeyType="send"
