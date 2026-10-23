@@ -4,11 +4,7 @@ Babelish teaches 25 languages. **The learner never configures a model.** They
 open Speak and the tutor answers; the only configuration lives on the server
 that the app owner runs.
 
-The tutor is a hosted deployment of open-weight models (Qwen3-Next 80B via
-OpenRouter by default, or any OpenAI-compatible endpoint you host). Courses,
-review, the phrasebook and device audio need no model at all, and a labelled
-coach covers the tutor when the server is unreachable. No model screen ships in
-the app.
+The tutor uses a Supabase Edge Function that can call an operator-configured OpenAI-compatible provider. No provider is considered live until its server-side secrets are configured and a real reply is verified. Courses, review, the phrasebook and device audio need no hosted model, and the labelled offline coach remains available when the provider is not configured or unreachable. No model screen ships in the app.
 
 This document is the honest map: what runs where, which models were verified
 for which languages, how to set each one up, what it costs in hardware, and
@@ -21,7 +17,7 @@ what is **not** finished.
 | Plane | What it is | Runs on | Needs a server? | Cost to you |
 |---|---|---|---|---|
 | **On-device content** | 101 chapters · 212 lessons · 1,744 exercises · 550 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
-| **Tutor server** | Babelish's `api` Function → OpenRouter free Qwen3 endpoints (default) or any OpenAI-compatible server you host | A machine you rent or own | Yes | Free-tier requests are $0; self-hosting costs electricity and hardware |
+| **Tutor server** | Supabase `babelish-ai` Edge Function → operator-configured OpenAI-compatible provider | Supabase Edge Functions + provider | Yes for hosted AI | Depends on provider; offline coach costs no inference |
 | **On-device model** | Transformers.js Whisper (`whisper-base`) for voice input in the browser | The learner's browser | No (one ~150 MB download) | Free (bandwidth + battery) |
 | **External provider** | Optional. Any OpenAI-compatible endpoint, including paid ones | Someone else's servers | Yes | Whatever that provider charges |
 
