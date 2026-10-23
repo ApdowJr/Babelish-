@@ -206,7 +206,8 @@ export default function SettingsScreen() {
   }
 
   function confirmDeleteAccount() {
-    if (!user || !supabase) {
+    const client = supabase;
+    if (!user || !client) {
       showAlert('Sign in required', 'Sign in to your Supabase account before requesting account deletion.');
       return;
     }
@@ -221,7 +222,7 @@ export default function SettingsScreen() {
           onPress: () => {
             void (async () => {
               try {
-                const { error } = await supabase.functions.invoke('delete-account', { body: {} });
+                const { error } = await client.functions.invoke('delete-account', { body: {} });
                 if (error) throw error;
               } catch {
                 showAlert(
@@ -234,7 +235,7 @@ export default function SettingsScreen() {
               // The server confirmed deletion. Clear local state separately so a
               // device-storage hiccup cannot falsely claim the cloud account survived.
               try {
-                await supabase.auth.signOut({ scope: 'local' });
+                await client.auth.signOut({ scope: 'local' });
                 await clearLearningStorage();
                 await clearConversations(ownerIdFor(user.id));
                 await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS, 'babelish:demo-user']);
