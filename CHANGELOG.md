@@ -20,6 +20,11 @@ a disable-only `vercel.json` kill switch: `git.deploymentEnabled: false`) and th
   `scripts/build-apk-local.sh`, and a manual GitHub Actions workflow
   (“Build mobile (APK + iOS)”) that produces a downloadable APK with no
   Expo account. Guide (Soomaali + English): `docs/BUILD_MOBILE.md`.
+- The **GitHub Actions iOS job** now runs on an **Xcode 27** runner (Expo
+  SDK 58 requires Xcode 26.4+; the previous `macos-14` image failed
+  `xcodebuild` instantly with exit 66) and installs CocoaPods
+  dependencies explicitly. Verified end-to-end: the Android APK and the
+  unsigned iOS simulator build both complete and upload artifacts.
 - In-app leftovers of the web build were removed: the referral message no
   longer links to a website, Settings data export uses the native share
   sheet only, and the Settings voice badge reflects only the tutor-server

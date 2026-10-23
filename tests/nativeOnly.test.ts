@@ -88,6 +88,11 @@ test('the manual "Build mobile" workflow really builds an APK and an iOS app', (
   assert.match(workflow, /upload-artifact/, 'APK must be downloadable from the run');
   assert.match(workflow, /babelish-android-apk/);
   assert.match(workflow, /expo prebuild --platform ios/);
+  // Expo SDK 58 needs Xcode 26.4+; old macOS images fail xcodebuild
+  // instantly (exit 66). The job must stay on an Xcode 27 runner.
+  assert.match(workflow, /runs-on: xcode-27/, 'iOS job must use the Xcode 27 runner (SDK 58)');
+  assert.ok(!workflow.includes('macos-14'), 'macos-14 ships an Xcode too old for SDK 58');
+  assert.match(workflow, /pod install/, 'pods must be installed explicitly if prebuild skips them');
   assert.match(workflow, /iphonesimulator/, 'iOS job must be honest: unsigned = simulator build');
   assert.match(workflow, /CODE_SIGNING_ALLOWED=NO/);
   // The workflow must say the quiet part out loud: no fake iPhone installs.

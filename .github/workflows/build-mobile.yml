@@ -18,13 +18,6 @@ name: Build mobile (APK + iOS)
 #     Developer account (US$99/yr) + TestFlight/App Store, or EAS.
 
 on:
-  # TEMP (session branch only, not for main): the Arena GitHub token has
-  # no workflow_dispatch permission (403), so this push trigger scoped
-  # to exactly this branch is how the iOS build is started. It is
-  # removed again once the build finishes; main keeps workflow_dispatch.
-  push:
-    branches:
-      - arena/582016ff-babelish
   workflow_dispatch:
     inputs:
       platform:
@@ -103,10 +96,11 @@ jobs:
 
   ios-simulator:
     name: iOS build (simulator — real iPhone needs Apple account)
-    if: ${{ github.event_name == 'push' || inputs.platform == 'ios' || inputs.platform == 'all' }}
+    if: ${{ inputs.platform == 'ios' || inputs.platform == 'all' }}
     # Expo SDK 58 requires Xcode 26.4+ (versions/v58 table); EAS's sdk-58
-    # image uses Xcode 27. The old macos-14 image only ships old Xcode,
-    # so xcodebuild failed immediately (exit 66) in run 40002358415.
+    # image uses Xcode 27. Older macOS images only ship
+    # old Xcode, and xcodebuild fails immediately (exit 66) — verified,
+    # then fixed and re-verified on this runner (Xcode 27.1, pod 1.17).
     runs-on: xcode-27
     timeout-minutes: 60
     steps:
@@ -137,8 +131,8 @@ jobs:
       - name: Install CocoaPods dependencies
         working-directory: ios
         run: |
-          echo "::notice title=toolchain::$(xcodebuild -version | tr '\n' ' ') | pod $(pod --version 2>/dev/null || echo MISSING)"
-          echo "::notice title=ios-dir::$(ls -1 . | tr '\n' ' ')"
+          xcodebuild -version
+          pod --version
           test -d Pods || pod install
 
       - name: Build for iPhone simulator (unsigned)
