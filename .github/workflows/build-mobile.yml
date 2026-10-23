@@ -18,13 +18,6 @@ name: Build mobile (APK + iOS)
 #     Developer account (US$99/yr) + TestFlight/App Store, or EAS.
 
 on:
-  # TEMP (session branch only, not for main): the Arena GitHub token has
-  # no workflow_dispatch permission (403), so this push trigger scoped
-  # to exactly this branch is how the APK build is started. It is
-  # removed again once the APK is built; main keeps workflow_dispatch.
-  push:
-    branches:
-      - arena/582016ff-babelish
   workflow_dispatch:
     inputs:
       platform:
@@ -47,7 +40,7 @@ concurrency:
 jobs:
   android-apk:
     name: Android APK (direct install)
-    if: ${{ github.event_name == 'push' || inputs.platform == 'android' || inputs.platform == 'all' }}
+    if: ${{ inputs.platform == 'android' || inputs.platform == 'all' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
