@@ -73,9 +73,9 @@ profiling — for anyone, of any age. See the app's current privacy and data-saf
 
 | Service | Role | Data |
 |---|---|---|
-| Supabase (Lakebase Postgres + Managed Auth + Functions) | App backend | Account id/email, progress, vocab, weekly XP, reports |
+| Supabase Auth + PostgreSQL | App backend | Account id/email, progress, vocabulary, learner reports |
 | OpenAI-compatible endpoint (optional, configurable) | STT + tutor | Audio (transient, STT only), conversation text |
 
 That's the whole list. Nothing else touches your data. AI provider keys are
-held only in backend configuration (a Neon Function env var) — `EXPO_PUBLIC_*`
+held only in the operator's server-side gateway configuration — `EXPO_PUBLIC_*`
 values shipped in the app are never used for privileged secrets.
