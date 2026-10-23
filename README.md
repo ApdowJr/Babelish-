@@ -91,48 +91,36 @@ Indonesian, Swahili and Somali (Soomaali). Somali has a starter course; AI and s
 
 ```bash
 pnpm install
-cp .env.example .env    # add your Supabase URL and publishable key
-pnpm android            # run the Android app (Expo SDK 58)
-npx expo start --web    # or run it in the browser
+cp .env.example .env
+# Add EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env
+pnpm android
 ```
 
-The app is usable with **no model at all**: lessons, reviews, phrasebook and
-device audio work offline and the tutor shows the labelled coach. To give every
-learner a live tutor, configure the **server** once — no app rebuild, nothing
-for the learner to install:
+The app keeps its authored curriculum bundled so lessons and reviews work
+offline. Supabase Auth handles accounts; Supabase PostgreSQL stores approved
+curriculum, lesson progress, vocabulary review, and learner reports with RLS.
+The AI tutor uses an optional owner-operated OpenAI-compatible gateway; model
+credentials must stay on that server. Without a gateway, the bundled offline
+coach remains available.
 
-```bash
-AI_API_KEY=sk-or-... npm run deploy:tutor
-```
+## Supabase setup
 
-That one command deploys the `api` Function with the model chain in its
-environment — the key stays on the server, the app is untouched.
+1. Create or open the Babelish Supabase project.
+2. Copy its URL and **publishable key** into `.env` as `EXPO_PUBLIC_SUPABASE_URL`
+   and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. Enable email sign-in in Supabase Auth and configure email confirmation/reset
+   redirect URLs for the Android app.
+4. The development database schema and RLS migrations are tracked in
+   `supabase/schema.sql`. Test with two accounts before any production cutover.
+5. Never place a Supabase secret/service-role key or an AI provider key in the
+   Android app or any `EXPO_PUBLIC_*` variable.
 
-Free Qwen3 endpoints document 24 of 25 atlas languages; Somali is available as a starter course but remains unverified for this model. Free endpoints are rate-limited and availability can change. Prefer your own hardware?
-Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §7.
+## AI tutor
 
-Want a fully local preview with no backend? `EXPO_PUBLIC_NEON_DISABLED=1 npx
-expo start --web` runs the whole app in device-local demo mode.
-
-## Connect real services (optional)
-
-1. **Backend (Neon)** — the app is wired to a Neon branch: **Managed Better Auth**
-   (real accounts + password reset), the **`api` Function** (JWT-verified progress
-   sync + presigned Object Storage), **Lakebase Postgres** (`neon/schema.sql`) and
-   the **`assets`** bucket. `neon deploy` provisions everything and pulls the branch
-   endpoints into `.env.local`; `npm run neon:e2e` proves each service end to end.
-2. **Accounts (Supabase, legacy)** — create a free [Supabase](https://supabase.com)
-   project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
-3. **Tutor server** — the `api` Function proxies chat and speech to the model
-   endpoint you configure (`AI_API_URL`, `AI_KEY`, `AI_MODELS`). The key stays in
-   the Function's environment; the app only holds the public backend URL. Free
-   hosted endpoints cost nothing per token but are rate-limited and rotate;
-   self-hosting costs electricity. Either way the learner sees "Tutor server" or
-   "Coach mode" — never a claim we cannot verify.
-
-The full matrix — local, self-hosted and external — is in
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md).
+Set `EXPO_PUBLIC_AI_GATEWAY_URL` only if you have a compatible, secure tutor
+gateway. Provider credentials belong in that server's environment. Voice input
+and hosted inference depend on that gateway; native speech playback and the
+bundled coach work without it.
 
 ## Project structure
 
@@ -147,11 +135,11 @@ src/
     review.tsx          # daily Leitner review with real session stats
   components/           # Button · TextField · Chip · Logo · Screen · SectionHeader
                         # ProgressBar · StatTile · WeeklyBars · SegmentedControl · Pill
-  context/              # AuthContext (Neon Auth · Supabase · demo mode)
+  context/              # AuthContext (Supabase Auth · demo mode)
   lib/
     ai.ts               # app-facing tutor/voice API (tutorReply · transcribeSpeech · TTS)
     mic.ts              # microphone failure → actionable message (iframe/permission/device)
-    aiCore.ts           # prompt + strict JSON contract + script guard (shared w/ Function)
+    aiCore.ts           # tutor prompt + strict JSON contract + script guard
     models/
       catalog.ts        # model catalogue, language tables, licences
       config.ts         # defaults, URL sanitising, runtime planning, coverage gate
@@ -179,21 +167,16 @@ src/
     palette.ts          # day + night palettes, mode resolution, contrast rules
     tokens.ts           # "warm atlas" spacing, type, radii, shadows
     theme.tsx           # ThemeProvider · useTheme · useThemedStyles
-functions/
-  api/index.ts          # Neon Function: state sync · tutor server (model chain) · storage · review
-neon/schema.sql         # Lakebase Postgres schema (app_state)
-supabase/schema.sql     # legacy tables + RLS
-scripts/                # curriculum drafts · neon e2e · zero-dep tests · local API smoke
-docs/AI_ARCHITECTURE.md # models, coverage, setup, hardware, privacy, limits
-docs/DEPLOYMENT.md      # how to deploy the backend, web and mobile builds
+supabase/schema.sql     # PostgreSQL tables + row-level security
+src/lib/supabaseLearning.ts # per-user progress and vocabulary sync
+scripts/                # curriculum drafts · zero-dependency tests
+docs/AI_ARCHITECTURE.md # model choices, coverage, privacy and limits
 docs/RELEASE_2_0.md     # the 2.0 release notes (atlas + free plan)
 ```
 
 ## Curriculum pipeline
 
-Content ships **bundled** (works offline & in demo mode). When the legacy
-Supabase backend is configured, **approved** chapters from that database
-override the bundle. Every language in the atlas has a course: Spanish is
+Content ships **bundled** (works offline & in demo mode). When Supabase is configured, **approved** chapters from PostgreSQL can override the bundle. Every language in the atlas has a course: Spanish is
 hand-authored, the other 23 are built by the deterministic starter-pack builder
 (`src/data/curriculum/samplers.ts`).
 
@@ -205,11 +188,8 @@ never automatic.
 ## Quality gates
 
 ```bash
-npm test                 # ✅ 105 unit tests / 14 files (atlas · models · courses · review · XP · AI · uploads)
-npm run smoke:local      # ✅ the real Function from source
-npm run neon:e2e         # ✅ 50 checks against the live deployed backend
-npx tsc --noEmit         # ✅ typecheck (app)
-npm run check:functions  # ✅ typecheck (functions)
-npx expo lint            # ✅ lint
-npx expo export --platform web   # ✅ production web build
+pnpm test
+npx tsc --noEmit
+pnpm exec expo lint
+pnpm exec expo export --platform android
 ```
