@@ -2,9 +2,7 @@
 
 **Learn any of 25 languages free — with an open-source tutor you can host yourself.**
 
-Babelish is an AI language tutor that talks to you *only* in your target
-language. **You do not configure a model, download weights or paste a key** —
-open Speak and the tutor answers.
+Babelish is an Android-first AI language tutor. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
 
 Behind it, the app calls its own tutor server, which fronts open-weight models
 (Qwen3-Next 80B on free endpoints by default). Voice input can run Whisper in
@@ -62,7 +60,7 @@ needed a model at all.
 
 | Feature | Status |
 |---|---|
-| **Professional auth** — sign up / sign in / forgot password | ✅ Real Supabase or Neon auth; friendly errors |
+| **Professional auth** — sign up / sign in / forgot password | ✅ Supabase Auth; friendly errors |
 | **Demo mode** — full app without any keys | ✅ Clearly labeled, device-local accounts |
 | **25-language atlas** — real dialects, native names, scripts, speaker counts | ✅ `src/data/languages.ts` |
 | **Starter courses** — 4 chapters × 8 lessons for 23 languages, all offline | ✅ 1,518 starter exercises + 160 in the Spanish course |
@@ -92,9 +90,9 @@ Indonesian, Swahili and Somali (Soomaali). Somali has a starter course; AI and s
 ## Run it
 
 ```bash
-npm install
-cp .env.example .env    # optional — public Neon endpoints are baked in as defaults
-npx expo start          # scan the QR with Expo Go (SDK 58)
+pnpm install
+cp .env.example .env    # add your Supabase URL and publishable key
+pnpm android            # run the Android app (Expo SDK 58)
 npx expo start --web    # or run it in the browser
 ```
 
