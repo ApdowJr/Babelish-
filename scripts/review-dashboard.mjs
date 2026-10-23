@@ -173,7 +173,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const reportMatch = path.match(/^\/admin\/reports\/(lr_[0-9a-f]{12})$/);
+    const reportMatch = path.match(/^\/admin\/reports\/([0-9]+|lr_[0-9a-f]{12})$/);
     if (reportMatch && method === 'POST') {
       const form = new URLSearchParams(await readBody(req));
       const note = String(form.get('note') ?? '').trim().slice(0, 300);

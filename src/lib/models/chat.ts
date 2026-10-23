@@ -112,11 +112,21 @@ export async function probeOpenAI(base: string): Promise<string[]> {
 }
 
 /** Health-checks the app owner's gateway. */
-export async function probeGateway(base: string, jwt?: string | null) {
+export async function probeGateway(
+  base: string,
+  jwt?: string | null,
+  apiKey?: string | null
+) {
   try {
     const res = await getJson(
       `${base}/api/ai/status`,
-      { method: 'GET', headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} },
+      {
+        method: 'GET',
+        headers: {
+          ...(apiKey ? { apikey: apiKey } : {}),
+          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        },
+      },
       3_000
     );
     // Signed out (or an owner-hosted keyless gateway): not an error, just a
@@ -200,7 +210,7 @@ export async function probeEngines(
   const gatewayBase = ctx.gatewayBase ?? null;
   if (gatewayBase && settings.mode !== 'local' && settings.mode !== 'offline') {
     tasks.push(
-      probeGateway(gatewayBase, ctx.jwt)
+      probeGateway(gatewayBase, ctx.jwt, ctx.apiKey)
         .then((status) => {
           gateway = { configured: true, chat: status.chat, stt: status.stt, model: status.model };
           if (status.chat && !chatRuntime) {
@@ -379,6 +389,7 @@ async function runGateway(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(ctx.apiKey ? { apikey: ctx.apiKey } : {}),
         ...(ctx.jwt ? { Authorization: `Bearer ${ctx.jwt}` } : {}),
       },
       body: JSON.stringify(gatewayBody(call)),

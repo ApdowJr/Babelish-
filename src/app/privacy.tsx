@@ -82,7 +82,7 @@ export default function PrivacyRoute() {
       <Text style={styles.p}>
         Babelish is general-audience (12+). It is not directed at children under 13 and does not
         knowingly collect their data. No ads, no tracking, no behavioral profiling — for anyone, of
-        any age. See docs/STORE_COMPLIANCE.md.
+        any age. See docs/STORE_RELEASE.md.
       </Text>
 
       <Text style={styles.h2}>Your rights</Text>

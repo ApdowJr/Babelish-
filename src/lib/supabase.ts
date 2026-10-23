@@ -13,8 +13,13 @@ const SUPABASE_PUBLISHABLE_KEY =
 export const isSupabaseConfigured = Boolean(
   SUPABASE_URL &&
   SUPABASE_PUBLISHABLE_KEY &&
-  !SUPABASE_PUBLISHABLE_KEY.includes('your-')
+  !SUPABASE_PUBLISHABLE_KEY.includes('your-') &&
+  !SUPABASE_PUBLISHABLE_KEY.includes('replace_with')
 );
+
+export const SUPABASE_PUBLISHABLE_KEY_VALUE: string | null = isSupabaseConfigured
+  ? (SUPABASE_PUBLISHABLE_KEY as string)
+  : null;
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY as string, {

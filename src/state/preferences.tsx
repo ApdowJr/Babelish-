@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 import { DEFAULT_LANGUAGE_ID, getLanguage, isKnownLanguage } from '@/data/languages';
 import {
   DAILY_GOALS,
@@ -10,6 +11,7 @@ import {
   type Preferences,
   type VoiceSpeed,
 } from '@/lib/preferenceRules';
+import { readScopedItem, writeScopedItem } from '@/lib/scopedStorage';
 import type { ThemeMode } from '@/theme/palette';
 
 // Re-exported so screens keep importing from one place (`@/state/preferences`).
@@ -36,38 +38,70 @@ type PreferencesValue = Preferences & {
 };
 
 const STORAGE_KEY = 'zelvoca:preferences';
+const DEVICE_THEME_KEY = 'zelvoca:device-theme';
 
 const PreferencesContext = createContext<PreferencesValue | undefined>(undefined);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFERENCES);
-  const [ready, setReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
+
+  const currentScope = authLoading ? '__boot__' : userId ?? '__guest__';
+  const ready = !authLoading && loadedScope === currentScope;
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (!raw) return;
+    if (authLoading) return;
+    let cancelled = false;
+    const scope = userId ?? '__guest__';
+
+    Promise.all([
+      readScopedItem(STORAGE_KEY, userId),
+      AsyncStorage.getItem(DEVICE_THEME_KEY).catch(() => null),
+    ])
+      .then(([raw, deviceTheme]) => {
+        if (cancelled) return;
+        const themeFallback: ThemeMode =
+          deviceTheme === 'light' || deviceTheme === 'dark' || deviceTheme === 'system'
+            ? deviceTheme
+            : DEFAULT_PREFERENCES.themeMode;
+
+        if (!raw) {
+          setPrefs({ ...DEFAULT_PREFERENCES, themeMode: themeFallback });
+          return;
+        }
         const parsed: unknown = JSON.parse(raw);
         // A blob written before onboarding existed belongs to a returning
         // learner: never re-show the welcome flow for it.
-        setPrefs((prev) =>
-          normalizePreferences(
-            parsed,
-            { ...DEFAULT_PREFERENCES, onboarded: true },
-            { isKnownLanguage }
-          ) ?? prev
+        const normalized = normalizePreferences(
+          parsed,
+          { ...DEFAULT_PREFERENCES, onboarded: true },
+          { isKnownLanguage }
         );
+        setPrefs(normalized ?? { ...DEFAULT_PREFERENCES, themeMode: themeFallback });
       })
       .catch(() => {
-        // Unreadable storage keeps the defaults — the app still works.
+        if (!cancelled) setPrefs(DEFAULT_PREFERENCES);
       })
-      .finally(() => setReady(true));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setLoadedScope(scope);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, userId]);
+
+  function persist(next: Preferences) {
+    void writeScopedItem(STORAGE_KEY, JSON.stringify(next), userId);
+    AsyncStorage.setItem(DEVICE_THEME_KEY, next.themeMode).catch(() => {});
+  }
 
   function update(patch: Partial<Preferences>) {
     setPrefs((prev) => {
       const next = { ...prev, ...patch };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      persist(next);
       return next;
     });
   }
@@ -79,7 +113,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         ? prev.activeLanguageIds
         : [...prev.activeLanguageIds, id];
       const next = { ...prev, targetLanguageId: id, activeLanguageIds: active };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      persist(next);
       return next;
     });
   }
@@ -96,7 +130,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       if (has && target === id) target = active[0] ?? DEFAULT_LANGUAGE_ID;
       if (!active.includes(target)) active.unshift(target);
       const next = { ...prev, activeLanguageIds: active, targetLanguageId: target };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      persist(next);
       return next;
     });
   }
