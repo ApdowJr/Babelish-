@@ -47,7 +47,9 @@
     "build": "expo export --platform android",
     "review:dashboard": "node --experimental-strip-types scripts/review-dashboard.mjs",
     "test": "node scripts/test.mjs",
-    "check:release": "node scripts/check-release.mjs"
+    "check:release": "node scripts/check-release.mjs",
+    "web": "expo start --web",
+    "build:web": "expo export --platform web"
   },
   "private": true
 }
