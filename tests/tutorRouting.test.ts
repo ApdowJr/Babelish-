@@ -7,8 +7,14 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_SETTINGS, chatCandidates, sttCandidates } from '../src/lib/models/config';
-import { runChat } from '../src/lib/models/chat';
+import {
+  DEFAULT_SETTINGS,
+  chatCandidates,
+  languageSupport,
+  sttCandidates,
+} from '../src/lib/models/config';
+import { findModel } from '../src/lib/models/catalog';
+import { probeEngines, runChat } from '../src/lib/models/chat';
 
 const gateway = { gatewayBase: 'https://tutor.example.org' };
 const settings = DEFAULT_SETTINGS;
@@ -24,15 +30,34 @@ test('the default setup points at the tutor server, not localhost', () => {
   );
 });
 
-test('speech may still use an on-device model when the server has no audio', () => {
+test('speech may still use an on-device model when the server has no audio', async () => {
   assert.deepEqual(sttCandidates(settings, gateway), ['gateway']);
+  const withBrowserVoice = {
+    ...settings,
+    browser: { ...settings.browser, enabled: true },
+  };
   assert.deepEqual(
-    sttCandidates(
-      { ...settings, browser: { ...settings.browser, enabled: true } },
-      { ...gateway, browserSupported: true }
-    ),
+    sttCandidates(withBrowserVoice, { ...gateway, browserSupported: true }),
     ['gateway', 'browser']
   );
+
+  // ONNX HuggingFace browser IDs must resolve in the model catalogue so
+  // languageSupport permits Whisper transcription when browser voice is enabled.
+  assert.equal(findModel(DEFAULT_SETTINGS.browser.sttModel)?.id, 'whisper-base');
+  assert.equal(languageSupport(DEFAULT_SETTINGS.browser.sttModel, 'es', false), 'ok');
+  assert.equal(languageSupport(DEFAULT_SETTINGS.browser.sttModel, 'so', true), 'ok');
+
+  // When server chat is live but server STT is unconfigured, enabling browser
+  // voice in server mode keeps chat on the gateway and reports browser STT ready.
+  const stubber = stub(() => json({ chat: true, stt: false }));
+  try {
+    const probed = await probeEngines(withBrowserVoice, { ...gateway, browserSupported: true });
+    assert.equal(probed.chatRuntime, 'gateway');
+    assert.equal(probed.sttRuntime, 'browser');
+    assert.equal(probed.sttModel, DEFAULT_SETTINGS.browser.sttModel);
+  } finally {
+    stubber.restore();
+  }
 });
 
 type FetchArgs = { url: string; init?: RequestInit };

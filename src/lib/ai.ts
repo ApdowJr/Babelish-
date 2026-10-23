@@ -534,7 +534,10 @@ export async function transcribeSpeech(
   audioUri: string,
   languageId: string,
   io?: AiTransport | null,
-  opts: { signal?: AbortSignal } = {}
+  opts: {
+    signal?: AbortSignal;
+    onProgress?: (p: { loaded: number; total: number; pct: number; label: string }) => void;
+  } = {}
 ): Promise<string> {
   const settings = getModelSettings();
   const ctx = gatewayContext(io);
@@ -569,6 +572,7 @@ export async function transcribeSpeech(
   const answer = await runTranscribe(settings, audioUri, languageId, ctx, {
     platform: Platform.OS,
     signal: opts.signal,
+    onProgress: opts.onProgress,
   });
   if (!answer) {
     throw new Error(

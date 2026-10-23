@@ -47,7 +47,22 @@ export async function ensureRecordingReady(): Promise<MicResult> {
       return { ok: true };
     } catch (error) {
       const name = error instanceof Error ? error.name : undefined;
-      return { ok: false, ...describeMicFailure(name, context) };
+      let permissionState: 'granted' | 'denied' | 'prompt' | undefined;
+      try {
+        const status = await navigator.permissions?.query({
+          name: 'microphone' as PermissionName,
+        });
+        if (
+          status?.state === 'granted' ||
+          status?.state === 'denied' ||
+          status?.state === 'prompt'
+        ) {
+          permissionState = status.state;
+        }
+      } catch {
+        // Permissions API unsupported for microphone in this browser.
+      }
+      return { ok: false, ...describeMicFailure(name, { ...context, permissionState }) };
     }
   }
 

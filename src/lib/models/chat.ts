@@ -233,23 +233,29 @@ export async function probeEngines(
     );
   }
 
-  if (settings.mode === 'browser' || (settings.mode === 'auto' && settings.browser.enabled)) {
+  await Promise.all(tasks);
+
+  const browserChatAllowed =
+    settings.mode === 'browser' || (settings.mode === 'auto' && settings.browser.enabled);
+  const browserSttAllowed =
+    settings.mode === 'browser' ||
+    ((settings.mode === 'auto' || settings.mode === 'server') && settings.browser.enabled);
+
+  if (browserChatAllowed || browserSttAllowed) {
     if (!browserSupported) {
       notes.push('Browser inference needs a web build with WebAssembly.');
     } else {
-      if (!chatRuntime) {
+      if (browserChatAllowed && !chatRuntime) {
         chatRuntime = 'browser';
         chatModel = settings.browser.chatModel;
       }
-      if (!sttRuntime) {
+      if (browserSttAllowed && !sttRuntime) {
         sttRuntime = 'browser';
         sttModel = settings.browser.sttModel;
       }
       notes.push('Browser models load on first use (first run downloads them).');
     }
   }
-
-  await Promise.all(tasks);
 
   if (settings.mode === 'offline') {
     notes.push('Offline coach selected — no model will be contacted.');
