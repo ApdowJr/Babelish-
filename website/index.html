@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="so">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Babelish — Soo deji Android APK iyo macluumaadka iPhone</title>
+  <meta name="description" content="Babelish waa app Android iyo iPhone oo keliya. Boggan static-ga ah waa soo-dejin, macluumaad, Privacy Policy iyo Terms oo keliya — ma aha web app.">
+  <meta name="theme-color" content="#2415c7">
+  <meta property="og:title" content="Babelish — Android & iPhone">
+  <meta property="og:description" content="Baro 25 luuqadood adigoo ku hadlaya. Boggan waa download iyo sharci oo keliya; Babelish browser-ka kuma shaqeeyo.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/feature-graphic.png">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">U bood nuxurka</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="Babelish — bogga hore">
+        <img src="/icon.png" alt="" width="44" height="44">
+        <span>Babelish</span>
+      </a>
+      <nav class="nav" aria-label="Bogagga ugu waaweyn">
+        <a href="#download">Soo deji</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="https://github.com/ApdowJr/Babelish-">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-grid">
+          <div>
+            <span class="eyebrow">Android + iPhone kaliya • Version 3.4.0</span>
+            <h1>Baro luuqado adigoo <span>run ahaantii ku hadlaya.</span></h1>
+            <p class="lead">
+              Babelish waa app taleefan oo aad ku barato 25 luuqadood: cashirro offline ah,
+              ku-hadal iyo macallin AI ah, dib-u-eegis erayo, iyo horumar aad adigu maamusho.
+            </p>
+            <p class="notice">
+              <strong>Muhim:</strong> Boggan waa download &amp; sharci oo keliya. Ma aha web app,
+              cashirrada Babelish-na browser-ka kuma furmi karaan.
+            </p>
+            <div class="cta-row">
+              <a class="button primary" href="#download">Soo deji Android APK</a>
+              <a class="button secondary" href="#iphone">Macluumaadka iPhone</a>
+            </div>
+          </div>
+          <figure class="hero-art">
+            <img src="/feature-graphic.png" alt="Astaanta Babelish iyo kaararka cashirrada luuqadda" width="1024" height="500">
+          </figure>
+        </div>
+
+        <div class="stats" aria-label="Xog kooban oo Babelish ah">
+          <div class="stat"><strong>25</strong><span>luuqadood oo koorsooyin dhab ah leh</span></div>
+          <div class="stat"><strong>Offline</strong><span>cashirro taleefanka ku jira</span></div>
+          <div class="stat"><strong>0</strong><span>xayaysiis iyo tracker saddexaad</span></div>
+          <div class="stat"><strong>2</strong><span>platform: Android iyo iOS kaliya</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="download">
+      <div class="wrap">
+        <h2>Soo deji Babelish</h2>
+        <p class="section-intro">
+          Android-ka APK-ga tijaabada ah hadda waa la heli karaa. iPhone-ka lama soo bandhigi doono
+          link been abuur ah: rakibashada taleefan dhab ah waxay u baahan tahay Apple Developer,
+          TestFlight ama App Store.
+        </p>
+
+        <div class="cards">
+          <article class="card">
+            <span class="status available">✓ Android — hadda waa la heli karaa</span>
+            <h3>APK si toos ah loo rakibo</h3>
+            <p>
+              APK-gan waxaa soo saaray GitHub Actions, waana mid debug-key lagu saxiixay oo
+              tijaabo toos ah loogu talagalay. Google Play lama gelin karo; Play Store-ka
+              waxaa loo isticmaalaa AAB saxiixan.
+            </p>
+            <div class="cta-row">
+              <a class="button primary" href="https://github.com/ApdowJr/Babelish-/actions/runs/39998390132">
+                Fur APK-ga GitHub ku jira
+              </a>
+              <a class="button secondary" href="https://github.com/ApdowJr/Babelish-/actions/workflows/build-mobile.yml">
+                Dhammaan mobile builds
+              </a>
+            </div>
+            <h4>Sida loo rakibo</h4>
+            <ol class="steps">
+              <li>Fur run-ka GitHub Actions ee kor ku xusan.</li>
+              <li>Hoos u deg ilaa qaybta <strong>Artifacts</strong>.</li>
+              <li>Soo deji artifact-ka <code>babelish-android-apk</code> (ZIP), kadib fur ZIP-ka.</li>
+              <li>Faylka <code>.apk</code> u wareeji taleefanka Android oo taabo si aad u rakibto.</li>
+              <li>Haddii Android ku weydiiyo, oggolow <strong>Install unknown apps</strong> app-ka faylka furaya.</li>
+            </ol>
+            <p class="small">
+              Artifact-kan gaarka ah wuxuu GitHub ka dhacayaa 2026-11-22. Intaa ka dib, isticmaal
+              run guulaysta oo cusub oo ka mid ah workflow-ga “Build mobile (APK + iOS)”.
+            </p>
+          </article>
+
+          <article class="card" id="iphone">
+            <span class="status pending">● iPhone — TestFlight weli lama furin</span>
+            <h3>iPhone dhab ah: link rakibid weli ma jiro</h3>
+            <p>
+              Code-ka iOS waa uu dhismaa, laakiin Apple ma ogola in APK ama IPA aan saxiixin
+              lagu rakibo iPhone caadi ah. Rakibid dhab ah waxay u baahan tahay
+              <strong>Apple Developer Program ($99/sannadkii)</strong>, kadib TestFlight ama App Store.
+            </p>
+            <div class="cta-row">
+              <span class="button disabled" aria-disabled="true">TestFlight link weli ma jiro</span>
+              <a class="button secondary" href="https://github.com/ApdowJr/Babelish-/blob/main/docs/BUILD_MOBILE.md">
+                Akhri hagaha iPhone
+              </a>
+            </div>
+            <h4>Maxaa hadda jira?</h4>
+            <ul class="feature-list">
+              <li>GitHub Actions wuxuu si guul leh u dhisay iOS app tijaabo ah.</li>
+              <li>Build-kaasi waa <strong>iPhone Simulator</strong> oo Mac kaliya loogu talagalay.</li>
+              <li><strong>Cannot be installed on a physical iPhone</strong> — taleefan dhab ah laguma rakibi karo saxiix la'aan.</li>
+              <li>
+                <a href="https://github.com/ApdowJr/Babelish-/actions/runs/40002964354">Eeg caddeynta simulator build-ka</a>
+                — tani ma aha download iPhone dhab ah.
+              </li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="features-title">
+      <div class="wrap">
+        <h2 id="features-title">Maxaa app-ka ku jira?</h2>
+        <p class="section-intro">
+          Boggan kaliya wuxuu ku geynayaa app-ka. Barashada lafteedu waxay ka dhacdaa taleefanka.
+        </p>
+        <div class="feature-grid">
+          <article class="feature">
+            <div class="icon" aria-hidden="true">🎙️</div>
+            <h3>Ku hadal, ha ilaawin</h3>
+            <p>Cashirro hadal, qoraal cod loo beddelay iyo dib-u-eegis waxay kaa caawinayaan inaad luuqadda isticmaasho.</p>
+          </article>
+          <article class="feature">
+            <div class="icon" aria-hidden="true">📚</div>
+            <h3>25 koorso oo offline ah</h3>
+            <p>Cashirrada aasaasiga ah taleefanka ayay ku jiraan, mana u baahna internet joogto ah.</p>
+          </article>
+          <article class="feature">
+            <div class="icon" aria-hidden="true">🔒</div>
+            <h3>Private by default</h3>
+            <p>Tababarkaagu taleefanka ayuu ku harayaa; horumarka iyo erayada oo keliya ayaa account-kaaga sync noqda.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" lang="en" aria-labelledby="english-title">
+      <div class="wrap english-box">
+        <h2 id="english-title">English summary</h2>
+        <p>
+          Babelish 3.4.0 is a native-only Android and iPhone language-learning app. This page is
+          <strong>not a web app</strong>: it is a static download and legal-information page only.
+        </p>
+        <p>
+          Android users can download the tested direct-install APK from the GitHub Actions run above.
+          A physical iPhone install is not available yet; it requires the
+          Apple Developer Program ($99/year) plus TestFlight or the App Store.
+          The existing iOS artifact is an unsigned simulator build and
+          cannot be installed on a physical iPhone.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="legal-title">
+      <div class="wrap">
+        <h2 id="legal-title">Sharci iyo taageero</h2>
+        <p class="section-intro">
+          Kuwani waa nuqullo public ah oo loogu talagalay isticmaalayaasha iyo store review.
+        </p>
+        <div class="legal-grid">
+          <a class="legal-card" href="/privacy">
+            <strong>Privacy Policy</strong>
+            <span>Maxaa taleefanka ku hara, maxaa sync noqda, iyo sida aad xogtaada u dhoofin ama u tirtiri karto.</span>
+          </a>
+          <a class="legal-card" href="/terms">
+            <strong>Terms of Service</strong>
+            <span>Xeerarka isticmaalka app-ka, xaddidaadda AI tutor-ka iyo mas'uuliyadda account-kaaga.</span>
+          </a>
+          <a class="legal-card" href="mailto:support@zelvoca.app">
+            <strong>Taageero</strong>
+            <span>support@zelvoca.app — su'aalaha app-ka iyo sharciga halkan u dir.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>© 2026 Babelish • Android + iOS kaliya • <code>app.zelvoca.babelish</code></p>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#download">Download</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="https://github.com/ApdowJr/Babelish-">Source code</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,8 +1,10 @@
 # Shipping Babelish to the Play Store (and the App Store)
 
 > **Native-only:** Babelish ships as an Android APK/AAB + iPhone app. There is
-> no web version. For a direct-install APK without the stores, see
-> `docs/BUILD_MOBILE.md` (GitHub Actions → “Build mobile (APK + iOS)”).
+> no browser version of the app. Vercel hosts only a static download/legal
+> page (`website/`); lessons and accounts do not run there. For a direct-install
+> APK without the stores, see `docs/BUILD_MOBILE.md` (GitHub Actions →
+> “Build mobile (APK + iOS)”).
 
 Everything in this file is either **done in code** or an **explicit action only you can take**
 (accounts, uploads, legal identity). Nothing here is claimed to be done on your behalf.
@@ -27,7 +29,7 @@ Run `npm run check:release` before every upload — it blocks the mistakes that 
 | Play icon + feature graphic | 512² RGB, 1024×500 | `assets/store/` |
 | Build profiles | development / apk (.apk) / preview (.apk) / production (.aab + iOS) | `eas.json` |
 | Submit profile | internal track, **draft** | `eas.json` |
-| Legal pages | `/privacy`, `/terms` | `src/app/` |
+| Legal pages | `/privacy`, `/terms` | `src/app/` + public static copies in `website/privacy.html`, `website/terms.html` |
 | Consent | shown before onboarding completes | `src/app/onboarding.tsx` |
 
 **Bump the version in one place.** Change `package.json`, `app.json` and `android.versionCode`
@@ -67,7 +69,7 @@ Create the app, then fill **App content**. Each answer below is what the code ac
 
 | Declaration | Answer | Why |
 |---|---|---|
-| Privacy policy URL | _Publish `docs/PRIVACY.md` at a public URL first (e.g. GitHub Pages) and paste that URL_ | Both stores require a **public web page** for the policy even though the app itself is native-only; the in-app `/privacy` route carries the same text. There is no Babelish web app any more, so do **not** invent/reuse an old app URL that no longer exists |
+| Privacy policy URL | _Use the **verified Vercel production domain** + `/privacy`_ | The source is `docs/PRIVACY.md`; the public static copy is `website/privacy.html`, and terms are `website/terms.html` at `/terms`. Both stores require a public legal page even though the app itself is native-only. Do **not** paste an ephemeral PR preview URL, and do not describe the static page as a browser version of Babelish |
 | Ads | **No ads** | no ad SDK in `package.json` |
 | In-app purchases | **No** | the plan screens are informational; nothing is sold |
 | Content rating | fill the questionnaire honestly | no violence, no user-generated public content, no gambling |

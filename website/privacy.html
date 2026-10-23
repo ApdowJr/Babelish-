@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Babelish — Privacy Policy</title>
+  <meta name="description" content="Babelish Privacy Policy: what stays on your phone, what syncs to your account, microphone audio, AI tutor content, export and account deletion.">
+  <meta name="theme-color" content="#2415c7">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="Babelish home">
+        <img src="/icon.png" alt="" width="44" height="44">
+        <span>Babelish</span>
+      </a>
+      <nav class="nav" aria-label="Main pages">
+        <a href="/#download">Download</a>
+        <a href="/privacy" aria-current="page">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="https://github.com/ApdowJr/Babelish-">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="legal-main">
+    <div class="wrap">
+      <article class="legal-shell">
+        <span class="eyebrow">Babelish for Android &amp; iPhone</span>
+        <h1>Privacy Policy</h1>
+        <p class="meta">Last updated: 2026-10-23</p>
+
+        <div class="notice">
+          This is the public copy of the Babelish mobile app policy. This static download/legal
+          website does not run lessons, create app accounts, or receive learning data. Download
+          links take you to GitHub.
+        </div>
+
+        <h2>The short version</h2>
+        <p>
+          Your practice stays on your phone. Babelish has no ads, no third-party analytics, and no
+          data brokers. The only thing that ever syncs to a server is your progress and vocabulary —
+          in your Supabase account, protected by Row Level Security (RLS). Microphone audio is
+          transcribed on demand and never stored.
+        </p>
+
+        <h2>What lives only on your device</h2>
+        <ul>
+          <li>Practice events, XP, streaks, league standing (computed locally)</li>
+          <li>Your learner profile (name, goals, interests)</li>
+          <li>Reminder settings (scheduling is a local OS notification — no push server)</li>
+          <li>The offline curriculum for every language (bundled in the app)</li>
+        </ul>
+        <p>
+          None of this leaves the device unless you sign in, and even then only the items in the next
+          section sync.
+        </p>
+
+        <h2>What syncs when you sign in</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Data</th><th scope="col">Where</th><th scope="col">Why</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Lesson progress (scores, timestamps)</td>
+                <td>Supabase PostgreSQL (<code>user_progress</code>)</td>
+                <td>Resume on another device</td>
+              </tr>
+              <tr>
+                <td>Vocabulary / spaced-repetition boxes</td>
+                <td>Supabase PostgreSQL (<code>user_vocab</code>)</td>
+                <td>Keep review queues correct</td>
+              </tr>
+              <tr>
+                <td>Weekly XP (a number, and a week key)</td>
+                <td>Stored locally for now</td>
+                <td>Your rank on the weekly board</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The weekly board is privacy-first by design: you see your own rank and the number of
+          participants — never another learner’s identity, and they never see yours. Reports you file
+          (“this sounds wrong”) are queued with your user id so reviewers can follow up; they are
+          never shown to other learners.
+        </p>
+
+        <h2>Microphone audio</h2>
+        <ul>
+          <li>Word-match feedback is computed on your device from the transcript; it is not acoustic pronunciation scoring.</li>
+          <li>
+            Optional cloud speech-to-text (only if an OpenAI-compatible endpoint is configured)
+            receives the audio for transcription only; the audio is discarded immediately and only the
+            transcribed phrase is kept as practice content.
+          </li>
+          <li>
+            With no STT configured, audio never leaves the device — and the app says so instead of
+            pretending otherwise.
+          </li>
+        </ul>
+
+        <h2>AI tutor content</h2>
+        <p>
+          Tutor replies use the Supabase <code>babelish-ai</code> Edge Function when a provider is
+          configured with server-side secrets, or the clearly labelled bundled offline coach when no
+          live model is available. Conversation text is sent to the configured provider to generate
+          the reply and is not stored by Babelish. Every AI-generated item that could reach the
+          curriculum passes the human approval gate before publication — AI never publishes itself.
+        </p>
+
+        <h2>Children</h2>
+        <p>
+          Babelish is general-audience (12+). It is not directed at children under 13 and does not
+          knowingly collect their data. No ads, no tracking, no behavioral profiling — for anyone, of
+          any age.
+        </p>
+
+        <h2>Your rights</h2>
+        <ul>
+          <li>
+            Export everything the app knows about you: Settings → Data &amp; storage → Export my data
+            (JSON via the system share sheet).
+          </li>
+          <li>
+            Delete your account: Settings → Danger zone → Delete account. After confirmation, a
+            protected Supabase Edge Function deletes your signed-in account; the app then clears local
+            learning data and saved conversations. If the server cannot confirm deletion, the app
+            reports failure.
+          </li>
+          <li>No cookie banners in the app, because there is nothing to consent to.</li>
+        </ul>
+
+        <h2>Operators &amp; subprocessors</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Service</th><th scope="col">Role</th><th scope="col">Data</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Supabase Auth + PostgreSQL + Edge Functions</td>
+                <td>App backend</td>
+                <td>Account id/email, lesson progress, vocabulary, learner reports</td>
+              </tr>
+              <tr>
+                <td>OpenAI-compatible endpoint (optional, configurable)</td>
+                <td>STT + tutor</td>
+                <td>Audio (transient, STT only), conversation text</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>That’s the whole list for app data. Nothing else touches your learning data.</p>
+
+        <h2>This static website</h2>
+        <p>
+          This site contains static download and legal pages only. It has no lesson player, account
+          sign-in, form, advertising, or analytics script. The hosting provider may process standard
+          technical request data needed to deliver and secure these pages. When you follow a download
+          or source-code link to GitHub, GitHub’s own privacy terms apply to that visit.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about this policy: <a href="mailto:support@zelvoca.app">support@zelvoca.app</a>.
+          See also the <a href="/terms">Terms of Service</a>.
+        </p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>© 2026 Babelish • Android + iOS only</p>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@zelvoca.app">Support</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -3,6 +3,8 @@
 > **SOOMAALI marka hore, English hoos.**
 > Babelish hadda waa **app taleefan oo kaliya**: Android (.apk / .aab) iyo
 > iPhone (iOS). **Web/browser version lama rabo, waana laga saaray.**
+> Vercel waxaa ku jira oo keliya bog **static ah oo download & sharci ah** —
+> cashirrada iyo account-ga app-ku browser-ka kuma shaqeeyaan.
 
 ---
 
@@ -12,10 +14,26 @@
 
 | Wax | Kahor | Hadda |
 |---|---|---|
-| Web (Vercel, browser) | ✅ jiray | ❌ **waa la saaray** — `react-native-web`, `react-dom` ma jiraan; `vercel.json` waa *kill-switch* kaliya (`deploymentEnabled: false`) oo Vercel u diidaya inuu wax dhiso |
+| Web app (browser) | ✅ jiray | ❌ **waa la saaray** — `react-native-web`, `react-dom` ma jiraan. Vercel hadda wuxuu u adeegaa oo keliya faylasha static ah ee `website/` (download + Privacy/Terms), ma aha app browser ku shaqeeya |
 | Android | ✅ | ✅ **APK** (si toos ah loo rakibo) + AAB (Play Store) |
 | iPhone (iOS) | ⚠️ config kaliya | ✅ build profile diyaar ah (hoos ka fiiri shuruudaha Apple) |
 | `app.json` platforms | android + ios + web | `["android", "ios"]` oo kaliya |
+
+### Bogga Vercel — download & sharci kaliya
+
+Milkiiluhu wuxuu oggolaaday in Vercel mar kale deployment sameeyo, laakiin
+**kaliya** bog static ah:
+
+- Faylashu waxay ku jiraan `website/`: `index.html`, `website/privacy.html`,
+  `website/terms.html`, CSS iyo sawirrada astaanta.
+- `vercel.json` wuxuu Vercel u dejiyaa Framework Preset **Other**
+  (`framework: null`), `installCommand: ""`, `buildCommand: ""` iyo
+  `outputDirectory: "website"`. Sidaas darteed Vercel ma wadi karo
+  `package.json`-ka `build` script-kiisa Android, mana dhisi karo Expo web.
+- Bogga hore wuxuu dadka u diraa APK-ga GitHub Actions iyo macluumaad run ah
+  oo iPhone ah. Ma laha lesson player, account login, form ama JavaScript.
+- URL-yada dadweynaha waa `/privacy` iyo `/terms` oo ku yaal domain-ka
+  production ee Vercel marka deployment-ka la xaqiijiyo.
 
 ### Sida APK-ga loo helo — 3 doorasho
 
@@ -87,20 +105,24 @@ npm run build:ios         # JS bundle iOS
 ### Privacy URL (Play Store / App Store ay u baahan yihiin)
 
 Bakhaarada (stores) waxay u baahan yihiin bog **privacy policy** oo
-internet ka furan — xitaa haddii app-ku web lahayn. Qoraalku wuxuu ku
-jiraa `docs/PRIVACY.md`; ka hor intaadan store-ka gelin, ku daabac
-meel bilaash ah (tusaale GitHub Pages) oo URL-kaas ku qor store-ka.
-Ha isticmaalin URL duug ah oo web-app ah oo aan hadda jirin.
+internet ka furan — xitaa haddii app-ku web app lahayn. Nuqulka rasmiga ah
+wuxuu ku jiraa `docs/PRIVACY.md`, nuqulka static ee dadweynuhuna waa
+`website/privacy.html`. Marka production deployment-ka Vercel la xaqiijiyo,
+store-ka ku qor URL-ka production ee ku dhammaada `/privacy` (Terms-kuna
+waa `/terms`). Ha isticmaalin PR preview URL ku-meelgaar ah, hana u
+malayn in boggaas app-ku browser-ka ku shaqeeyo — waa sharci/download
+kaliya.
 
 ---
 
 ## 🇬🇧 English
 
 Babelish is **native-only**: Android (`.apk` direct-install, `.aab` for
-Google Play) and iPhone (iOS). The web target was removed at the owner's
+Google Play) and iPhone (iOS). The Expo web target was removed at the owner's
 request — `app.json` declares `platforms: ["android", "ios"]`, and
-`npm run check:release` fails if web dependencies, scripts, a `web`
-section ever comes back, or if `vercel.json` contains anything besides the deployment kill switch below (see `tests/nativeOnly.test.ts`).
+`npm run check:release` fails if web dependencies, scripts, or a `web`
+section ever comes back, or if `vercel.json` points anywhere besides the
+exact static download/legal contract below (see `tests/nativeOnly.test.ts`).
 
 ### Get the APK
 
@@ -130,9 +152,32 @@ There is no “APK for iPhone”. Apple's only paths are:
   cannot be installed on a physical iPhone — that is Apple's rule, not
   a Babelish limitation.
 
+### Static Vercel download/legal page
+
+The owner later approved one narrow exception to “no Vercel deployment”: a
+**static download/legal page**. It is not a web version of Babelish and it
+cannot run lessons or accounts.
+
+- Source/output directory: `website/` (`index.html`, `website/privacy.html`,
+  `website/terms.html`, CSS, and brand images only; no JavaScript).
+- `vercel.json` is pinned to Framework Preset **Other** (`framework: null`),
+  `installCommand: ""`, `buildCommand: ""`, `outputDirectory: "website"`,
+  clean URLs, Git deployments enabled, and a fixed set of security headers.
+  Empty install/build commands stop Vercel from falling back to
+  `package.json`'s Android `build` script.
+- The home page links Android users to the real GitHub Actions APK artifact
+  and says plainly that a physical iPhone still needs Apple Developer +
+  TestFlight/App Store. It must never present the unsigned simulator build as
+  an iPhone download.
+- Production routes are `/privacy` and `/terms`. Store consoles should use
+  the verified production domain, never an ephemeral PR preview URL.
+
 ### What was removed (web)
 
-- The Vercel **web build config** (replaced by a disable-only `vercel.json`: `git.deploymentEnabled: false`, Vercel's documented way to turn off *all* automatic deployments — the GitHub App stays connected but never creates a deployment, so it can no longer fail PRs trying to build a web app that does not exist), `assets/favicon.png`
+- The Vercel **Expo web build config** and `assets/favicon.png`. A temporary
+  disable-only kill switch was used during the native-only conversion; it has
+  now been replaced by the exact static download/legal contract above. Vercel
+  still never builds or exports the Expo app for a browser.
 - Dependencies: `react-native-web`, `react-dom`, `@expo/metro-runtime`
 - Scripts: `web`, `build:web` → replaced by `build:android`,
   `build:ios`, `build:apk`, `build:apk:local`, `build:aab`,
@@ -160,6 +205,8 @@ There is no “APK for iPhone”. Apple's only paths are:
   is unchanged. “No web” means no browser version of the **app** — the
   phone still talks to Supabase over HTTPS, as any native app does.
 - Store listings still need a public privacy URL (both stores require
-  one even for native-only apps). Publish `docs/PRIVACY.md` somewhere
-  public (e.g. GitHub Pages) before submitting; see
-  `docs/STORE_RELEASE.md`.
+  one even for native-only apps). The source policy is `docs/PRIVACY.md`;
+  the public static copy is `website/privacy.html`, served as `/privacy`
+  on the verified Vercel production domain (`website/terms.html` is
+  `/terms`). When legal copy changes, update the in-app route, docs, and
+  static page together; see `docs/STORE_RELEASE.md`.

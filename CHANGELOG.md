@@ -7,14 +7,18 @@ project uses semantic versioning.
 
 ### Changed
 
-- **Native-only: Android APK + iPhone, no web.** At the owner's request the
-  web target was removed completely — `app.json` now declares
-  `platforms: ["android", "ios"]`, the Vercel web build config (now
-a disable-only `vercel.json` kill switch: `git.deploymentEnabled: false`) and the web-only
-  dependencies (`react-native-web`, `react-dom`, `@expo/metro-runtime`) are
-  gone, and `expo export --platform web` is refused by Expo itself. CI now
-  bundles **both** Android and iOS. `npm run check:release` and
-  `tests/nativeOnly.test.ts` fail if a web target is ever re-added.
+- **Native-only app; static download/legal page on Vercel.** At the owner's
+  request the Expo web target remains removed completely — `app.json` now
+  declares `platforms: ["android", "ios"]`, the web-only dependencies
+  (`react-native-web`, `react-dom`, `@expo/metro-runtime`) are gone, and
+  `expo export --platform web` is refused by Expo itself. CI bundles **both**
+  Android and iOS. At the owner's later request for a new Vercel deployment,
+  Vercel now serves only the committed static files in `website/`
+  (Somali-first download/info page plus `/privacy` and `/terms`; no
+  JavaScript, lessons, accounts, or app bundle). `vercel.json` pins Framework
+  Preset Other, empty install/build commands, `outputDirectory: "website"`,
+  and restrictive headers; `npm run check:release` and
+  `tests/nativeOnly.test.ts` fail if an actual web target is ever re-added.
 - New phone build paths: EAS `apk` profile (`npm run build:apk`),
   `npm run build:aab` (Play), `npm run build:iphone`, a local
   `scripts/build-apk-local.sh`, and a manual GitHub Actions workflow
