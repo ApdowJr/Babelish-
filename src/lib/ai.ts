@@ -301,7 +301,6 @@ export async function speakNative(text: string, ttsLocale: string, rate = 0.92):
         voices.map((item) => ({
           identifier: item.identifier,
           language: item.language,
-          localService: item.networkConnectionRequired ? false : true,
         })),
         ttsLocale
       ))
