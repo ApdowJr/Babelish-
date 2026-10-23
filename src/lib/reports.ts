@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { postReport, type ReportPayload } from '@/lib/neonApi';
+import { supabase } from '@/lib/supabase';
+
+type ReportPayload = { languageId: string; kind: string; quote: string; reason: string };
 
 /**
  * Learner reporting — "this sounds wrong" from any content surface.
@@ -68,7 +70,17 @@ export async function flushReportQueue(
   for (let i = 0; i < queue.length; i++) {
     const { localId: _localId, at: _at, ...payload } = queue[i];
     try {
-      await postReport(jwt, payload);
+      if (!supabase) throw new Error('Supabase is not configured.');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Sign in to send a report.');
+      const { error } = await supabase.from('content_reports').insert({
+        user_id: user.id,
+        language_id: payload.languageId,
+        kind: payload.kind,
+        quote: payload.quote,
+        reason: payload.reason,
+      });
+      if (error) throw error;
       sent += 1;
     } catch {
       failureIndex = i;

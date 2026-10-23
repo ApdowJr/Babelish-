@@ -31,11 +31,9 @@ import { cancelDailyReminder, scheduleDailyReminder, sendTestReminder } from '@/
 import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
 import { clearConversations } from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
-import { deleteAccount } from '@/lib/neonApi';
 import { buildPack, formatPackSize } from '@/lib/offline';
 import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
 import { fetchAiStatus, type AiStatus } from '@/lib/ai';
-import { NEON_API_URL } from '@/lib/neon';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
@@ -77,7 +75,7 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors, isDark } = useTheme();
-  const { user, signOut, isNeon, getAccessToken } = useAuth();
+  const { user, signOut, getAccessToken } = useAuth();
   const prefs = usePreferences();
   const {
     setDailyGoal,
@@ -106,7 +104,8 @@ export default function SettingsScreen() {
     let cancelled = false;
     void (async () => {
       const jwt = await getAccessToken().catch(() => null);
-      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
+      const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+      const status = await fetchAiStatus(apiBase ? { apiBase, jwt } : null);
       if (!cancelled) setAiStatus(status);
     })();
     return () => {
@@ -207,40 +206,9 @@ export default function SettingsScreen() {
 
   function confirmDeleteAccount() {
     showAlert(
-      'Delete account?',
-      'This removes your profile, progress, vocabulary and XP from this device and from Babelish servers. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              let serverIssue = false;
-              try {
-                if (isNeon) {
-                  const jwt = await getAccessToken();
-                  if (jwt) {
-                    const result = await deleteAccount(jwt);
-                    serverIssue = result.authUser === 'failed';
-                  }
-                }
-              } catch {
-                // Server unreachable — the local wipe below still happens.
-              }
-              await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
-              await clearConversations(ownerIdFor(user?.id ?? null));
-              signOut();
-              if (serverIssue) {
-                showAlert(
-                  'Account removal incomplete',
-                  'Your learning data was erased, but the account itself could not be removed from the server. Please try again later.'
-                );
-              }
-            })();
-          },
-        },
-      ]
+      'Account deletion not available yet',
+      'Secure account deletion is not configured for this Supabase project yet. No account or learning data has been deleted. You can sign out, or contact support for help.',
+      [{ text: 'OK' }]
     );
   }
 

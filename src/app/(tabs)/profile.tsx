@@ -30,7 +30,7 @@ import { useTheme, useThemedStyles } from '@/theme/theme';
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const { user, signOut, isDemo, isNeon } = useAuth();
+  const { user, signOut, isDemo } = useAuth();
 
   const {
     targetLanguageId,
@@ -106,7 +106,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Pill
-              label={isDemo ? 'DEMO ACCOUNT' : isNeon ? 'NEON ACCOUNT' : 'VERIFIED'}
+              label={isDemo ? 'DEMO ACCOUNT' : 'SUPABASE ACCOUNT'}
               tone="dark"
             />
             <Pill label={`${tier.emoji} ${tier.name.toUpperCase()}`} tone="dark" />

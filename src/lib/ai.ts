@@ -24,7 +24,6 @@ import {
   sttCandidates,
   sttModelForRuntime,
 } from '@/lib/models/config';
-import { NEON_API_URL } from '@/lib/neon';
 import type { RuntimeId } from '@/lib/models/types';
 import { EngineFailed, RequestCancelled } from '@/lib/models/types';
 import {
@@ -68,7 +67,7 @@ function gatewayContext(io?: AiTransport | null) {
   // An owner-hosted deployment can point the app at its own gateway without a
   // rebuild-time backend URL. Public address only — never a credential.
   const configured = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
-  const base = io?.apiBase || configured || NEON_API_URL || undefined;
+  const base = io?.apiBase || configured || undefined;
   return {
     gatewayBase: base || null,
     jwt: io?.jwt ?? null,
