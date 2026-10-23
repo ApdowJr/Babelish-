@@ -19,8 +19,6 @@ type AuthContextValue = {
   user: AppUser | null;
   loading: boolean;
   isDemo: boolean;
-  /** Kept temporarily for UI compatibility while remaining Neon API calls are migrated. */
-  isNeon: false;
   /** Returns the active Supabase access token, or null when signed out. */
   getAccessToken: () => Promise<string | null>;
   signUp: (params: { name: string; email: string; password: string }) => Promise<{ message?: string }>;
@@ -102,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       isDemo: !isSupabaseConfigured,
-      isNeon: false,
       async getAccessToken() {
         if (!supabase) return null;
         const { data: { session } } = await supabase.auth.getSession();
