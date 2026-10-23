@@ -2,9 +2,12 @@
 
 **Learn any of 25 languages free — with an open-source tutor you can host yourself.**
 
-Babelish is an Android-first AI language tutor. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
+Babelish is a **native-only** AI language tutor for **Android and iPhone** — there is no web version. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
 
-Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live model is available only after the operator configures server-side provider secrets; otherwise the clearly labelled offline coach remains available. Browser Whisper can provide voice input where supported. Courses, review, the phrasebook and device audio work without a hosted model.
+Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live model is available only after the operator configures server-side provider secrets; otherwise the clearly labelled offline coach remains available. Courses, review, the phrasebook and device audio work without a hosted model.
+
+> 📱 **APK + iPhone kaliya — web ma jiro.** Sida APK-ga loo helo (GitHub Actions /
+> EAS / local) iyo runta ku saabsan iPhone-ka: **`docs/BUILD_MOBILE.md`** (Soomaali + English).
 
 > 25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550 starter words
 > bundled offline. Every lesson playable on the free plan.
@@ -65,7 +68,7 @@ Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live 
 | **Chapter unlocking** — chapter N opens at 70%+ on N−1 | ✅ Per-lesson scores on the language page |
 | **Spaced repetition** — missed words enter a Leitner queue (1/2/4/8/15 days) | ✅ Rebuilt review screen + Words tab |
 | **AI tutor** — level-aware conversation; verified model coverage varies by language | ✅ Hosted tutor server (zero setup) · coach fallback |
-| **Voice input** — record → Whisper → tutor reply | ✅ Server or in-browser Whisper; typing always available; failures explain themselves |
+| **Voice input** — record → Whisper → tutor reply | ✅ Server Whisper when configured; typing always available; failures explain themselves |
 | **Native TTS** — hear every reply in a locale voice (`es-ES`, `ar-EG`, `ja-JP`…) | ✅ expo-speech, with replay + slow mode |
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
 | **Translations** — toggle English under every AI message | ✅ Explanation language follows your native language |
@@ -86,11 +89,26 @@ Indonesian, Swahili and Somali (Soomaali). Somali has a starter course; AI and s
 ## Run it
 
 ```bash
-pnpm install
+npm install
 cp .env.example .env
 # Add EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env
-pnpm android
+npm run android        # Android emulator / device
+npm run ios            # iPhone simulator (Mac) / device
 ```
+
+### Build the phone apps
+
+```bash
+npm run build:apk      # Android .apk — install directly on a phone (EAS)
+npm run build:aab      # Android .aab — Google Play upload (EAS)
+npm run build:iphone   # iOS build — App Store / TestFlight (paid Apple account needed)
+```
+
+No Expo account? Use **GitHub → Actions → “Build mobile (APK + iOS)”** and
+download the APK from the run's Artifacts. Full Soomaali + English guide:
+`docs/BUILD_MOBILE.md`. Babelish is native-only — `app.json` declares
+`platforms: ["android", "ios"]`; there is no `web` script any more, and
+`npm run check:release` fails if a web target is re-added.
 
 The app keeps its authored curriculum bundled so lessons and reviews work
 offline. Supabase Auth handles accounts; Supabase PostgreSQL stores approved
@@ -186,8 +204,10 @@ never automatic.
 ## Quality gates
 
 ```bash
-pnpm test
+npm test
 npx tsc --noEmit
-pnpm exec expo lint
-pnpm exec expo export --platform android
+npm run lint
+npm run check:release
+npm run build:android   # Android JS bundle
+npm run build:ios       # iOS JS bundle
 ```

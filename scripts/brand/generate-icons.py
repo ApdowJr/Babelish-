@@ -17,7 +17,6 @@ Outputs (all committed, because stores and Expo builds require them):
     assets/android-icon-foreground.png 1024  adaptive foreground (66% safe zone)
     assets/android-icon-monochrome.png 1024  Android 13+ themed icon silhouette
     assets/splash-icon.png              512  native & in-app splash mark (RGBA)
-    assets/favicon.png                   96  web favicon (RGBA squircle)
     assets/store/play-icon-512.png      512  Google Play app icon (24-bit RGB)
     assets/store/feature-graphic.png 1024x500 Google Play Store feature graphic
     assets/notification-icon.png         96  Android notification small icon (white)
@@ -238,7 +237,7 @@ def build_monochrome_mask(src: Image.Image, coeffs: list[list[float]], size: int
 
 
 def build_squircle_mark(src: Image.Image, size: int, fill_ratio: float = 0.94) -> Image.Image:
-    """Crisp RGBA squircle mark for splash screen, in-app BrandMark, and web favicon."""
+    """Crisp RGBA squircle mark for the splash screen and in-app BrandMark."""
     bbox = src.getchannel("A").getbbox()
     cropped = src.crop(bbox) if bbox else src
     inner = max(1, round(size * fill_ratio))
@@ -355,9 +354,8 @@ def main() -> None:
     mono_1024 = build_monochrome_mask(src, coeffs, 1024)
     save(mono_1024, "android-icon-monochrome.png")
 
-    # 3. Splash icon & Web favicon (crisp RGBA squircle)
+    # 3. Splash icon (crisp RGBA squircle). Native-only: no web favicon.
     save(build_squircle_mark(src, 512, fill_ratio=0.94), "splash-icon.png")
-    save(build_squircle_mark(src, 96, fill_ratio=0.96), "favicon.png")
 
     # 4. Android notification small icon (white silhouette on transparent)
     save(build_notification_icon(mono_1024, 96), "notification-icon.png")

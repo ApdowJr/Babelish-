@@ -10,7 +10,8 @@
  *   version / versionCode drift · missing package id · unused or undeclared
  *   permissions · store artwork at the wrong size · a committed signing key ·
  *   a secret in an EXPO_PUBLIC_* variable · missing legal routes · an eas.json
- *   that would upload to production instead of internal testing.
+ *   that would upload to production instead of internal testing · a web
+ *   target creeping back in (Babelish is native-only: Android + iOS).
  *
  * Exit codes: 0 = clear to build, 1 = blockers, 2 = warnings only.
  */
@@ -100,7 +101,6 @@ const required = [
   ['assets/android-icon-background.png', 1024, 1024],
   ['assets/android-icon-monochrome.png', 1024, 1024],
   ['assets/splash-icon.png', 512, 512],
-  ['assets/favicon.png', 96, 96],
   ['assets/store/play-icon-512.png', 512, 512],
   ['assets/store/feature-graphic.png', 1024, 500],
   ['assets/notification-icon.png', 96, 96],
@@ -140,6 +140,29 @@ for (const line of envExample.split('\n')) {
   }
 }
 
+
+// ── native-only (no web) ────────────────────────────────────────────────────
+// Babelish ships ONLY as an Android APK/AAB and an iPhone app. If any of
+// these creep back, someone re-added the web target by accident.
+const platforms = app.platforms ?? [];
+if (JSON.stringify([...platforms].sort()) !== JSON.stringify(['android', 'ios'])) {
+  block(`app.json platforms must be ["android","ios"] only, found ${JSON.stringify(platforms)}`);
+}
+if ('web' in app) block('app.json still has a "web" section — Babelish is native-only, remove it');
+if (existsSync(path.join(root, 'vercel.json'))) {
+  block('vercel.json exists — the web deployment was removed on purpose (native-only)');
+}
+const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+for (const webDep of ['react-native-web', 'react-dom', '@expo/metro-runtime']) {
+  if (webDep in deps) block(`${webDep} is a web-only dependency — remove it (native-only app)`);
+}
+for (const webScript of ['web', 'build:web']) {
+  if (pkg.scripts?.[webScript]) block(`package.json script "${webScript}" is a web target — remove it`);
+}
+if (!blockers.some((msg) => /web|vercel|platforms/i.test(msg))) {
+  ok('native-only: platforms are Android + iOS, no web deps/scripts/deployment');
+}
+
 // ── legal + eas ─────────────────────────────────────────────────────────────
 for (const route of ['src/app/privacy.tsx', 'src/app/terms.tsx']) {
   if (!existsSync(path.join(root, route))) block(`${route} is missing — both stores need reachable legal pages`);
@@ -161,6 +184,15 @@ if (eas) {
     block('eas.json has no production Android build type (Play needs an .aab)');
   } else if (eas.build.production.android.buildType !== 'app-bundle') {
     block(`production buildType is ${eas.build.production.android.buildType}; Play needs app-bundle`);
+  }
+  if (eas.build?.apk?.android?.buildType !== 'apk') {
+    block('eas.json needs an "apk" profile with android.buildType "apk" (the direct-install APK)');
+  }
+  if (eas.build?.preview?.android?.buildType !== 'apk') {
+    block('eas.json preview profile must build an APK so testers can install it directly');
+  }
+  if (eas.build?.production?.ios?.simulator !== false) {
+    block('eas.json production.ios.simulator must be false (a real iPhone / App Store build)');
   }
   if (eas.submit?.production?.android?.track === 'production') {
     warn('submit targets the production track — use internal first, then promote');
@@ -187,4 +219,4 @@ if (warnings.length > 0) {
   console.log(`\n! ${warnings.length} warning(s), nothing blocking. Clear to build.\n`);
   process.exit(2);
 }
-console.log('\n✓ Clear to build. Next: npx eas-cli build --platform android --profile production\n');
+console.log('\n✓ Clear to build. APK: npm run build:apk · iPhone: npm run build:iphone · Play (.aab): npm run build:aab\n');
