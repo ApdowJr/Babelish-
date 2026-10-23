@@ -92,9 +92,7 @@ export default function PrivacyRoute() {
           the system share sheet).
         </Text>
         <Text style={styles.li}>
-          • Delete everything: Profile → PRIVACY → Delete account — wipes the device and calls
-          DELETE /api/me, which erases your rows from app_state, weekly_xp, and learner_reports, and
-          (when configured) removes the auth user itself.
+          • Delete your account: Settings → Danger zone → Delete account. After confirmation, a protected Supabase Edge Function deletes your signed-in account; the app then clears local learning data and saved conversations. If the server cannot confirm deletion, the app reports failure.
         </Text>
         <Text style={styles.li}>• No cookie banners, because there is nothing to consent to.</Text>
       </View>
@@ -107,9 +105,9 @@ export default function PrivacyRoute() {
           <Text style={styles.th}>Data</Text>
         </View>
         <View style={styles.tr}>
-          <Text style={styles.td}>Neon (Lakebase Postgres + Managed Auth + Functions)</Text>
+          <Text style={styles.td}>Supabase Auth + PostgreSQL + Edge Functions</Text>
           <Text style={styles.td}>App backend</Text>
-          <Text style={styles.td}>Account id/email, progress, vocab, weekly XP, reports</Text>
+          <Text style={styles.td}>Account id/email, lesson progress, vocabulary, learner reports</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>OpenAI-compatible endpoint (optional, configurable)</Text>
