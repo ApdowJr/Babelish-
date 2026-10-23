@@ -72,15 +72,20 @@ test('app.json points at the new assets and configures the splash', () => {
   assert.equal(splash[1].image, './assets/splash-icon.png');
   assert.equal(splash[1].backgroundColor, '#0B3A2C');
   assert.equal(typeof splash[1].imageWidth, 'number');
-  assert.equal(expo.android.adaptiveIcon.backgroundColor, '#0B3A2C');
+  assert.equal(expo.android.adaptiveIcon.backgroundColor, '#3125B5');
 });
 
-test('the icon generator is committed, so the assets are reproducible', () => {
+test('the icon generator and master logo source are committed, so the assets are reproducible', () => {
   const script = path.join(root, 'scripts', 'brand', 'generate-icons.py');
+  const master = path.join(root, 'scripts', 'brand', 'logo-source.png');
   assert.ok(existsSync(script), 'scripts/brand/generate-icons.py is missing');
+  assert.ok(existsSync(master), 'scripts/brand/logo-source.png is missing');
+  const { width, height } = pngSize(master);
+  assert.ok(width >= 500 && height >= 500, 'logo-source.png must be at least 500x500');
+
   const source = readFileSync(script, 'utf8');
-  // The palette must match the app tokens, not drift into a second brand.
-  assert.match(source, /FOREST_DARK = \(11, 58, 44\)/);
-  assert.match(source, /TANGERINE = \(233, 118, 79\)/);
+  assert.match(source, /logo-source\.png/);
+  assert.match(source, /INDIGO_TOP = \(66, 82, 214\)/);
+  assert.match(source, /INDIGO_DEEP = \(40, 21, 160\)/);
   assert.match(source, /PARCHMENT = \(247, 244, 237\)/);
 });

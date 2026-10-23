@@ -8,7 +8,7 @@ export function Logo({ size = 28, tone = 'dark' }: { size?: number; tone?: 'dark
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.row} accessibilityRole="image" accessibilityLabel="Babelish">
-      <BrandMark size={size * 1.06} tone={tone} />
+      <BrandMark size={Math.round(size * 1.2)} tone={tone} />
       <Text
         style={[
           styles.wordmark,
