@@ -128,7 +128,7 @@ export function AnimatedSplash({
           style={{ opacity: markOpacity, transform: [{ scale: markScale }] }}
           accessibilityElementsHidden
         >
-          <BrandMark size={96} tone="light" />
+          <BrandMark size={112} tone="light" />
         </Animated.View>
         <Animated.View
           style={[
