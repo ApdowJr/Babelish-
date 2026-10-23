@@ -48,3 +48,8 @@ $$;
 
 revoke all on function public.claim_ai_usage(uuid, text, integer) from public, anon, authenticated;
 grant execute on function public.claim_ai_usage(uuid, text, integer) to service_role;
+
+-- Explicit deny policy documents that only the service-role RPC may access this ledger.
+drop policy if exists ai_usage_daily_no_client_access on public.ai_usage_daily;
+create policy ai_usage_daily_no_client_access on public.ai_usage_daily
+  for all to anon, authenticated using (false) with check (false);
