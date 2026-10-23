@@ -19,7 +19,7 @@ import { FEATURED_LANGUAGES, LANGUAGES, getLanguage } from '@/data/languages';
 import { progressForLanguage } from '@/lib/catalog';
 import { activeToday, activityByDay, computeStreak, weekdayLabels, weakestSkill } from '@/lib/analytics';
 import { buildDailyPlan, planTotalMinutes } from '@/lib/dailyPlan';
-import { levelForXp, todayXp, weekKey, weeklyXp } from '@/lib/xp';
+import { levelForXp, todayXp, weeklyXp } from '@/lib/xp';
 import { tierForXp, weeklyProgress } from '@/lib/league';
 import { loadCurriculum } from '@/lib/curriculum/store';
 import { wordOfTheDay } from '@/lib/phrasebook';
@@ -31,7 +31,7 @@ import { useTheme, useThemedStyles } from '@/theme/theme';
 export default function HomeScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const { user, isDemo, getAccessToken } = useAuth();
+  const { user, isDemo } = useAuth();
   const {
     targetLanguageId,
     activeLanguageIds,
@@ -104,11 +104,9 @@ export default function HomeScreen() {
   const level = levelForXp(analytics.xp.lifetime);
   const tier = tierForXp(analytics.xp.lifetime);
   const weekProgress = weeklyProgress(weeklyNow, tier);
-  const week = weekKey(now);
   const weekValues = activityByDay(analytics.events);
   const weekLabels = weekdayLabels();
 
-  const [rankText] = useState<string | null>(null);
 
   const plan = buildDailyPlan({
     dueCount,
@@ -475,7 +473,7 @@ export default function HomeScreen() {
           </View>
           <WeeklyBars values={weekValues} labels={weekLabels} height={54} />
           <Text style={styles.rhythmNote}>
-            {rankText ?? 'Tiers come from lifetime XP and never demote — the weekly bar is a guide.'}
+            {'Tiers come from lifetime XP and never demote — the weekly bar is a guide.'}
           </Text>
         </View>
 
