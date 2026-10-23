@@ -1,5 +1,6 @@
 import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
+import { SUPABASE_FUNCTIONS_URL } from '@/lib/supabase';
 import { getLanguage, type Language } from '@/data/languages';
 import {
   buildSystemPrompt,
@@ -66,7 +67,7 @@ export type AiTransport = { apiBase: string; jwt?: string | null };
 function gatewayContext(io?: AiTransport | null) {
   // An owner-hosted deployment can point the app at its own gateway without a
   // rebuild-time backend URL. Public address only — never a credential.
-  const configured = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+  const configured = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '') || `${SUPABASE_FUNCTIONS_URL}/babelish-ai`;
   const base = io?.apiBase || configured || undefined;
   return {
     gatewayBase: base || null,
