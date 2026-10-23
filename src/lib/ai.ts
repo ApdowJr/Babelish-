@@ -294,7 +294,24 @@ export async function speakNative(text: string, ttsLocale: string, rate = 0.92):
 
   try {
     await Speech.stop().catch(() => undefined);
-    await speakWithCallbacks(trimmed, { language: ttsLocale, rate, pitch: 1.0 });
+    // Prefer an installed voice that matches the requested language/region.
+    // This stays on-device and does not send lesson text to a third-party API.
+    const voice = await Speech.getAvailableVoicesAsync()
+      .then((voices) => matchVoice(
+        voices.map((item) => ({
+          identifier: item.identifier,
+          language: item.language,
+          localService: item.networkConnectionRequired ? false : true,
+        })),
+        ttsLocale
+      ))
+      .catch(() => null);
+    await speakWithCallbacks(trimmed, {
+      language: ttsLocale,
+      ...(voice?.identifier ? { voice: voice.identifier } : {}),
+      rate,
+      pitch: 1.0,
+    });
   } catch (err) {
     reportSpeechError(
       err instanceof Error && err.message
