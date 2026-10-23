@@ -134,17 +134,11 @@ export default function SettingsScreen() {
     };
   }, [prefs.targetLanguageId]);
 
-  const webSpeechSupported =
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    Boolean(
-      (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
-        .SpeechRecognition ??
-        (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
-          .webkitSpeechRecognition
-    );
   const tutorLive = aiStatus?.chat === true;
-  const voiceLive = aiStatus?.stt === true || webSpeechSupported;
+  // Native-only (Android + iOS): voice input goes through the tutor
+  // server's speech-to-text. There is no browser speech engine to fall
+  // back to, so the badge must reflect the server probe and nothing else.
+  const voiceLive = aiStatus?.stt === true;
 
   async function pickReminder(hour: number, minute: number, turningOff: boolean) {
     if (turningOff) {
@@ -183,37 +177,12 @@ export default function SettingsScreen() {
       analytics,
     });
 
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      try {
-        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `babelish-data-export-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showAlert('Export downloaded', 'Your Babelish data export was saved as a JSON file.');
-        return;
-      } catch {
-        // Fall through to Share / clipboard below.
-      }
-    }
-
+    // Native-only: the export leaves the device through the OS share
+    // sheet (Files, Mail, Drive, …) — there is no browser download.
     void Share.share({
       title: 'Babelish data export',
       message: payload,
-    }).catch(async () => {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(payload);
-          showAlert('Export copied', 'Your Babelish data export JSON was copied to your clipboard.');
-          return;
-        } catch {
-          // Ignore clipboard errors.
-        }
-      }
+    }).catch(() => {
       showAlert('Export unavailable', 'Could not open the share sheet on this device.');
     });
   }
@@ -474,9 +443,7 @@ export default function SettingsScreen() {
             keywords: 'native language translation',
             onPress: () => setLanguagePicker(true),
           },
-          ...(Platform.OS === 'web'
-            ? []
-            : ([
+          ...([
                 {
                   id: 'reminder',
                   kind: 'chips',
@@ -497,7 +464,7 @@ export default function SettingsScreen() {
                   keywords: 'notification test try check',
                   onPress: () => void testReminder(),
                 },
-              ] as Row[])),
+              ] as Row[]),
           {
             id: 'translation',
             kind: 'toggle',
@@ -570,9 +537,7 @@ export default function SettingsScreen() {
             hint:
               aiStatus?.stt === true
                 ? 'Transcription is available'
-                : webSpeechSupported
-                  ? 'Browser speech recognition is available'
-                  : 'Not configured — type your replies',
+                : 'Not configured — type your replies',
             detail: voiceLive ? 'Ready' : 'Off',
             keywords: 'speech microphone stt',
           },
@@ -592,9 +557,7 @@ export default function SettingsScreen() {
             value: prefs.reduceMotion,
             onChange: setReduceMotion,
           },
-          ...(Platform.OS === 'web'
-            ? []
-            : ([
+          ...([
                 {
                   id: 'system-settings',
                   kind: 'nav',
@@ -608,7 +571,7 @@ export default function SettingsScreen() {
                     );
                   },
                 },
-              ] as Row[])),
+              ] as Row[]),
         ],
       },
       {

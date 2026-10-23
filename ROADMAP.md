@@ -2,13 +2,13 @@
 
 ## Product goal
 
-Build a reliable language-learning app for Android and Web with offline lessons, spaced repetition, speaking practice, an optional AI tutor, and privacy-protective learner progress sync.
+Build a reliable language-learning app for Android and iPhone (native-only — no web version) with offline lessons, spaced repetition, speaking practice, an optional AI tutor, and privacy-protective learner progress sync. See `docs/BUILD_MOBILE.md`.
 
 ## Current architecture
 
 | Layer | Choice |
 |---|---|
-| Mobile & Web app | Expo, React Native, TypeScript, Expo Router (`https://babelish.vercel.app`) |
+| Mobile app (Android APK + iPhone) | Expo, React Native, TypeScript, Expo Router |
 | Accounts | Supabase Auth |
 | Database | Supabase PostgreSQL with Row Level Security (`user_progress`, `user_vocab`, `content_reports`, `ai_usage_daily`) |
 | Learning content | Bundled 25-language curriculum first; approved Supabase curriculum (`chapters`, `lessons`, `exercises`) when available |

@@ -1,5 +1,9 @@
 # Shipping Babelish to the Play Store (and the App Store)
 
+> **Native-only:** Babelish ships as an Android APK/AAB + iPhone app. There is
+> no web version. For a direct-install APK without the stores, see
+> `docs/BUILD_MOBILE.md` (GitHub Actions → “Build mobile (APK + iOS)”).
+
 Everything in this file is either **done in code** or an **explicit action only you can take**
 (accounts, uploads, legal identity). Nothing here is claimed to be done on your behalf.
 
@@ -21,7 +25,7 @@ Run `npm run check:release` before every upload — it blocks the mistakes that 
 | Encryption question | answered (`false`) | `app.json` → `ios.infoPlist` |
 | Icons / splash | generated, all sizes | `assets/`, `assets/store/` |
 | Play icon + feature graphic | 512² RGB, 1024×500 | `assets/store/` |
-| Build profiles | development / preview / production (AAB) | `eas.json` |
+| Build profiles | development / apk (.apk) / preview (.apk) / production (.aab + iOS) | `eas.json` |
 | Submit profile | internal track, **draft** | `eas.json` |
 | Legal pages | `/privacy`, `/terms` | `src/app/` |
 | Consent | shown before onboarding completes | `src/app/onboarding.tsx` |
@@ -40,8 +44,9 @@ eas login               # your Expo account
 eas init                # links the project, writes extra.projectId
 
 # build (cloud, no local Android SDK needed)
-eas build --platform android --profile production    # → .aab
-eas build --platform ios --profile production        # → .ipa (needs an Apple account)
+npm run build:aab     # → .aab for Google Play      (= --profile production, Android)
+npm run build:iphone  # → iPhone build for the App Store (needs a paid Apple Developer account)
+npm run build:apk     # → .apk you can install directly on an Android phone (not for Play)
 
 # upload
 eas submit --platform android --profile production   # internal track, draft
@@ -62,7 +67,7 @@ Create the app, then fill **App content**. Each answer below is what the code ac
 
 | Declaration | Answer | Why |
 |---|---|---|
-| Privacy policy URL | `https://babelish.vercel.app/privacy` | `/privacy` is a real route, not a placeholder |
+| Privacy policy URL | _Publish `docs/PRIVACY.md` at a public URL first (e.g. GitHub Pages) and paste that URL_ | Both stores require a **public web page** for the policy even though the app itself is native-only; the in-app `/privacy` route carries the same text. There is no Babelish web app any more, so do **not** invent/reuse an old app URL that no longer exists |
 | Ads | **No ads** | no ad SDK in `package.json` |
 | In-app purchases | **No** | the plan screens are informational; nothing is sold |
 | Content rating | fill the questionnaire honestly | no violence, no user-generated public content, no gambling |
@@ -147,8 +152,8 @@ in the repository.
 ```
 New in 3.4:
 • Full Supabase Auth, progress sync, spaced-repetition sync and in-app account deletion.
-• 25 bundled offline language courses with browser + cloud speech recognition support.
-• Per-account local storage isolation on shared devices and JSON data export on web & mobile.
+• 25 bundled offline language courses with cloud speech recognition support.
+• Per-account local storage isolation on shared devices and JSON data export via the share sheet.
 • Public Privacy Policy and Terms of Service routes accessible before and after sign-in.
 ```
 
@@ -172,8 +177,8 @@ Rules that keep the listing honest: no text overlays claiming features that are 
 screen, no stock photos, and no screenshot showing a limit as a failure.
 
 > Screenshots are **not** included in this repository: they must be captured from a real device
-> or simulator running the built app. `npm run start` serves the same UI in a browser if you need a
-> quick reference, but store screenshots should come from the native build.
+> or simulator running the built app. Babelish is native-only, so there is no browser build to
+> screenshot — capture from the Android APK / iOS simulator build (`docs/BUILD_MOBILE.md`).
 
 ---
 
@@ -193,11 +198,12 @@ AI_API_KEY=sk-or-… npm run deploy:tutor      # runs the live gate afterwards
 ## 7. Release checklist
 
 ```bash
-npm run check:release     # versions, ids, permissions, assets, secrets, legal pages
-npm test                  # 213 tests
-npx tsc --noEmit && npm run check:functions && npx expo lint
-npm run build:web         # export still builds
-eas build --platform android --profile production
+npm run check:release     # versions, ids, permissions, assets, secrets, legal pages, native-only
+npm test                  # unit tests
+npx tsc --noEmit && npx expo lint
+npm run build:android     # Android JS bundle builds
+npm run build:ios         # iOS JS bundle builds
+npm run build:aab         # Play-ready Android App Bundle (EAS)
 eas submit --platform android --profile production
 ```
 

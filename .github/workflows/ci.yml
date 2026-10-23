@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Unit tests, types, lint, web export
+    name: Unit tests, types, lint, Android + iOS exports
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -48,8 +48,13 @@ jobs:
       - name: Expo lint
         run: npm run lint
 
-      - name: Export web build
-        run: npm run build:web
+      - name: Release gate (native-only, store invariants)
+        run: npm run check:release
 
-      - name: Export Android build
-        run: npm run build
+      # Native-only app: BOTH phone platforms must bundle. There is no web
+      # export any more — `app.json` declares platforms: ["android", "ios"].
+      - name: Export Android bundle
+        run: npm run build:android
+
+      - name: Export iOS bundle
+        run: npm run build:ios

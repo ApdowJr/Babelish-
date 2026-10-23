@@ -1,0 +1,156 @@
+name: Build mobile (APK + iOS)
+
+# 👋 SOOMAALI: GitHub → Actions → "Build mobile (APK + iOS)" → Run workflow
+#    → markuu dhamaado, APK-ga ka soo deji "Artifacts" xagga hoose.
+#
+# This workflow builds installable phone binaries WITHOUT an Expo/EAS
+# account. It is manual (workflow_dispatch) so it never burns CI minutes
+# on every push — press the button when you want a fresh APK.
+#
+# Honest limits (read docs/BUILD_MOBILE.md):
+#   • Android: the APK is signed with the debug keystore that `expo
+#     prebuild` generates. It installs directly on any Android phone
+#     (share it, e.g. via WhatsApp/file transfer) but it can NOT be
+#     uploaded to Google Play. For Play, use EAS `production` (.aab).
+#   • iPhone: Apple does not allow installing an unsigned .ipa on a real
+#     iPhone. This workflow produces a SIMULATOR build (.app) to prove
+#     the iOS code compiles. For a real iPhone you need an Apple
+#     Developer account (US$99/yr) + TestFlight/App Store, or EAS.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Which platform(s) to build"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: babelish-build-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-apk:
+    name: Android APK (direct install)
+    if: ${{ inputs.platform == 'android' || inputs.platform == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Release gate
+        run: npm run check:release
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --clean
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://dvgluivslmdrqsvlscmj.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://dvgluivslmdrqsvlscmj.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU
+
+      - name: Collect APK
+        run: |
+          mkdir -p build-output
+          APK="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)"
+          test -n "$APK" || { echo "::error::No APK was produced"; exit 1; }
+          cp "$APK" "build-output/Babelish-${GITHUB_SHA::7}.apk"
+          ls -lh build-output/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: babelish-android-apk
+          path: build-output/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  ios-simulator:
+    name: iOS build (simulator — real iPhone needs Apple account)
+    if: ${{ inputs.platform == 'ios' || inputs.platform == 'all' }}
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Release gate
+        run: npm run check:release
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --clean
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://dvgluivslmdrqsvlscmj.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU
+
+      - name: Build for iPhone simulator (unsigned)
+        run: |
+          WORKSPACE="$(ls -d ios/*.xcworkspace | head -n 1)"
+          SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+          echo "Workspace: $WORKSPACE  Scheme: $SCHEME"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://dvgluivslmdrqsvlscmj.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU
+
+      - name: Collect simulator .app
+        run: |
+          mkdir -p build-output
+          APP="$(find ios/build/Build/Products -maxdepth 2 -name '*.app' | head -n 1)"
+          test -n "$APP" || { echo "::error::No .app was produced"; exit 1; }
+          ditto -c -k --sequesterRsrc --keepParent "$APP" \
+            "build-output/Babelish-iOS-Simulator-${GITHUB_SHA::7}.zip"
+          ls -lh build-output/
+
+      - name: Upload iOS simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: babelish-ios-simulator
+          path: build-output/*.zip
+          if-no-files-found: error
+          retention-days: 30

@@ -29,7 +29,6 @@ const expected: [string, number][] = [
   ['android-icon-foreground.png', 1024],
   ['android-icon-monochrome.png', 1024],
   ['splash-icon.png', 512],
-  ['favicon.png', 96],
 ];
 
 test('every launcher asset exists at the size the stores expect', () => {
@@ -48,7 +47,8 @@ test('app.json points at the new assets and configures the splash', () => {
       icon: string;
       version: string;
       android: { adaptiveIcon: Record<string, string> };
-      web: { favicon: string; themeColor?: string };
+      platforms?: string[];
+      web?: unknown;
       plugins: (string | [string, Record<string, unknown>])[];
     };
   };
@@ -59,10 +59,13 @@ test('app.json points at the new assets and configures the splash', () => {
     expo.android.adaptiveIcon.foregroundImage,
     expo.android.adaptiveIcon.backgroundImage,
     expo.android.adaptiveIcon.monochromeImage,
-    expo.web.favicon,
   ]) {
     assert.ok(existsSync(path.join(root, candidate)), `${candidate} does not exist`);
   }
+
+  // Native-only: there must be no web target or favicon config left.
+  assert.deepEqual(expo.platforms, ['android', 'ios']);
+  assert.equal(expo.web, undefined, 'app.json must not declare a web target');
 
   const splash = expo.plugins.find(
     (plugin): plugin is [string, Record<string, unknown>] =>

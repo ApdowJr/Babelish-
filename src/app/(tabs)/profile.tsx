@@ -1,4 +1,4 @@
-import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,28 +53,10 @@ export default function ProfileScreen() {
   const myReferralCode = referralCode(user?.id ?? 'babelish-demo');
 
   function shareReferral() {
-    const message = `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get supporter perks at launch. https://babelish.vercel.app`;
-    if (Platform.OS === 'web') {
-      const nav = typeof navigator !== 'undefined' ? navigator : undefined;
-      if (nav?.share) {
-        void nav.share({ title: 'Learn with me on Babelish', text: message }).catch(() => {});
-        return;
-      }
-      if (nav?.clipboard?.writeText) {
-        void nav.clipboard
-          .writeText(message)
-          .then(() => {
-            showAlert('Invite copied', `Copied your invite link and code (${myReferralCode}) to the clipboard.`);
-          })
-          .catch(() => {
-            showAlert('Your invite code', message);
-          });
-        return;
-      }
-      showAlert('Your invite code', message);
-      return;
-    }
-
+    // Native-only app (Android APK + iPhone): invite via the OS share sheet.
+    // There is no web version to link to, so the message carries the code
+    // itself — the recipient enters it after installing the app.
+    const message = `I'm learning ${target.name} with Babelish 🌍 — install Babelish on Android or iPhone and use my code ${myReferralCode} when you sign up and we both get supporter perks at launch.`;
     void Share.share({ message }).catch(() => {
       showAlert('Your invite code', message);
     });

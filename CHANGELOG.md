@@ -3,6 +3,28 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- **Native-only: Android APK + iPhone, no web.** At the owner's request the
+  web target was removed completely — `app.json` now declares
+  `platforms: ["android", "ios"]`, the Vercel web build config (now
+a disable-only `vercel.json` kill switch: `git.deploymentEnabled: false`) and the web-only
+  dependencies (`react-native-web`, `react-dom`, `@expo/metro-runtime`) are
+  gone, and `expo export --platform web` is refused by Expo itself. CI now
+  bundles **both** Android and iOS. `npm run check:release` and
+  `tests/nativeOnly.test.ts` fail if a web target is ever re-added.
+- New phone build paths: EAS `apk` profile (`npm run build:apk`),
+  `npm run build:aab` (Play), `npm run build:iphone`, a local
+  `scripts/build-apk-local.sh`, and a manual GitHub Actions workflow
+  (“Build mobile (APK + iOS)”) that produces a downloadable APK with no
+  Expo account. Guide (Soomaali + English): `docs/BUILD_MOBILE.md`.
+- In-app leftovers of the web build were removed: the referral message no
+  longer links to a website, Settings data export uses the native share
+  sheet only, and the Settings voice badge reflects only the tutor-server
+  probe.
+
 ## [3.4.0] — 2026-10-22
 
 Night mode, a progress screen that explains the streak, and a theme system the

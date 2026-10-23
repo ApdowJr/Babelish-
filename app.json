@@ -10,6 +10,10 @@
       "zelvoca"
     ],
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.zelvoca.babelish",
@@ -37,11 +41,6 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "backgroundColor": "#0B3A2C",
-      "themeColor": "#0F4C3A"
     },
     "plugins": [
       "expo-router",
