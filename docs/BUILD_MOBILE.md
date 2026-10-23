@@ -12,7 +12,7 @@
 
 | Wax | Kahor | Hadda |
 |---|---|---|
-| Web (Vercel, browser) | ✅ jiray | ❌ **waa la saaray** — `vercel.json`, `react-native-web`, `react-dom` ma jiraan |
+| Web (Vercel, browser) | ✅ jiray | ❌ **waa la saaray** — `react-native-web`, `react-dom` ma jiraan; `vercel.json` waa *kill-switch* kaliya (`deploymentEnabled: false`) oo Vercel u diidaya inuu wax dhiso |
 | Android | ✅ | ✅ **APK** (si toos ah loo rakibo) + AAB (Play Store) |
 | iPhone (iOS) | ⚠️ config kaliya | ✅ build profile diyaar ah (hoos ka fiiri shuruudaha Apple) |
 | `app.json` platforms | android + ios + web | `["android", "ios"]` oo kaliya |
@@ -100,7 +100,7 @@ Babelish is **native-only**: Android (`.apk` direct-install, `.aab` for
 Google Play) and iPhone (iOS). The web target was removed at the owner's
 request — `app.json` declares `platforms: ["android", "ios"]`, and
 `npm run check:release` fails if web dependencies, scripts, a `web`
-section, or `vercel.json` ever come back (see `tests/nativeOnly.test.ts`).
+section ever comes back, or if `vercel.json` contains anything besides the deployment kill switch below (see `tests/nativeOnly.test.ts`).
 
 ### Get the APK
 
@@ -132,7 +132,7 @@ There is no “APK for iPhone”. Apple's only paths are:
 
 ### What was removed (web)
 
-- `vercel.json` (web deployment), `assets/favicon.png`
+- The Vercel **web build config** (replaced by a disable-only `vercel.json`: `git.deploymentEnabled: false`, Vercel's documented way to turn off *all* automatic deployments — the GitHub App stays connected but never creates a deployment, so it can no longer fail PRs trying to build a web app that does not exist), `assets/favicon.png`
 - Dependencies: `react-native-web`, `react-dom`, `@expo/metro-runtime`
 - Scripts: `web`, `build:web` → replaced by `build:android`,
   `build:ios`, `build:apk`, `build:apk:local`, `build:aab`,

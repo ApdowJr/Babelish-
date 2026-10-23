@@ -149,8 +149,28 @@ if (JSON.stringify([...platforms].sort()) !== JSON.stringify(['android', 'ios'])
   block(`app.json platforms must be ["android","ios"] only, found ${JSON.stringify(platforms)}`);
 }
 if ('web' in app) block('app.json still has a "web" section — Babelish is native-only, remove it');
-if (existsSync(path.join(root, 'vercel.json'))) {
-  block('vercel.json exists — the web deployment was removed on purpose (native-only)');
+// vercel.json is allowed ONLY as a kill switch that turns Vercel's Git
+// deployments OFF (git.deploymentEnabled: false — per Vercel's Git
+// Configuration docs, "To turn off automatic deployments for all
+// branches, set the property value to false"). The Vercel GitHub App is
+// still connected to this repo; without this file it tries to build a
+// web app that no longer exists and fails every PR check. Any key that
+// would actually build/deploy something is a blocker.
+try {
+  const vercel = JSON.parse(read('vercel.json'));
+  const topKeys = Object.keys(vercel).filter((key) => key !== '$schema');
+  if (vercel['$schema'] !== undefined && vercel['$schema'] !== 'https://openapi.vercel.sh/vercel.json') {
+    block('vercel.json $schema must be Vercel\'s own schema URL');
+  }
+  if (JSON.stringify(topKeys) !== JSON.stringify(['git'])) {
+    block(`vercel.json may only contain "git" (deployments off), found: ${topKeys.join(', ') || '(none)'}`);
+  }
+  const gitKeys = Object.keys(vercel.git ?? {});
+  if (JSON.stringify(gitKeys) !== JSON.stringify(['deploymentEnabled']) || vercel.git?.deploymentEnabled !== false) {
+    block('vercel.json git must be exactly {"deploymentEnabled": false} — no Vercel deployment may ever run');
+  }
+} catch {
+  block('vercel.json is missing or invalid — keep the disable-only kill switch so the connected Vercel app never builds this native-only repo');
 }
 const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 for (const webDep of ['react-native-web', 'react-dom', '@expo/metro-runtime']) {
@@ -160,7 +180,7 @@ for (const webScript of ['web', 'build:web']) {
   if (pkg.scripts?.[webScript]) block(`package.json script "${webScript}" is a web target — remove it`);
 }
 if (!blockers.some((msg) => /web|vercel|platforms/i.test(msg))) {
-  ok('native-only: platforms are Android + iOS, no web deps/scripts/deployment');
+  ok('native-only: Android + iOS only, no web deps/scripts, Vercel deployments disabled');
 }
 
 // ── legal + eas ─────────────────────────────────────────────────────────────

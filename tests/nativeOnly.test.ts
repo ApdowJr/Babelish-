@@ -51,8 +51,19 @@ test('the phone build scripts exist (APK, AAB, iPhone)', () => {
   assert.ok(existsSync(path.join(root, 'scripts/build-apk-local.sh')), 'local APK script missing');
 });
 
-test('no web deployment or web-only assets are committed', () => {
-  assert.ok(!existsSync(path.join(root, 'vercel.json')), 'vercel.json must stay removed');
+test('no web deployment happens: vercel.json is a disable-only kill switch', () => {
+  // The Vercel GitHub App is still connected to this repo. With no
+  // vercel.json it auto-detects a web build and fails every PR (that
+  // was the PR #34 "Vercel: FAILURE" check). Vercel's documented fix is
+  // git.deploymentEnabled: false — "To turn off automatic deployments
+  // for all branches, set the property value to false" — so no
+  // deployment is ever created. The file must contain NOTHING else:
+  // any build/framework/output key would mean a web app is back.
+  const vercel = JSON.parse(read('vercel.json')) as Record<string, unknown>;
+  assert.deepEqual(vercel, {
+    $schema: 'https://openapi.vercel.sh/vercel.json',
+    git: { deploymentEnabled: false },
+  });
   assert.ok(!existsSync(path.join(root, 'assets/favicon.png')), 'web favicon must stay removed');
   const ignore = read('.gitignore');
   assert.ok(!ignore.includes('web-build/'), '.gitignore should not mention web builds');
