@@ -13,7 +13,7 @@ async function currentUserId(): Promise<string | null> {
   return data.user?.id ?? null;
 }
 
-export async function fetchSupabaseState(): Promise<SupabaseState> {
+export async function fetchSupabaseState(_jwt?: string): Promise<SupabaseState> {
   if (!supabase) throw new Error('Supabase is not configured.');
   const userId = await currentUserId();
   if (!userId) throw new Error('Sign in to sync learning progress.');
@@ -45,7 +45,7 @@ export async function fetchSupabaseState(): Promise<SupabaseState> {
   return { progress, vocab, updatedAt: times.sort().at(-1) ?? null };
 }
 
-export async function saveSupabaseState(payload: SupabaseStatePayload): Promise<{ updatedAt: string }> {
+export async function saveSupabaseState(_jwt: string | null, payload: SupabaseStatePayload): Promise<{ updatedAt: string }> {
   if (!supabase) throw new Error('Supabase is not configured.');
   const userId = await currentUserId();
   if (!userId) throw new Error('Sign in to sync learning progress.');
