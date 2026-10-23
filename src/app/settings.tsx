@@ -223,19 +223,29 @@ export default function SettingsScreen() {
               try {
                 const { error } = await supabase.functions.invoke('delete-account', { body: {} });
                 if (error) throw error;
+              } catch {
+                showAlert(
+                  'Account not deleted',
+                  'The server could not confirm deletion. Your account was not reported as deleted; check your connection and try again.'
+                );
+                return;
+              }
+
+              // The server confirmed deletion. Clear local state separately so a
+              // device-storage hiccup cannot falsely claim the cloud account survived.
+              try {
                 await supabase.auth.signOut({ scope: 'local' });
                 await clearLearningStorage();
                 await clearConversations(ownerIdFor(user.id));
                 await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS, 'babelish:demo-user']);
                 resetAnalytics();
                 resetLearning();
-                showAlert('Account deleted', 'Your Supabase account has been deleted.');
-                router.replace('/login');
-              } catch {
+              } finally {
                 showAlert(
-                  'Account not deleted',
-                  'The server could not confirm deletion. Your account was not reported as deleted; check your connection and try again.'
+                  'Account deleted',
+                  'Your Supabase account was deleted. If this device still shows saved learning data, clear Babelish storage in Android settings.'
                 );
+                router.replace('/login');
               }
             })();
           },
