@@ -179,6 +179,33 @@ test('the landing page has both palettes and follows the device', () => {
   assert.ok(read('site/theme-boot.js').includes('babelish-theme'));
 });
 
+test('the browser chrome matches the page, on every page', () => {
+  // Without this the address bar stays the old forest green over a violet
+  // header on mobile — the first thing a visitor sees.
+  for (const page of ['site/index.html', 'site/privacy.html', 'site/terms.html']) {
+    const markup = read(page);
+    assert.match(
+      markup,
+      /<meta name="theme-color" content="#F6F4FB" media="\(prefers-color-scheme: light\)" \/>/,
+      `${page} needs a daylight theme-color`
+    );
+    assert.match(
+      markup,
+      /<meta name="theme-color" content="#0D0A1C" media="\(prefers-color-scheme: dark\)" \/>/,
+      `${page} needs a night theme-color`
+    );
+  }
+  const boot = read('site/theme-boot.js');
+  assert.ok(boot.includes('#F6F4FB') && boot.includes('#0D0A1C'));
+  assert.ok(js.includes('#F6F4FB') && js.includes('#0D0A1C'), 'the toggle must repaint it');
+  for (const [file, source] of [
+    ['site/app.js', js],
+    ['site/theme-boot.js', boot],
+  ] as const) {
+    assert.ok(!source.includes('#0B3A2C'), `${file} still paints the old forest chrome`);
+  }
+});
+
 test('the stylesheet has no dead or undefined custom properties', () => {
   const defined = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]));
   const used = new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]));

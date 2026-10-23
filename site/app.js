@@ -361,8 +361,10 @@
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     store(THEME_KEY, theme);
-    var meta = $('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#101512' : '#0B3A2C');
+    $$('meta[name="theme-color"]').forEach(function (meta) {
+      meta.setAttribute('content', theme === 'dark' ? '#0D0A1C' : '#F6F4FB');
+      meta.removeAttribute('media');
+    });
     var toggle = $('#theme-toggle');
     if (toggle) {
       toggle.setAttribute(
