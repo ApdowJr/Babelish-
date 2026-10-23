@@ -113,7 +113,7 @@ async function chat(req: Request) {
   if (!messages.length || !messages.some((m: { role: string }) => m.role === "user")) {
     return json({ error: "invalid-request", message: "A learner message is required." }, 400);
   }
-  if (!await claimUsage(userId, "chat")) return json({ error: "quota-unavailable", message: "Tutor quota service is unavailable." }, 503);
+  if (!await claimUsage(userId, "chat")) return json({ error: "daily-limit", message: "You have reached the tutor limit for today.", resetsAt: new Date(Date.now() + (86400000 - (Date.now() % 86400000))).toISOString() }, 429);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
@@ -163,7 +163,7 @@ async function transcribe(req: Request) {
   if (!(file instanceof File) || file.size < 1 || file.size > 12 * 1024 * 1024) {
     return json({ error: "invalid-audio", message: "A valid audio recording under 12 MB is required." }, 400);
   }
-  if (!await claimUsage(userId, "stt")) return json({ error: "quota-unavailable", message: "Voice quota service is unavailable." }, 503);
+  if (!await claimUsage(userId, "stt")) return json({ error: "daily-limit", message: "You have reached the voice limit for today.", resetsAt: new Date(Date.now() + (86400000 - (Date.now() % 86400000))).toISOString() }, 429);
   const form = new FormData();
   form.append("file", file, file.name || "speech.m4a");
   form.append("model", sttModel);
@@ -199,6 +199,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const path = new URL(req.url).pathname;
   if (req.method === "GET" && path.endsWith("/api/ai/status")) {
+    const userId = await authenticatedUser(req);
+    if (!userId) return json({ error: "unauthorized", message: "Sign in to use the tutor." }, 401);
     const chat = Boolean(chatUrl && chatKey && chatModel);
     const stt = Boolean(sttUrl && sttKey);
     return json({ chat, stt, model: chat ? chatModel : undefined });
