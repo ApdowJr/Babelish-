@@ -4,11 +4,7 @@ Babelish teaches 25 languages. **The learner never configures a model.** They
 open Speak and the tutor answers; the only configuration lives on the server
 that the app owner runs.
 
-The tutor is a hosted deployment of open-weight models (Qwen3-Next 80B via
-OpenRouter by default, or any OpenAI-compatible endpoint you host). Courses,
-review, the phrasebook and device audio need no model at all, and a labelled
-coach covers the tutor when the server is unreachable. No model screen ships in
-the app.
+The tutor uses a Supabase Edge Function that can call an operator-configured OpenAI-compatible provider. No provider is considered live until its server-side secrets are configured and a real reply is verified. Courses, review, the phrasebook and device audio need no hosted model, and the labelled offline coach remains available when the provider is not configured or unreachable. No model screen ships in the app.
 
 This document is the honest map: what runs where, which models were verified
 for which languages, how to set each one up, what it costs in hardware, and
@@ -21,7 +17,7 @@ what is **not** finished.
 | Plane | What it is | Runs on | Needs a server? | Cost to you |
 |---|---|---|---|---|
 | **On-device content** | 101 chapters · 212 lessons · 1,744 exercises · 550 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
-| **Tutor server** | Babelish's `api` Function → OpenRouter free Qwen3 endpoints (default) or any OpenAI-compatible server you host | A machine you rent or own | Yes | Free-tier requests are $0; self-hosting costs electricity and hardware |
+| **Tutor server** | Supabase `babelish-ai` Edge Function → operator-configured OpenAI-compatible provider | Supabase Edge Functions + provider | Yes for hosted AI | Depends on provider; offline coach costs no inference |
 | **On-device model** | Transformers.js Whisper (`whisper-base`) for voice input in the browser | The learner's browser | No (one ~150 MB download) | Free (bandwidth + battery) |
 | **External provider** | Optional. Any OpenAI-compatible endpoint, including paid ones | Someone else's servers | Yes | Whatever that provider charges |
 
@@ -209,28 +205,31 @@ meaning, meaning → typed target), records every answer through
 
 ## 7. Setup
 
-The Android client no longer includes a bundled Neon API endpoint. Without an
-AI gateway, bundled lessons, local practice, and the labelled offline coach
-remain available. Hosted AI and cloud transcription require an operator-managed
-OpenAI-compatible gateway; its provider key must never be shipped in the app.
+The Android app uses Supabase Auth and the Supabase `babelish-ai` Edge Function
+by default. The bundled lessons, phrasebook, review and offline coach work even
+when no hosted model is configured.
 
-### 7.1 Hosted tutor gateway
+### 7.1 Supabase hosted tutor
 
-Set `EXPO_PUBLIC_AI_GATEWAY_URL` to a secure gateway URL in the Android build
-environment. The gateway must implement the chat/status/transcription routes
-expected by Babelish and must enforce authentication, rate limits, and request
-limits. Keep `AI_API_KEY`, `AI_API_URL`, and model configuration on the server.
+The Edge Function is deployed at
+`https://dvgluivslmdrqsvlscmj.supabase.co/functions/v1/babelish-ai`.
+The app uses this by default; `EXPO_PUBLIC_AI_GATEWAY_URL` is only an optional
+override. The function validates the Supabase session, limits input sizes,
+applies per-user daily quotas, and keeps provider keys on the server.
 
-```bash
-# Example server-side environment only — do not put the provider key in the app.
-AI_API_URL=https://openrouter.ai/api/v1
-AI_API_KEY=your-server-side-key
-AI_APP_NAME=Babelish
-```
+In Supabase Dashboard → Edge Functions → Secrets, configure these values
+without sharing them in chat or committing them to Git:
 
-Do not deploy the old Neon Function or configure Neon environment variables.
-A Supabase Edge Function implementation is still required before the hosted
-AI tutor can be considered part of the Supabase-only backend.
+- `AI_API_URL`: OpenAI-compatible API base URL, e.g. `https://openrouter.ai/api/v1`
+- `AI_API_KEY`: newly rotated provider key
+- `AI_CHAT_MODEL`: model ID enabled for that provider
+- `AI_STT_API_URL`: full transcription endpoint, e.g. `https://api.openai.com/v1/audio/transcriptions`
+- `AI_STT_API_KEY`: speech provider key (may match the chat key only if the provider supports both)
+- `AI_STT_MODEL`: transcription model supported by that endpoint
+
+Until the secrets are set, status correctly reports that hosted AI is not
+configured and the bundled offline coach remains available. Never put provider
+keys or the Supabase service-role key in an `EXPO_PUBLIC_*` variable.
 
 ### 7.2 Self-hosted model
 
@@ -240,10 +239,9 @@ gateway for real devices; a localhost URL on the phone does not refer to the
 developer's computer.
 ### 7.3 Voice input
 
-Priority: server transcription (if enabled) → **browser Whisper** → typing.
+Priority: Supabase server transcription (if configured) → **browser Whisper** → typing.
 
-- Server: `AI_STT_ENABLED=true` + `AI_STT_MODEL=openai/whisper-large-v3-turbo`.
-  Accurate, works on phones, **metered per second of audio** by the provider.
+- Server: configure `AI_STT_API_URL`, `AI_STT_API_KEY`, and `AI_STT_MODEL` as Edge Function secrets. Check the provider's audio limits and price before enabling it.
 - Browser: free and on-device. On web, tapping the mic when the server has no
   audio offers **one tap** to download `onnx-community/whisper-base` (~150 MB,
   cached afterwards). Nothing downloads until that tap.

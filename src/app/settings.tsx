@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, SUPABASE_FUNCTIONS_URL } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
 import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
@@ -104,7 +105,7 @@ export default function SettingsScreen() {
     let cancelled = false;
     void (async () => {
       const jwt = await getAccessToken().catch(() => null);
-      const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+      const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '') || `${SUPABASE_FUNCTIONS_URL}/babelish-ai`;
       const status = await fetchAiStatus(apiBase ? { apiBase, jwt } : null);
       if (!cancelled) setAiStatus(status);
     })();
@@ -205,10 +206,52 @@ export default function SettingsScreen() {
   }
 
   function confirmDeleteAccount() {
+    const client = supabase;
+    if (!user || !client) {
+      showAlert('Sign in required', 'Sign in to your Supabase account before requesting account deletion.');
+      return;
+    }
     showAlert(
-      'Account deletion not available yet',
-      'Secure account deletion is not configured for this Supabase project yet. No account or learning data has been deleted. You can sign out, or contact support for help.',
-      [{ text: 'OK' }]
+      'Permanently delete account?',
+      'This deletes your Supabase account and cloud learning data. Your local Babelish profile, progress, vocabulary and saved tutor conversations on this device will also be cleared. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete permanently',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                const { error } = await client.functions.invoke('delete-account', { body: {} });
+                if (error) throw error;
+              } catch {
+                showAlert(
+                  'Account not deleted',
+                  'The server could not confirm deletion. Your account was not reported as deleted; check your connection and try again.'
+                );
+                return;
+              }
+
+              // The server confirmed deletion. Clear local state separately so a
+              // device-storage hiccup cannot falsely claim the cloud account survived.
+              try {
+                await client.auth.signOut({ scope: 'local' });
+                await clearLearningStorage();
+                await clearConversations(ownerIdFor(user.id));
+                await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS, 'babelish:demo-user']);
+                resetAnalytics();
+                resetLearning();
+              } finally {
+                showAlert(
+                  'Account deleted',
+                  'Your Supabase account was deleted. If this device still shows saved learning data, clear Babelish storage in Android settings.'
+                );
+                router.replace('/login');
+              }
+            })();
+          },
+        },
+      ]
     );
   }
 

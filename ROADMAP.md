@@ -33,8 +33,9 @@ Build a reliable language-learning app for Android with offline lessons, spaced 
 - [ ] Verify user A cannot read or alter user B's progress, vocabulary, or reports.
 
 ### Phase 2 — Complete backend migration
-- [ ] Implement a Supabase Edge Function for AI chat and speech-to-text with server-only provider credentials.
-- [ ] Implement secure account deletion through a server-side Supabase function.
+- [x] Deploy the Supabase Edge Function for AI chat and speech-to-text; provider secrets remain server-side.
+- [ ] Configure AI provider secrets and verify a real tutor/STT request.
+- [x] Deploy protected account deletion through a server-side Supabase function.
 - [ ] Port curriculum review/admin workflows to Supabase and protect them with explicit admin authorization.
 - [ ] Decide whether existing accounts are migrated; do not copy old production records by default.
 - [ ] Add database export/retention rules and test account deletion end-to-end.
@@ -48,4 +49,4 @@ Build a reliable language-learning app for Android with offline lessons, spaced 
 
 ## Safety boundary
 
-All current implementation changes are isolated to `plan/supabase-android-rebuild`. The production branch, existing production backend, accounts, and deployments have not been modified. Do not merge or perform a production cutover until checks pass and a separate migration/rollback plan is approved.
+Current follow-up changes are isolated to `fix/supabase-android-completion`; the previous Supabase migration PR was merged by the project owner. The two Supabase Edge Functions are deployed to the Babelish Supabase project. No Neon data was migrated. Do not change or delete the legacy Neon project as part of this app migration.

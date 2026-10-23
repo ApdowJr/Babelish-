@@ -1,7 +1,7 @@
 /**
  * Best-effort, in-memory rate limiting for the API Function.
  *
- * Honest about its scope: a Neon Function can run several instances, so these
+ * Honest about its scope: a serverless function can run several instances, so these
  * are per-instance guardrails — they cap the damage a single caller can do to
  * a provider bill (AI proxy) or to credential guessing (admin gate), they are
  * not a global quota. Pure and clock-injected so they are unit-testable.

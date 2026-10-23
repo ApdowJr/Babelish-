@@ -46,9 +46,7 @@ id so reviewers can follow up; they are never shown to other learners.
 
 ## AI tutor content
 
-Tutor replies come from the app's AI backend when the operator has configured a
-provider (server-side key), or from a development endpoint in local builds, or
-from the clearly-labeled built-in demo lines when neither exists. Conversation
+Tutor replies use the Supabase `babelish-ai` Edge Function when the operator has configured a compatible provider and server-side key, or from the clearly-labelled bundled offline coach when no live model is available. Conversation
 text is sent to that endpoint to generate the reply; it is not stored by Babelish.
 A failed live request surfaces an error — the app never disguises an outage as
 an "AI" answer. Every AI-generated item that could reach the curriculum passes
@@ -65,8 +63,7 @@ profiling — for anyone, of any age. See the app's current privacy and data-saf
 
 - **Export everything** the app knows about you: Profile → PRIVACY →
   *Export my data* (JSON via the system share sheet).
-- **Delete everything**: Profile → PRIVACY → *Delete account* — wipes the
-  device and requires a secure Supabase account-deletion function. That server-side function is not yet configured; the app currently warns you and does not claim deletion succeeded.
+- **Delete your account**: Settings → Danger zone → *Delete account*. After confirmation, a protected Supabase Edge Function deletes the authenticated Supabase account; the app then clears local learning data and saved conversations. If the server cannot confirm deletion, the app reports failure rather than claiming success.
 - No cookie banners, because there is nothing to consent to.
 
 ## Operators & subprocessors
@@ -77,5 +74,4 @@ profiling — for anyone, of any age. See the app's current privacy and data-saf
 | OpenAI-compatible endpoint (optional, configurable) | STT + tutor | Audio (transient, STT only), conversation text |
 
 That's the whole list. Nothing else touches your data. AI provider keys are
-held only in the operator's server-side gateway configuration — `EXPO_PUBLIC_*`
-values shipped in the app are never used for privileged secrets.
+held only in Supabase Edge Function secrets (`AI_API_KEY` and, if needed, `AI_STT_API_KEY`). `EXPO_PUBLIC_*` values shipped in the app are never used for privileged secrets.
