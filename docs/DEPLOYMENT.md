@@ -9,8 +9,9 @@ Function environment (set by the Neon CLI) and in `.env.local` (git-ignored).
 | Surface | What | How |
 |---|---|---|
 | **Backend** | the `api` Function (Hono): auth-verified state, storage, review dashboard, **AI proxy** | Neon CLI (`neon functions deploy`) |
-| **Web** | the Expo web SPA preview | Vercel, from `expo export --platform web` → `dist/` (`vercel.json` catch-all) |
-| **Mobile** | iOS / Android binaries + OTA | EAS (`eas build`, `eas update`) |
+| **Web app** | the Expo web SPA | Vercel, from `expo export --platform web` → `dist/` (`vercel.json` catch-all) |
+| **Landing page** | the marketing page in `site/` (static HTML/CSS/JS) | Vercel with **Root Directory = `site`**, or any static host |
+| **Mobile** | iOS / Android binaries + OTA | EAS (`eas build`) for the store; GitHub Actions for the side-loadable APK |
 
 ## Backend: the `api` Function
 
@@ -110,6 +111,43 @@ The Function currently retains the existing `zelvoca.app` origin and allows the 
 plus the per-route chunks (e.g. the `/privacy` screen). Build with
 `npm run build:web`. `.npmrc` sets `legacy-peer-deps=true` for the Expo/React
 peer range.
+
+## Landing page (`site/`)
+
+`site/` is plain HTML, CSS and JavaScript — no build step, no framework, no
+third-party requests. It is deliberately **independent of the Expo web app**:
+the app stays at the domain root (`vercel.json` rewrites to the SPA shell),
+while the landing page is deployed as its own project.
+
+### Deploy to Vercel
+
+1. New Project → import `ApdowJr/Babelish-`.
+2. **Root Directory:** `site`. **Framework preset:** Other. **Build command:** empty.
+3. Add the domain (e.g. `babelish.app`). `site/vercel.json` supplies the CSP and
+   cache headers; that file is only read when the root directory is `site`.
+
+### Preview locally
+
+```bash
+python3 -m http.server 8080 --directory site   # http://localhost:8080
+```
+
+### The download button
+
+It points at
+`https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk`.
+That URL resolves to the asset `babelish.apk` on the latest release, which
+`.github/workflows/android-apk.yml` attaches when a `v*` tag is pushed:
+
+```bash
+git tag v3.4.0 && git push origin v3.4.0
+```
+
+The page asks the GitHub API whether that asset exists — if it does not, the
+buttons fall back to the releases page and a note says so instead of handing a
+visitor a dead link. **The APK from this workflow is signed with the debug
+keystore**: it is installable by side-loading, and it is *not* the artifact you
+upload to Play (that is `eas.json` → `app-bundle`, signed with the real key).
 
 ## Mobile (EAS)
 

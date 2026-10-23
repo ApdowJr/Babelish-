@@ -35,8 +35,7 @@
       ],
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "edgeToEdgeEnabled": true
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

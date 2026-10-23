@@ -15,6 +15,10 @@ needed a model at all.
 > 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
 > bundled offline. Every lesson playable on the free plan.
 
+**Install:** [the APK](https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk)
+(side-load, debug-signed) · **Website:** [`site/`](site/README.md) ·
+**Play Store:** not published yet, see [`docs/STORE_RELEASE.md`](docs/STORE_RELEASE.md).
+
 ## What's new in 3.4
 
 | Area | 3.4 |
@@ -23,6 +27,8 @@ needed a model at all.
 | **Progress** | `/progress` — six-week streak calendar, level progress and an honest per-skill breakdown |
 | **Contrast** | Both palettes are tested against WCAG AA pair by pair; the daylight palette was darkened where it used to fail |
 | **Theming** | `useTheme()` / `useThemedStyles()`; the static `colors` export is gone so a screen cannot silently stay light |
+| **Website** | `site/` — a static, bilingual (EN/SO) landing page with a strict CSP and a real download button |
+| **APK** | GitHub Actions builds and attaches `babelish.apk` on a `v*` tag |
 
 ## What's new in 3.3
 
@@ -186,6 +192,7 @@ functions/
   api/index.ts          # Neon Function: state sync · tutor server (model chain) · storage · review
 neon/schema.sql         # Lakebase Postgres schema (app_state)
 supabase/schema.sql     # legacy tables + RLS
+site/                   # static landing page (EN/SO) — deploy with Root Directory = site
 scripts/                # curriculum drafts · neon e2e · zero-dep tests · local API smoke
 docs/AI_ARCHITECTURE.md # models, coverage, setup, hardware, privacy, limits
 docs/DEPLOYMENT.md      # how to deploy the backend, web and mobile builds

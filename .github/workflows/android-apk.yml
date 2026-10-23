@@ -1,0 +1,102 @@
+name: Android APK
+
+# Builds the installable APK — the file the landing page (site/) links to.
+#
+#   * every push to main and every pull request: build it, keep it as an
+#     artifact for 14 days, so a broken native config is caught early;
+#   * a tag like v3.4.0: same build, plus attach `babelish.apk` to that
+#     GitHub release, which is the URL https://…/releases/latest/download/babelish.apk
+#
+# The build is signed with the generated debug keystore. That is deliberate and
+# documented: it is a side-loadable APK, not a Play Store upload. Play needs the
+# EAS production build (eas.json → app-bundle) signed with the real key.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Assemble release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # only used to attach the APK to a tag's release
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release gate
+        run: npm run check:release
+
+      - name: Generate the native project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Keep the APK to phone architectures
+        # The default template builds x86 and x86_64 too, which only emulators
+        # use and which roughly doubles the download.
+        run: |
+          sed -i 's/^reactNativeArchitectures=.*/reactNativeArchitectures=armeabi-v7a,arm64-v8a/' android/gradle.properties
+
+      - name: Build
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Collect the APK
+        run: |
+          set -euo pipefail
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          test -n "$APK"
+          cp "$APK" babelish.apk
+          ls -lh babelish.apk
+          echo "sha256=$(sha256sum babelish.apk | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo "size_bytes=$(stat -c%s babelish.apk)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: babelish-apk
+          path: babelish.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Attach the APK to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" babelish.apk --clobber
+          else
+            gh release create "$TAG" babelish.apk \
+              --title "Babelish $TAG" \
+              --generate-notes
+          fi
