@@ -40,10 +40,7 @@ npm run review:dashboard     # → http://127.0.0.1:8788/admin
 
 HTTP Basic: `admin` / `$ADMIN_PASSWORD` (default `zelvoca`, localhost only).
 
-**Deployed (same UI, same shared code):** the `api` Function serves `/admin`.
-Set `ADMIN_PASSWORD` (and optionally `ADMIN_USERNAME`) in the Function
-environment, then `neon deploy`. Until it's deployed, the local runner covers
-the workflow with the same database.
+**Current status:** the local dashboard is available for local review. The old Neon-hosted `/admin` Function is not part of the Supabase-only Android backend. A Supabase-backed admin dashboard with explicit reviewer authorization is still a separate task; do not use a public client or service-role key in the browser.
 
 What's on the dashboard:
 
