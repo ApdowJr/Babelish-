@@ -7,13 +7,12 @@ export default function PrivacyRoute() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Babelish — Privacy Policy</Text>
-      <Text style={styles.meta}>Last updated: 2026-10-18</Text>
+      <Text style={styles.meta}>Last updated: 2026-10-23</Text>
 
       <Text style={styles.h2}>The short version</Text>
       <Text style={styles.p}>
         Your practice stays on your phone. Babelish has no ads, no third-party analytics, and no data
-        brokers. The only thing that ever syncs to a server is your progress and vocabulary — under
-        your own Neon account, on a database branch you control. Microphone audio is transcribed on
+        brokers. The only thing that ever syncs to a server is your progress and vocabulary — in your Supabase account, protected by Row Level Security (RLS). Microphone audio is transcribed on
         demand and never stored.
       </Text>
 
@@ -38,17 +37,17 @@ export default function PrivacyRoute() {
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Lesson progress (scores, timestamps)</Text>
-          <Text style={styles.td}>Your Neon Postgres branch (app_state)</Text>
+          <Text style={styles.td}>Supabase PostgreSQL (`user_progress`)</Text>
           <Text style={styles.td}>Resume on another device</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Vocabulary / spaced-repetition boxes</Text>
-          <Text style={styles.td}>Same row</Text>
+          <Text style={styles.td}>Supabase PostgreSQL (`user_vocab`)</Text>
           <Text style={styles.td}>Keep review queues correct</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Weekly XP (a number, and a week key)</Text>
-          <Text style={styles.td}>weekly_xp</Text>
+          <Text style={styles.td}>Stored locally for now</Text>
           <Text style={styles.td}>Your rank on the weekly board</Text>
         </View>
       </View>
@@ -75,9 +74,7 @@ export default function PrivacyRoute() {
 
       <Text style={styles.h2}>AI tutor content</Text>
       <Text style={styles.p}>
-        Tutor replies come from whichever AI endpoint is configured (or from the built-in demo
-        responses when none is). Conversation text is sent to that endpoint to generate the reply; it
-        is not stored by Babelish. Every AI-generated item that could reach the curriculum passes the
+        Tutor replies use the Supabase AI Edge Function when a provider is configured with server-side secrets, or the clearly labelled bundled offline coach when no live model is available. Conversation text is sent to the configured provider to generate the reply and is not stored by Babelish. Every AI-generated item that could reach the curriculum passes the
         human approval gate before publication — AI never publishes itself.
       </Text>
 
