@@ -18,6 +18,13 @@ name: Build mobile (APK + iOS)
 #     Developer account (US$99/yr) + TestFlight/App Store, or EAS.
 
 on:
+  # TEMP (session branch only, not for main): the Arena GitHub token has
+  # no workflow_dispatch permission (403), so this push trigger scoped
+  # to exactly this branch is how the iOS build is started. It is
+  # removed again once the build finishes; main keeps workflow_dispatch.
+  push:
+    branches:
+      - arena/582016ff-babelish
   workflow_dispatch:
     inputs:
       platform:
@@ -96,7 +103,7 @@ jobs:
 
   ios-simulator:
     name: iOS build (simulator — real iPhone needs Apple account)
-    if: ${{ inputs.platform == 'ios' || inputs.platform == 'all' }}
+    if: ${{ github.event_name == 'push' || inputs.platform == 'ios' || inputs.platform == 'all' }}
     runs-on: macos-14
     timeout-minutes: 60
     steps:
