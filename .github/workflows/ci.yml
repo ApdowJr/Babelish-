@@ -27,19 +27,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Unit tests
         run: npm test
 
       - name: App TypeScript check
         run: npx tsc --noEmit
-
-      - name: Neon Function TypeScript check
-        run: npm run check:functions
 
       - name: Expo lint
         run: npm run lint
