@@ -25,20 +25,13 @@ App name: **Babelish**. Keep public domain and authentication origins aligned wi
 |---|---|---|
 | App | **Expo (React Native) + expo-router** | One codebase, OTA updates, native audio APIs |
 | Language | **TypeScript** everywhere | Safety as the codebase grows |
-| Auth/DB | **Neon** — Managed Better Auth + Lakebase Postgres + Functions | Real email/password accounts, branch-per-environment DB, API and auth verify on the same branch; Supabase remains an optional fallback mode |
+| Auth/DB | **Supabase Auth + PostgreSQL + RLS** | Email/password accounts, per-user row policies, versioned SQL migrations |
 | AI (chat) | **OpenAI-compatible LLM API** via the app's own backend proxy (`/api/ai/chat`), configurable URL/model | Provider key stays server-side; swap providers without shipping a new app |
 | TTS | **expo-speech** (on-device native voices) + cloud TTS API | Device voices give instant, offline pronunciation; cloud voices give studio quality |
 | STT/scoring | Speech-recognition adapter (pluggable) + backend proxy (`/api/ai/stt`) | Score pronunciation per phoneme; transcribe without a key in the app |
 | State | React Context + hooks (Zustand later if needed) | Simple until it isn't |
 
-**Configuration:** the public Neon endpoints are compiled in as build defaults
-(`src/lib/neon.ts`) — they are public URLs, not secrets — so every build talks
-to the real backend; `EXPO_PUBLIC_NEON_DISABLED=1` deliberately forces demo
-mode. The AI tutor and voice run live only when a provider key exists
-(server-side `AI_API_KEY` on the `api` Function, or `EXPO_PUBLIC_AI_*` for
-development); with no key the app degrades to clearly-labeled demo lines or an
-actionable error — never a fake "live" reply. Other secrets live only in the
-backend env (see `docs/DEPLOYMENT.md`).
+**Configuration:** the Android app uses `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The AI tutor is optional and uses an owner-operated gateway configured by `EXPO_PUBLIC_AI_GATEWAY_URL`; all model provider secrets stay server-side. The offline coach and bundled lessons remain usable without a gateway.
 
 ---
 
