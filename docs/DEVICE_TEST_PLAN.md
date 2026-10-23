@@ -75,4 +75,4 @@ it the Speak tab honestly reports voice input as not configured.
   scheduling, and EAS binary contents require a real device / simulator with
   audio. The container used for the audit has none, so this file is a checklist
   only. Everything that *can* be automated is covered by `npm test`,
-  `npm run smoke:local`, and `npm run neon:e2e`.
+  `npm test`, plus live Supabase checks with two test accounts.
