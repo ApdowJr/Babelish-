@@ -30,6 +30,20 @@ a disable-only `vercel.json` kill switch: `git.deploymentEnabled: false`) and th
   sheet only, and the Settings voice badge reflects only the tutor-server
   probe.
 
+### Fixed
+
+- **Supabase Preview check** failing on `main` with *"Remote migration
+  versions not found in local migrations directory."* Three migrations
+  had been applied remotely (`20261023042259`, `20261023042605`,
+  `20261023111245`) and later committed under different timestamps
+  (`…071500`, `…073000`, `…110000`); Supabase compares versions, not
+  names. The files are renamed to their remote-applied versions (SQL
+  verified statement-for-statement against the remote history), the
+  duplicated deny policy was removed from `ai_usage_daily`, and
+  `tests/migrations.test.ts` now pins the directory to the remote
+  history so it cannot drift again unnoticed. **No database change** —
+  the remote schema is untouched.
+
 ## [3.4.0] — 2026-10-22
 
 Night mode, a progress screen that explains the streak, and a theme system the
