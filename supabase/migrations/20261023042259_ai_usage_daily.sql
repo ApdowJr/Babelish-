@@ -48,8 +48,6 @@ $$;
 
 revoke all on function public.claim_ai_usage(uuid, text, integer) from public, anon, authenticated;
 grant execute on function public.claim_ai_usage(uuid, text, integer) to service_role;
-
--- Explicit deny policy documents that only the service-role RPC may access this ledger.
-drop policy if exists ai_usage_daily_no_client_access on public.ai_usage_daily;
-create policy ai_usage_daily_no_client_access on public.ai_usage_daily
-  for all to anon, authenticated using (false) with check (false);
+-- The explicit client deny policy for this ledger lives in the next
+-- migration (20261023042605_ai_usage_deny_policy.sql), matching exactly
+-- what was applied remotely under each version. Do not duplicate it here.
