@@ -131,7 +131,7 @@ test('a model is only allowed for documented languages unless opted in', () => {
   // Bengali is not in Qwen2.5's documented table.
   assert.equal(languageSupport('qwen2.5:1.5b', 'bn', false), 'unverified');
   assert.equal(languageSupport('qwen2.5:1.5b', 'bn', true), 'ok');
-  // Whisper documents every atlas language.
+  // Whisper documents 24 of 25 atlas languages; Somali remains unverified.
   for (const id of ['es', 'sw', 'bn', 'ar', 'th', 'he']) {
     assert.equal(languageSupport('whisper-large-v3-turbo', id, false), 'ok', id);
   }
@@ -159,15 +159,16 @@ test('the catalogue is internally consistent', () => {
 
 test('coverage summaries only count documented languages', () => {
   const qwen = coverageSummary('qwen2.5:1.5b');
-  assert.equal(qwen.total, 24);
+  assert.equal(qwen.total, 25);
   assert.ok(qwen.documented.includes('es'));
   assert.ok(qwen.documented.includes('zh'));
   assert.ok(!qwen.documented.includes('bn'));
-  assert.equal(qwen.pct, qwen.documented.length / 24);
+  assert.equal(qwen.pct, qwen.documented.length / 25);
 
   const whisper = coverageSummary('whisper-large-v3-turbo');
   assert.equal(whisper.documented.length, 24);
-  assert.equal(whisper.pct, 1);
+  assert.equal(whisper.pct, whisper.documented.length / 25);
+  assert.ok(!whisper.documented.includes('so'));
 
   assert.equal(coverageFor('whisper-large-v3-turbo', 'bn'), 'documented');
   assert.equal(coverageFor('qwen2.5:1.5b', 'bn'), 'unverified');

@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   isValidSlot,
+  isDailyReminderNotification,
   reminderBody,
   reminderTitle,
   type ReminderSlot,
@@ -34,6 +35,18 @@ Notifications.setNotificationHandler({
 
 export type ReminderResult = 'scheduled' | 'denied' | 'error';
 
+/** Cancel only Babelish's daily reminder; leave other scheduled notifications intact. */
+async function cancelDailyReminders(): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((notification) =>
+        isDailyReminderNotification(notification.content.title, notification.content.data),
+      )
+      .map((notification) => Notifications.cancelScheduledNotificationAsync(notification.identifier)),
+  );
+}
+
 export async function scheduleDailyReminder(
   slot: ReminderSlot,
   copy: { languageName: string; streak: number; name?: string }
@@ -60,11 +73,12 @@ export async function scheduleDailyReminder(
       })).granted;
     if (!granted) return 'denied';
 
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelDailyReminders();
     await Notifications.scheduleNotificationAsync({
       content: {
         title: reminderTitle(),
         body: reminderBody(copy),
+        data: { kind: 'babelish-daily-reminder' },
         sound: false,
       },
       trigger: {
@@ -82,7 +96,7 @@ export async function scheduleDailyReminder(
 
 export async function cancelDailyReminder(): Promise<void> {
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelDailyReminders();
   } catch {
     // nothing to cancel
   }
@@ -92,7 +106,9 @@ export async function cancelDailyReminder(): Promise<void> {
 export async function isReminderScheduled(): Promise<boolean> {
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    return scheduled.length > 0;
+    return scheduled.some((notification) =>
+      isDailyReminderNotification(notification.content.title, notification.content.data),
+    );
   } catch {
     return false;
   }
@@ -127,6 +143,7 @@ export async function sendTestReminder(): Promise<ReminderResult> {
       content: {
         title: 'This is your reminder',
         body: 'It will arrive at your chosen time, quietly. Nothing else is sent.',
+        data: { kind: 'babelish-test-reminder' },
         sound: false,
       },
       trigger: {

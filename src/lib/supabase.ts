@@ -2,23 +2,27 @@ import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// This project URL is public configuration. Supply the publishable key through
+// EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY; never place a secret/service-role key here.
+const SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://dvgluivslmdrqsvlscmj.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-/** True when real credentials are present (not the placeholder values). */
 export const isSupabaseConfigured = Boolean(
   SUPABASE_URL &&
-    SUPABASE_ANON_KEY &&
-    !SUPABASE_URL.includes('your-project') &&
-    !SUPABASE_ANON_KEY.includes('your-anon')
+  SUPABASE_PUBLISHABLE_KEY &&
+  !SUPABASE_PUBLISHABLE_KEY.includes('your-') &&
+  !SUPABASE_PUBLISHABLE_KEY.includes('replace_with')
 );
 
-/**
- * Real auth client. Null when .env isn't configured — the app then runs in
- * clearly-labeled demo mode so the UI stays fully testable.
- */
+export const SUPABASE_PUBLISHABLE_KEY_VALUE: string | null = isSupabaseConfigured
+  ? (SUPABASE_PUBLISHABLE_KEY as string)
+  : null;
+
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(SUPABASE_URL as string, SUPABASE_ANON_KEY as string, {
+  ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY as string, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -27,3 +31,6 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
       },
     })
   : null;
+
+// Edge Function base URL used by the Android AI tutor and account deletion.
+export const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;

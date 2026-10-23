@@ -1,218 +1,48 @@
-# Babelish — Roadmap to the 2027 Language Learning App
+# Babelish — Android-first roadmap
 
-> **Vision:** An AI language tutor that speaks *every* language like a native speaker —
-> accurate curriculum, real pronunciation, real scenarios, personalized to each learner.
+## Product goal
 
-App name: **Babelish**. Keep public domain and authentication origins aligned with the deployed configuration.
+Build a reliable language-learning app for Android and iPhone (native-only — no web version) with offline lessons, spaced repetition, speaking practice, an optional AI tutor, and privacy-protective learner progress sync. See `docs/BUILD_MOBILE.md`.
 
----
+## Current architecture
 
-## 1. Product Pillars (what "real" means)
-
-| Pillar | 2027 standard |
+| Layer | Choice |
 |---|---|
-| **Native-level AI speech** | The AI speaks in the target language at all times, with locale-correct TTS voices (accent, gender, region), natural pacing, and slang/formality awareness (tú vs usted, register shifts). |
-| **Accurate chapters** | Curriculum per language follows real proficiency frameworks (CEFR A1→C2), not invented content. Every chapter passes a human-review pipeline before shipping. |
-| **Real scenarios** | Role-play from real life: airport, job interview, doctor, dating, bargaining in a market — each scenario is scripted *and* free-form, with culturally accurate behavior. |
-| **Pronunciation** | Speech-to-text + phoneme-level scoring. The learner speaks; we score accuracy and show exactly which sounds to fix, with reference audio from the native voice. |
-| **Personalization** | Examples use the learner's own name, job, hobbies, and past mistakes. The AI adapts difficulty live based on performance. |
+| Mobile app (Android APK + iPhone) | Expo, React Native, TypeScript, Expo Router |
+| Accounts | Supabase Auth |
+| Database | Supabase PostgreSQL with Row Level Security (`user_progress`, `user_vocab`, `content_reports`, `ai_usage_daily`) |
+| Learning content | Bundled 25-language curriculum first; approved Supabase curriculum (`chapters`, `lessons`, `exercises`) when available |
+| Learner data | Per-user progress, vocabulary review, and content reports (isolated per account on shared devices) |
+| AI tutor | Protected `babelish-ai` Supabase Edge Function + bundled coach fallback; provider keys stay server-side |
+| Speech playback & input | Native device voices via Expo Speech; server STT or browser Web Speech API |
+| Offline support | Bundled lessons, phrasebook, and local review state |
 
----
+## Implementation phases
 
-## 2. Tech Stack (locked)
+### Phase 1 — Supabase foundation
+- [x] Create a separate Supabase project (`dvgluivslmdrqsvlscmj`).
+- [x] Create chapters, lessons, exercises, user progress, and vocabulary tables.
+- [x] Enable RLS and add policies for approved curriculum and owner-scoped learner data.
+- [x] Add content reports with owner-scoped insert/read policies.
+- [x] Remove Neon auth and API modules from the Android/Web app runtime.
+- [x] Switch auth/session persistence to Supabase Auth (including PKCE/OTP/hash recovery callbacks and Vercel redirect allowlists).
+- [x] Switch progress and vocabulary sync to Supabase PostgreSQL (including reset cleanup).
+- [x] Set the project URL and publishable key across Vercel, `app.json`, and `eas.json` build profiles.
+- [x] Run TypeScript, lint, unit tests, release checks, and static web export on the current branch.
+- [ ] Test sign-up, email confirmation, password reset, session restore, and sign-out on a physical Android device.
+- [x] Isolate local storage per account (`u:<userId>`) so user A cannot leak into user B on shared devices, with RLS enforcing server isolation.
 
-| Layer | Choice | Why |
-|---|---|---|
-| App | **Expo (React Native) + expo-router** | One codebase, OTA updates, native audio APIs |
-| Language | **TypeScript** everywhere | Safety as the codebase grows |
-| Auth/DB | **Neon** — Managed Better Auth + Lakebase Postgres + Functions | Real email/password accounts, branch-per-environment DB, API and auth verify on the same branch; Supabase remains an optional fallback mode |
-| AI (chat) | **OpenAI-compatible LLM API** via the app's own backend proxy (`/api/ai/chat`), configurable URL/model | Provider key stays server-side; swap providers without shipping a new app |
-| TTS | **expo-speech** (on-device native voices) + cloud TTS API | Device voices give instant, offline pronunciation; cloud voices give studio quality |
-| STT/scoring | Speech-recognition adapter (pluggable) + backend proxy (`/api/ai/stt`) | Score pronunciation per phoneme; transcribe without a key in the app |
-| State | React Context + hooks (Zustand later if needed) | Simple until it isn't |
+### Phase 2 — Complete backend migration
+- [x] Deploy the `babelish-ai` Supabase Edge Function for AI chat and speech-to-text; provider secrets remain server-side.
+- [x] Configure AI chat secrets (`AI_API_URL`, `AI_API_KEY`, `AI_CHAT_MODEL`) on Supabase (optional `AI_STT_*` secrets remain configurable for server-side Whisper).
+- [x] Deploy protected account deletion (`delete-account` Edge Function) with `ON DELETE CASCADE` across learner tables.
+- [ ] Port curriculum review/admin workflows to Supabase and protect them with explicit admin authorization.
+- [x] Keep legacy Neon data untouched; start clean on Supabase.
+- [x] Support JSON data export on Web and Android plus full in-app account & local-state deletion.
 
-**Configuration:** the public Neon endpoints are compiled in as build defaults
-(`src/lib/neon.ts`) — they are public URLs, not secrets — so every build talks
-to the real backend; `EXPO_PUBLIC_NEON_DISABLED=1` deliberately forces demo
-mode. The AI tutor and voice run live only when a provider key exists
-(server-side `AI_API_KEY` on the `api` Function, or `EXPO_PUBLIC_AI_*` for
-development); with no key the app degrades to clearly-labeled demo lines or an
-actionable error — never a fake "live" reply. Other secrets live only in the
-backend env (see `docs/DEPLOYMENT.md`).
-
----
-
-## 3. Phases
-
-### ✅ Phase 0 — Foundations (this build)
-- [x] Project scaffold (Expo + TypeScript + expo-router)
-- [x] Design system: tokens (color, spacing, typography, radius), core components
-- [x] **Real auth**: Sign up / Sign in / Forgot password via Supabase, session persistence
-- [x] Auth gate + protected routes
-- [x] Tab shell: Home · Learn · Speak · Profile
-- [x] AI service layer (chat + TTS adapters) with native-speaker system prompts
-- [x] Seed language data (real dialects, native names, speaker counts)
-
-### ✅ Phase 1 — Learning content engine (shipped 2026-10-18)
-- [x] Chapter model: units → lessons → exercises (multiple choice, typing, listening; speaking placeholder locked for Phase 2)
-- [x] CEFR-aligned curriculum: Spanish A1 hand-authored (5 chapters × 4 lessons), 9 language samplers; AI draft generator (`scripts/generate-curriculum.mjs`, drafts-only + human approval flag in DB — never auto-publishes)
-- [x] Language detail screen: chapter list with progress bars, 70%+ unlock chain, lesson scores
-- [x] Lesson player: choose · type · listen with native TTS, accent-lenient grading, culture/grammar notes, XP + completion screen
-- [x] Spaced-repetition review (Leitner boxes 1/2/4/8/15 days): missed words → daily review screen + Home card + Profile stats
-- [x] Storage: Supabase tables + RLS (`supabase/schema.sql`) with bundled-JSON fallback for demo mode
-
-### ✅ Backend on Neon (shipped 2026-10-18)
-- [x] Infra as code: `neon.ts` → `neon deploy` provisions Managed Better Auth, Functions, Object Storage (`assets`) on branch `production`
-- [x] **Managed Better Auth** wired into `AuthContext` as a third mode (Neon · Supabase · demo): sign-up/sign-in/session restore/password-reset, trusted origin `https://zelvoca.app`
-- [x] **`api` Function** (`functions/api/index.ts`, Hono): health, `GET/PUT /api/state` (JWT-verified against branch JWKS, user id from `sub`), presigned storage URLs — cross-user access denied by construction
-- [x] **Lakebase Postgres**: `neon/schema.sql` (`public.app_state`) applied to the branch
-- [x] **Object Storage**: private `assets` bucket, presigned PUT/GET under `users/{id}/` prefixes
-- [x] **Two-way progress sync** in `LearningProvider`: device ∪ server merge (best score / Leitner box wins), fire-and-forget on every lesson/review; Profile shows sync status
-- [x] Proofs: `npm run neon:e2e` (15/15 checks) · `npm run build` · `npx expo lint` · `tsc` (app + functions) · `expo-doctor` 20/20
-- [ ] Neon **AI Gateway** — paid-plan feature; app keeps OpenAI-compatible `EXPO_PUBLIC_AI_*` path (re-add `aiGateway: true` to `neon.ts` after upgrade)
-
-### ✅ Phase 2 — Speaking & pronunciation (shipped 2026-10-18)
-- [x] Scenario role-play studio on the Speak tab: scenario chips · in-language-only tutor (existing native-speaker prompt) · per-scenario key-phrase phrasebook for all 10 languages (`src/data/practice.ts`)
-- [x] **Voice I/O**: record (`expo-audio`, in Expo Go) → STT via OpenAI-compatible `/audio/transcriptions` (`whisper-1` by default, `EXPO_PUBLIC_AI_STT_MODEL`) → AI reply → native TTS playback; 30s cap, mic-permission flow, graceful "type instead" fallback
-- [x] **Pronunciation scoring** (`src/lib/pronunciation.ts`): word-level Levenshtein alignment → exact/close/missed per word + extras, accent/tashkeel/punctuation-blind, char-based for 中文/日本語; score card with per-word color chips + "I heard" transcript + TTS reference audio (slow); best score per phrase persisted (`src/lib/speaking.ts`)
-- [x] **Conversation controls**: Listen (repeat) · 🐢 Slow (rate 0.55) · per-message Translate on every tutor bubble + global translation toggle
-- [x] Works in **demo mode**: typed practice gets the same word-by-word scoring without any AI key; voice needs the same `EXPO_PUBLIC_AI_*` endpoint as chat
-- [x] Proofs: 19/19 scoring-engine tests (compiled + node-run) · `npx tsc --noEmit` · `npx expo lint` · `npx expo-doctor` 20/20 · `npm run build` (Hermes bundles)
-- [ ] On-device pass in Expo Go (mic record → STT round-trip needs a real phone + AI key)
-
-### 🗓 Phase 3 — Personalization
-- [x] Learner profile (name, job, interests, native language, goals) — Profile tab editor, stored on device (`src/state/profile.tsx`)
-- [x] Context injection: profile + adaptive CEFR level spliced into every tutor prompt (`src/lib/profilePrompt.ts`, `src/lib/adaptive.ts`)
-- [x] Adaptive difficulty from per-skill analytics (listening/speaking/reading/writing) — lesson answers + pronunciation scores tallied per skill (`src/lib/analytics.ts`, `src/state/analytics.tsx`); weakest skill drives the plan, `suggestLevel` (A1→B2) drives tutor difficulty
-- [x] Daily plan: ~10-minute path tuned to weak spots — due reviews → weakest-skill drill → keep-the-streak, with "why this card" subtitles (`src/lib/dailyPlan.ts`), Home "TODAY'S PLAN" section
-- [x] Real streak counter on Home (replaces hardcoded "Day 1"), computed from activity events
-- [x] Proofs: 57/57 node tests (analytics · daily plan · adaptive · profile prompt, compiled + run standalone) · `npx tsc --noEmit` · `npx expo lint` · `npx expo-doctor` 20/20 · `npm run build` (Hermes bundles, bytecode-verified) · `npm run neon:e2e` 15/15 regression
-
-### 🗓 Phase 4 — Trust & accuracy (the moat)
-- [x] Human review dashboard: every AI-drafted chapter must be approved before publish — `/admin` on the `api` Function **and** runnable locally today via `npm run review:dashboard`; one shared implementation (`functions/api/admin.ts`), HTTP Basic gated (constant-time compare), full-payload review + approve/reject with notes
-- [x] Native-speaker contributor program (per language, paid review) — program defined: roster (6 beta languages), per-cycle deliverables, reviewer checklist, rates contract; `docs/CONTENT_REVIEW.md` (onboarding is operational)
-- [x] Learner reporting: "this sounds wrong" → review queue — 🚩 flag on every tutor bubble → queue-first on-device (never lost) → `POST /api/reports` (JWT) → dashboard queue → human resolves with a note
-- [x] Versioned curriculum: content changes are auditable, never silently rewrite history — `content_versions` is append-only and written **before** the status flip; rejections write no version; publishes ride git; version history rendered on the dashboard
-- [x] Proofs: 46/46 standalone tests (XSS escaping · validators · dashboard rendering) · `npm run neon:e2e` **35/35** (20 new content-pipeline checks against the live DB) · live dashboard smoke (submit → approve → v1, reject, report resolve) · `tsc` app + functions · `expo lint` · `expo-doctor` 20/20 · `npm run build`
-- [ ] Deploy `api` Function changes (`/admin` + `/api/reports` + `ADMIN_PASSWORD`) — requires a Neon API key (batch with the final git push); the local dashboard + queued reports cover the gap until then
-
-### 🗓 Phase 5 — Retention & scale
-- [x] Streaks, XP, leagues (ethical gamification — no dark patterns)
-- [x] Offline lessons (download packs per language)
-- [x] Notifications: smart reminders based on the learner's own schedule
-- [x] Referral + family plans; **2.0: every lesson is free** — premium is an optional supporter tier
-
-### 🗓 Phase 6 — Launch
-- [x] App Store / Play Store compliance (kids' privacy, speech data handling)
-- [x] Analytics events (privacy-first, no third-party ad SDKs)
-- [x] Beta per language (start: Spanish, Arabic, Japanese, French, Hindi, Mandarin)
-- [x] Feedback loop → weekly curriculum updates
-
-### ✅ Master audit A–J (2026-10-19)
-
-- [x] **A/B — Branding & demo banner:** the "midqhub.com" branding is not
-      present anywhere in the repo, history, or exported web chunks; the demo
-      banner's real root cause was configuration — Neon endpoints are now
-      compiled in as build defaults and startup config warnings are actionable
-      (`src/lib/config.ts`).
-- [x] **C — Voice upload:** web `blob:` → `FormData` fix
-      (`src/lib/sttUpload.ts`), transport order (backend proxy → direct dev
-      endpoint), actionable errors.
-- [x] **D — TTS hardening:** web speech-synthesis pre-check, voice-race
-      timeout, error listener surfaced on the Speak tab (`src/lib/ai.ts`).
-- [x] **E — AI core + backend proxy:** one shared `src/lib/aiCore.ts` used by
-      both the app and the Function; `GET /api/ai/status`,
-      `POST /api/ai/chat`, `POST /api/ai/stt` with a server-side key, strict
-      reply/script validation, and **no demo substitution on a failed live
-      reply**.
-- [x] **F — Auth re-audit:** active provider determined from code = Neon
-      Managed Better Auth — `docs/AUTH_AUDIT.md`.
-- [x] **G — UX:** cross-platform alerts (`Alert.alert` is a no-op on web),
-      capability gates (`tutorLive` / `voiceLive`), honest status rows.
-- [x] **H — CORS & limits:** origin allowlist + `DELETE` preflight, admin
-      Basic-auth failure limiter, per-user in-memory rate limiters (single-
-      instance scope documented honestly).
-- [x] **I — Quality gates:** `npm test` 26/26 · `scripts/local-api-smoke.mjs`
-      **37/37** (real Function from source: auth, CORS, limits, AI proxy,
-      admin) · `npm run neon:e2e` **50/50** (live) · app + functions `tsc` ·
-      `expo lint` · `expo-doctor` 20/20 · web export with `/privacy` route ·
-      secret scan clean.
-- [x] **J — Device test plan:** `docs/DEVICE_TEST_PLAN.md` (checklist only —
-      no hardware in CI).
-- [ ] Deploy the hardened `api` Function (AI proxy + CORS + rate limiting) —
-      **blocked on a Neon API key**; command in `docs/DEPLOYMENT.md`.
-- [ ] Push these commits — **blocked on a fresh GitHub PAT**.
-- [ ] Run `docs/DEVICE_TEST_PLAN.md` on a physical iOS + Android device.
-
----
-
-## 4. AI Architecture (how "native speaker" is engineered)
-
-```
-System prompt (per language + dialect + register)
-  + learner profile (name, job, level, weak spots)
-  + conversation history
-  + lesson context (current chapter/scenario)
-        │
-        ▼
-   LLM ──► replies strictly in target language (enforced by prompt + validator)
-        │
-        ├──► TTS (locale voice: e.g. es-MX female, ar-EG male, ja-JP)
-        └──► translation layer (separate call, user-toggleable)
-```
-
-Rules baked into every AI call:
-1. **In-language-only mode** — the AI never breaks into English (except when the learner taps "explain").
-2. **Register control** — formal/informal, regional vocabulary (vosotros vs ustedes, etc.).
-3. **Level adaptation** — CEFR band controls sentence complexity and idiom density.
-4. **Correction protocol** — mistakes get a gentle recast in-language, then the correction.
-5. **Output validation** — responses are checked against the expected script family
-   (e.g., Arabic → Arabic script) before display; invalid output is retried.
-
-## 5. Accuracy Pipeline (why our chapters are real)
-
-```
-Draft (AI, CEFR-mapped) → Automated checks → Human native review → Published
-                                                          │
-Learner report ──────────────► Review queue ◄──────────────┘
-```
-
-- No chapter ships without a human approval flag in Postgres.
-- Every published version is immutable; edits create new versions.
-- Contributors are native speakers with linguistic credentials where possible.
-
-## 6. Monetization (aligned with learning, not against it)
-
-- **Free (2.0):** all 24 languages, every chapter, every lesson, reviews, phrasebook and text chat — no daily caps.
-- **Supporter (optional, coming with billing):** a badge, early features and family seats — no learning feature is ever gated.
-- **Family / Student supporter tiers** at launch+3 months.
-
-## 7. Success Metrics (North stars)
-
-- **D1 / D7 retention** per language cohort
-- **Conversations completed per learner/week** (speaking minutes)
-- **Pronunciation score improvement** over 30 days
-- **Human-review pass rate** (curriculum quality proxy)
-- **Free → Premium conversion**
-
-## 8. Key Risks & Mitigations
-
-| Risk | Mitigation |
-|---|---|
-| AI invents inaccurate content | Mandatory human review gate (Phase 4) before any curriculum publishes |
-| Bad TTS accents (robotic/wrong region) | Per-locale voice selection + cloud TTS fallback + contributor audio for hero content |
-| API costs balloon | Cache lesson content, cap free-tier calls, smaller models for translations |
-| Speech privacy concerns | Consent copy, on-device STT where possible, delete-raw-audio default |
-
----
-
-## How to run what's built so far
-
-```bash
-cp .env.example .env      # paste Supabase + AI keys (or leave blank → demo mode)
-npm install
-npx expo start            # scan QR with Expo Go, or press i / a
-```
-
-Roadmap order is deliberate: **auth + shell now → content → voice → personalization → trust.**
-The trust phase (human review) is what makes this *real* rather than another AI wrapper.
+### Phase 3 — Android & store release quality
+- [ ] Test airplane mode, weak connectivity, session expiry, app restart, and fresh installation on a physical Android device.
+- [x] Verify local progress merges and resets safely on reconnect.
+- [ ] Test microphone permission denial, recording interruptions, transcription failures, and playback on physical Android hardware.
+- [ ] Run `eas build --platform android --profile preview` / `production` and internal-device smoke test.
+- [x] Align Play Store data-safety, privacy (`/privacy`), terms (`/terms`), permissions, and account deletion requirements (`docs/STORE_RELEASE.md`).

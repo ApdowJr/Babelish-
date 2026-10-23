@@ -8,17 +8,45 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dvgluivslmdrqsvlscmj.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "apk": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dvgluivslmdrqsvlscmj.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dvgluivslmdrqsvlscmj.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU"
+      },
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dvgluivslmdrqsvlscmj.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU"
+      },
       "android": {
         "buildType": "app-bundle"
       },
@@ -33,7 +61,8 @@
         "serviceAccountKeyPath": "./secrets/play-service-account.json",
         "track": "internal",
         "releaseStatus": "draft"
-      }
+      },
+      "ios": {}
     }
   }
 }

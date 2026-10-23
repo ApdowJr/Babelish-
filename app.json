@@ -10,6 +10,10 @@
       "zelvoca"
     ],
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.zelvoca.babelish",
@@ -23,7 +27,7 @@
       "package": "app.zelvoca.babelish",
       "versionCode": 30400,
       "adaptiveIcon": {
-        "backgroundColor": "#0B3A2C",
+        "backgroundColor": "#3125B5",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -37,17 +41,13 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "backgroundColor": "#0B3A2C",
-      "themeColor": "#0F4C3A"
-    },
     "plugins": [
       "expo-router",
       [
         "expo-audio",
         {
-          "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor."
+          "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor.",
+          "enableBackgroundPlayback": false
         }
       ],
       [

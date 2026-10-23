@@ -13,11 +13,12 @@ import {
   loadProgress,
   loadVocab,
   saveProgress,
+  saveProgressMap,
   saveVocab,
 } from '@/lib/curriculum/store';
 import { LEITNER_DAYS, type VocabItem, type VocabSeed } from '@/lib/curriculum/types';
-import { isNeonConfigured } from '@/lib/neon';
-import { fetchNeonState, saveNeonState } from '@/lib/neonApi';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { fetchSupabaseState, saveSupabaseState } from '@/lib/supabaseLearning';
 import { lessonXp } from '@/lib/xp';
 
 type ProgressMap = Record<string, { score: number; completedAt: string }>;
@@ -78,7 +79,7 @@ function countDue(vocab: Record<string, VocabItem>): number {
 
 /* ── Cloud sync merge rules (device + server union, best-entry wins) ─────── */
 
-function mergeProgress(local: ProgressMap, remote: ProgressMap | undefined): ProgressMap {
+export function mergeProgress(local: ProgressMap, remote: ProgressMap | undefined): ProgressMap {
   const merged: ProgressMap = { ...local };
   for (const [lessonId, entry] of Object.entries(remote ?? {})) {
     const mine = merged[lessonId];
@@ -93,7 +94,7 @@ function mergeProgress(local: ProgressMap, remote: ProgressMap | undefined): Pro
   return merged;
 }
 
-function mergeVocab(
+export function mergeVocab(
   local: Record<string, VocabItem>,
   remote: Record<string, unknown> | undefined
 ): Record<string, VocabItem> {
@@ -115,64 +116,74 @@ function mergeVocab(
 
 export function LearningProvider({ children }: { children: ReactNode }) {
   const { user, getAccessToken } = useAuth();
+  const userId = user?.id ?? null;
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState<ProgressMap>({});
   const [vocab, setVocab] = useState<Record<string, VocabItem>>({});
   const [dueCount, setDueCount] = useState(0);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  /** Pushes a state snapshot to the Neon backend (no-op outside Neon mode). */
+  /** Pushes a state snapshot to Supabase when configured. */
   const pushState = useCallback(
     async (nextProgress: ProgressMap, nextVocab: Record<string, VocabItem>) => {
-      if (!isNeonConfigured) return;
+      if (!isSupabaseConfigured || !userId) return;
       try {
         const jwt = await getAccessToken();
         if (!jwt) return;
-        await saveNeonState(jwt, { progress: nextProgress, vocab: nextVocab });
+        await saveSupabaseState(jwt, { progress: nextProgress, vocab: nextVocab });
         setLastSyncedAt(new Date().toISOString());
       } catch {
         // Offline or server unreachable: the device copy stays authoritative
         // and the next successful sync merges both sides.
       }
     },
-    [getAccessToken]
+    [getAccessToken, userId]
   );
 
   useEffect(() => {
-    if (!user) return;
     let cancelled = false;
-    // Same pattern as AuthProvider: state changes happen after an await, never
-    // synchronously in the effect body (react-hooks/set-state-in-effect).
-    Promise.all([loadProgress(), loadVocab()])
-      .then(async ([nextProgress, nextVocab]) => {
-        let mergedProgress = nextProgress;
-        let mergedVocab = nextVocab;
-        if (isNeonConfigured) {
-          // Cloud sync: union the device copy with the server copy, then make
-          // sure both sides hold the merged result.
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        setProgress({});
+        setVocab({});
+        setDueCount(0);
+        setLastSyncedAt(null);
+        setReady(false);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Load only THIS user's local progress/vocab, then merge with THIS user's
+    // Supabase rows when online.
+    Promise.all([loadProgress(userId), loadVocab(userId)])
+      .then(async ([localProgress, localVocab]) => {
+        let mergedProgress = localProgress;
+        let mergedVocab = localVocab;
+        let synced = false;
+        if (isSupabaseConfigured) {
           try {
             const jwt = await getAccessToken();
             if (jwt) {
-              const remote = await fetchNeonState(jwt);
-              mergedProgress = mergeProgress(nextProgress, remote.progress);
-              mergedVocab = mergeVocab(nextVocab, remote.vocab);
-              for (const [lessonId, entry] of Object.entries(mergedProgress)) {
-                if (nextProgress[lessonId]?.score !== entry.score) {
-                  await saveProgress(lessonId, entry.score);
-                }
-              }
-              await saveVocab(mergedVocab);
-              await saveNeonState(jwt, { progress: mergedProgress, vocab: mergedVocab });
+              const remote = await fetchSupabaseState(jwt);
+              mergedProgress = mergeProgress(localProgress, remote.progress);
+              mergedVocab = mergeVocab(localVocab, remote.vocab);
+              await saveProgressMap(mergedProgress, userId);
+              await saveVocab(mergedVocab, userId);
+              await saveSupabaseState(jwt, { progress: mergedProgress, vocab: mergedVocab });
+              synced = true;
             }
           } catch {
-            // Server unreachable: device state loads as usual.
+            // Server unreachable: local account-scoped state stays intact.
           }
         }
         if (cancelled) return;
         setProgress(mergedProgress);
         setVocab(mergedVocab);
         setDueCount(countDue(mergedVocab));
-        if (isNeonConfigured && !cancelled) setLastSyncedAt(new Date().toISOString());
+        setLastSyncedAt(synced ? new Date().toISOString() : null);
         setReady(true);
       })
       .catch(() => {
@@ -181,19 +192,18 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, getAccessToken]);
+  }, [userId, getAccessToken]);
 
   const recordLesson = useCallback<LearningValue['recordLesson']>(
     async ({ lessonId, languageId, correct, playable, missed, firstCompletion, completedToday }) => {
       const score = playable > 0 ? Math.round((correct / playable) * 100) : 100;
-      // Published rules from @/lib/xp — same number the ledger will store.
       const xpEarned = lessonXp({
         firstCompletion,
         completedToday,
         perfect: playable > 0 && correct === playable,
       });
 
-      const nextProgress = await saveProgress(lessonId, score);
+      const nextProgress = await saveProgress(lessonId, score, userId);
       setProgress(nextProgress);
 
       let nextVocab = vocab;
@@ -212,12 +222,12 @@ export function LearningProvider({ children }: { children: ReactNode }) {
         }
         setVocab(nextVocab);
         setDueCount(countDue(nextVocab));
-        await saveVocab(nextVocab);
+        await saveVocab(nextVocab, userId);
       }
       await pushState(nextProgress, nextVocab);
       return { score, xpEarned };
     },
-    [vocab, pushState]
+    [vocab, pushState, userId]
   );
 
   const addWord = useCallback<LearningValue['addWord']>(
@@ -237,11 +247,11 @@ export function LearningProvider({ children }: { children: ReactNode }) {
       };
       setVocab(nextVocab);
       setDueCount(countDue(nextVocab));
-      await saveVocab(nextVocab);
+      await saveVocab(nextVocab, userId);
       await pushState(progress, nextVocab);
       return true;
     },
-    [vocab, progress, pushState]
+    [vocab, progress, pushState, userId]
   );
 
   const reviewWord = useCallback<LearningValue['reviewWord']>(
@@ -260,27 +270,20 @@ export function LearningProvider({ children }: { children: ReactNode }) {
       };
       setVocab(nextVocab);
       setDueCount(countDue(nextVocab));
-      await saveVocab(nextVocab);
+      await saveVocab(nextVocab, userId);
       await pushState(progress, nextVocab);
     },
-    [vocab, progress, pushState]
+    [vocab, progress, pushState, userId]
   );
 
-  /**
-   * Clears progress locally and on the server.
-   *
-   * The cloud write matters: without it the next sync would merge the old
-   * server copy straight back, and the learner would watch their reset undo
-   * itself a second later.
-   */
   const resetLearning = useCallback<LearningValue['resetLearning']>(async () => {
     setProgress({});
     setVocab({});
     setDueCount(0);
     setLastSyncedAt(null);
-    await clearLearningStorage();
+    await clearLearningStorage(userId);
     await pushState({}, {});
-  }, [pushState]);
+  }, [pushState, userId]);
 
   const value = useMemo<LearningValue>(() => {
     const vocabList = Object.values(vocab);

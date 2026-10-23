@@ -9,6 +9,7 @@ import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { LANGUAGES } from '@/data/languages';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -60,7 +61,7 @@ export default function LoginScreen() {
         eyebrow="WELCOME BACK"
         title="Speak like a native."
         subtitle="Real conversations, real voices, and a tutor that never switches to your language."
-        perks={['24 languages', 'Every lesson free', 'Works offline']}
+        perks={[`${LANGUAGES.length} languages`, 'Every lesson free', 'Works offline']}
       />
 
       {error ? (

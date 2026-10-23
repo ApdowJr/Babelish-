@@ -30,7 +30,7 @@ import { useTheme, useThemedStyles } from '@/theme/theme';
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const { user, signOut, isDemo, isNeon } = useAuth();
+  const { user, signOut, isDemo } = useAuth();
 
   const {
     targetLanguageId,
@@ -53,10 +53,12 @@ export default function ProfileScreen() {
   const myReferralCode = referralCode(user?.id ?? 'babelish-demo');
 
   function shareReferral() {
-    void Share.share({
-      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get supporter perks at launch. https://zelvoca.app`,
-    }).catch(() => {
-      // sharing dismissed — nothing to do
+    // Native-only app (Android APK + iPhone): invite via the OS share sheet.
+    // There is no web version to link to, so the message carries the code
+    // itself — the recipient enters it after installing the app.
+    const message = `I'm learning ${target.name} with Babelish 🌍 — install Babelish on Android or iPhone and use my code ${myReferralCode} when you sign up and we both get supporter perks at launch.`;
+    void Share.share({ message }).catch(() => {
+      showAlert('Your invite code', message);
     });
   }
 
@@ -106,7 +108,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Pill
-              label={isDemo ? 'DEMO ACCOUNT' : isNeon ? 'NEON ACCOUNT' : 'VERIFIED'}
+              label={isDemo ? 'DEMO ACCOUNT' : 'SUPABASE ACCOUNT'}
               tone="dark"
             />
             <Pill label={`${tier.emoji} ${tier.name.toUpperCase()}`} tone="dark" />
@@ -335,7 +337,7 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
         <Text style={styles.footerText}>
-          Babelish v{Constants.expoConfig?.version ?? '3.2.0'} · {LANGUAGES.length} languages · free
+          Babelish v{Constants.expoConfig?.version ?? '3.4.0'} · {LANGUAGES.length} languages · free
         </Text>
       </View>
       <Text style={styles.footerSub}>Made for curious people everywhere.</Text>

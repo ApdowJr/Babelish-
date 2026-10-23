@@ -7,6 +7,7 @@ import { AuthHero } from '@/components/AuthHero';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { LANGUAGES } from '@/data/languages';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 
@@ -82,7 +83,7 @@ export default function SignupScreen() {
         eyebrow="JOIN BABELISH"
         title="Your first hello starts here."
         subtitle="Two minutes now, fluency later. Every language and every lesson is free — no card, no trial timer."
-        perks={['24 languages', 'Free forever', 'No ads']}
+        perks={[`${LANGUAGES.length} languages`, 'Free forever', 'No ads']}
       />
 
       {error ? (
@@ -144,9 +145,31 @@ export default function SignupScreen() {
 
       <Button label="Create account" onPress={handleSignUp} loading={busy} />
 
+      <Text style={styles.legalNote}>
+        By creating an account you agree to the{' '}
+        <Text
+          style={styles.legalLink}
+          onPress={() => router.push('/terms')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Terms of Service"
+        >
+          Terms of Service
+        </Text>{' '}
+        and{' '}
+        <Text
+          style={styles.legalLink}
+          onPress={() => router.push('/privacy')}
+          accessibilityRole="link"
+          accessibilityLabel="Open Privacy Policy"
+        >
+          Privacy Policy
+        </Text>
+        .
+      </Text>
+
       {isDemo ? (
         <Text style={styles.demoNote}>
-          Demo mode — accounts stay on this device. Add the Neon backend URL to use real accounts.
+          Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.
         </Text>
       ) : null}
 
@@ -188,6 +211,18 @@ const createStyles = (c: Palette) => StyleSheet.create({
     color: c.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
+  },
+  legalNote: {
+    ...typography.caption,
+    color: c.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    lineHeight: 18,
+  },
+  legalLink: {
+    color: c.primary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xxl },
   footerText: { ...typography.body, color: c.textMuted },

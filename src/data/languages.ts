@@ -2,7 +2,7 @@
  * Seed language data — real languages with their real native names, speaker
  * counts, scripts, dialect coverage, and starter scenarios.
  *
- * 2.0 widened the atlas from 10 to 24 languages. Every language here ships a
+ * 2.0 widened the atlas from 10 to 24 languages; the Somali starter course was added in 3.4. Every language here ships a
  * bundled, fully playable starter pack (see `src/data/starters.ts`), so the
  * "free forever" promise is literal: nothing below is a locked preview.
  */
@@ -564,6 +564,28 @@ export const LANGUAGES: Language[] = [
       { id: 'greetings', title: 'Greetings & respect', emoji: '🙌' },
     ],
   },
+  {
+    id: 'so',
+    name: 'Somali',
+    nativeName: 'Soomaali',
+    flag: '🇸🇴',
+    nativeSpeakers: '25M+ speakers',
+    ttsLocale: 'so-SO',
+    script: 'Latin',
+    difficulty: 1,
+    family: 'Afroasiatic (Cushitic)',
+    regions: ['africa'],
+    dialects: ['Northern Somali', 'Benadiri', 'Maay'],
+    blurb:
+      'Learn everyday Soomaali for greetings, family, travel, and connecting across the Horn of Africa and its global diaspora.',
+    greeting: { text: 'Salaan!', meaning: 'Hello!' },
+    featured: true,
+    scenarios: [
+      { id: 'greetings', title: 'Greetings & respect', emoji: '🤝' },
+      { id: 'family', title: 'Family & friends', emoji: '👨‍👩‍👧‍👦' },
+      { id: 'market', title: 'At the market', emoji: '🧺' },
+    ],
+  },
 ];
 
 export const DEFAULT_LANGUAGE_ID = 'es';
@@ -593,7 +615,7 @@ export function isKnownLanguage(id: string): boolean {
   return LANGUAGES.some((l) => l.id === id);
 }
 
-/** "24 languages — every one free" — used in copy without hardcoding numbers. */
+/** Language count is derived from the atlas so copy can stay in sync. */
 export const LANGUAGE_COUNT = LANGUAGES.length;
 
 export const FEATURED_LANGUAGES = LANGUAGES.filter((language) => language.featured);

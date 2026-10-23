@@ -154,6 +154,8 @@ export type EngineContext = {
   /** Set when the app owner deployed the inference gateway. */
   gatewayBase?: string | null;
   jwt?: string | null;
+  /** Optional public gateway API key (e.g. Supabase publishable key). */
+  apiKey?: string | null;
   /** WebAssembly available (web build). */
   browserSupported?: boolean;
 };

@@ -12,6 +12,7 @@
 
 export type MicFailureReason =
   | 'denied'
+  | 'os-denied'
   | 'iframe'
   | 'nodevice'
   | 'busy'
@@ -29,6 +30,8 @@ export type MicContext = {
   iframe: boolean;
   /** Web only: `window.isSecureContext` — getUserMedia needs HTTPS or localhost. */
   secure: boolean;
+  /** Web only: Permissions API state for `microphone`, when supported by the browser. */
+  permissionState?: 'granted' | 'denied' | 'prompt';
 };
 
 /** Maps a DOMException name (or none) to the sentence shown next to the mic. */
@@ -58,6 +61,14 @@ export function describeMicFailure(
       };
     }
     if (denied) {
+      if (ctx.permissionState === 'granted') {
+        return {
+          reason: 'os-denied',
+          message:
+            'Microphone is allowed for this site, but blocked by your device privacy settings. Allow microphone access for your browser in Windows or macOS Privacy Settings, then try again.',
+          canOpenSettings: false,
+        };
+      }
       return {
         reason: 'denied',
         message:

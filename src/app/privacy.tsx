@@ -7,13 +7,12 @@ export default function PrivacyRoute() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Babelish — Privacy Policy</Text>
-      <Text style={styles.meta}>Last updated: 2026-10-18</Text>
+      <Text style={styles.meta}>Last updated: 2026-10-23</Text>
 
       <Text style={styles.h2}>The short version</Text>
       <Text style={styles.p}>
         Your practice stays on your phone. Babelish has no ads, no third-party analytics, and no data
-        brokers. The only thing that ever syncs to a server is your progress and vocabulary — under
-        your own Neon account, on a database branch you control. Microphone audio is transcribed on
+        brokers. The only thing that ever syncs to a server is your progress and vocabulary — in your Supabase account, protected by Row Level Security (RLS). Microphone audio is transcribed on
         demand and never stored.
       </Text>
 
@@ -38,17 +37,17 @@ export default function PrivacyRoute() {
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Lesson progress (scores, timestamps)</Text>
-          <Text style={styles.td}>Your Neon Postgres branch (app_state)</Text>
+          <Text style={styles.td}>Supabase PostgreSQL (`user_progress`)</Text>
           <Text style={styles.td}>Resume on another device</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Vocabulary / spaced-repetition boxes</Text>
-          <Text style={styles.td}>Same row</Text>
+          <Text style={styles.td}>Supabase PostgreSQL (`user_vocab`)</Text>
           <Text style={styles.td}>Keep review queues correct</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>Weekly XP (a number, and a week key)</Text>
-          <Text style={styles.td}>weekly_xp</Text>
+          <Text style={styles.td}>Stored locally for now</Text>
           <Text style={styles.td}>Your rank on the weekly board</Text>
         </View>
       </View>
@@ -75,9 +74,7 @@ export default function PrivacyRoute() {
 
       <Text style={styles.h2}>AI tutor content</Text>
       <Text style={styles.p}>
-        Tutor replies come from whichever AI endpoint is configured (or from the built-in demo
-        responses when none is). Conversation text is sent to that endpoint to generate the reply; it
-        is not stored by Babelish. Every AI-generated item that could reach the curriculum passes the
+        Tutor replies use the Supabase AI Edge Function when a provider is configured with server-side secrets, or the clearly labelled bundled offline coach when no live model is available. Conversation text is sent to the configured provider to generate the reply and is not stored by Babelish. Every AI-generated item that could reach the curriculum passes the
         human approval gate before publication — AI never publishes itself.
       </Text>
 
@@ -85,19 +82,17 @@ export default function PrivacyRoute() {
       <Text style={styles.p}>
         Babelish is general-audience (12+). It is not directed at children under 13 and does not
         knowingly collect their data. No ads, no tracking, no behavioral profiling — for anyone, of
-        any age. See docs/STORE_COMPLIANCE.md.
+        any age. See docs/STORE_RELEASE.md.
       </Text>
 
       <Text style={styles.h2}>Your rights</Text>
       <View style={styles.ul}>
         <Text style={styles.li}>
-          • Export everything the app knows about you: Profile → PRIVACY → Export my data (JSON via
-          the system share sheet).
+          • Export everything the app knows about you: Settings → Data & storage → Export my data
+          (JSON download on web or via the system share sheet on mobile).
         </Text>
         <Text style={styles.li}>
-          • Delete everything: Profile → PRIVACY → Delete account — wipes the device and calls
-          DELETE /api/me, which erases your rows from app_state, weekly_xp, and learner_reports, and
-          (when configured) removes the auth user itself.
+          • Delete your account: Settings → Danger zone → Delete account. After confirmation, a protected Supabase Edge Function deletes your signed-in account; the app then clears local learning data and saved conversations. If the server cannot confirm deletion, the app reports failure.
         </Text>
         <Text style={styles.li}>• No cookie banners, because there is nothing to consent to.</Text>
       </View>
@@ -110,9 +105,9 @@ export default function PrivacyRoute() {
           <Text style={styles.th}>Data</Text>
         </View>
         <View style={styles.tr}>
-          <Text style={styles.td}>Neon (Lakebase Postgres + Managed Auth + Functions)</Text>
+          <Text style={styles.td}>Supabase Auth + PostgreSQL + Edge Functions</Text>
           <Text style={styles.td}>App backend</Text>
-          <Text style={styles.td}>Account id/email, progress, vocab, weekly XP, reports</Text>
+          <Text style={styles.td}>Account id/email, lesson progress, vocabulary, learner reports</Text>
         </View>
         <View style={styles.tr}>
           <Text style={styles.td}>OpenAI-compatible endpoint (optional, configurable)</Text>

@@ -7,38 +7,35 @@
    ========================================================================== */
 
 :root {
-  /* daylight palette (src/theme/palette.ts → lightPalette) */
-  --bg: #f7f4ed;
-  --bg-sunken: #f0ece2;
+  /* Daylight. The brand hue comes from the mascot icon (#3125B5 plate,
+     #3D4FE1 / #4522C9 bubbles); every pair below clears WCAG AA, verified by
+     tests/landingPage.test.ts. */
+  --bg: #f6f4fb;
+  --bg-sunken: #efeaf8;
   --surface: #ffffff;
-  --surface-high: #edf1ea;
-  --surface-tint: #f3f0e7;
-  --border: #e4e4d9;
-  --border-strong: #d3d6c8;
+  --surface-high: #ece7f8;
+  --surface-tint: #f1eefb;
+  --border: #e3def2;
+  --border-strong: #cfc8e6;
 
-  --primary: #0f4c3a;
-  --primary-pressed: #0a382b;
-  --primary-soft: rgba(15, 76, 58, 0.1);
-  --primary-tint: #dcebe3;
-  --gradient-from: #0b3a2c;
-  --gradient-mid: #1c6852;
-  --gradient-to: #22705a;
+  --primary: #3a2fb8;
+  --primary-soft: rgba(58, 47, 184, 0.1);
+  --primary-tint: #e3dffa;
+  --gradient-from: #1b1163;
+  --gradient-mid: #3222a8;
+  --gradient-to: #4b33c9;
 
-  --accent: #ae4321;
-  --accent-soft: rgba(233, 118, 79, 0.14);
+  --accent: #b4247f;
+  --accent-soft: rgba(180, 36, 127, 0.12);
   --sun: #8a6412;
-  --sky: #2c6c8b;
-  --lilac: #5f4e96;
-  --mint: #23704d;
 
-  --text: #15231d;
-  --text-muted: #525f57;
-  --text-faint: #67736b;
-  --on-dark: #f4f8f3;
-  --on-dark-muted: rgba(244, 248, 243, 0.86);
+  --text: #16112b;
+  --text-muted: #524b6b;
+  --text-faint: #6a6480;
+  --on-dark: #f6f5ff;
+  --on-dark-muted: rgba(246, 245, 255, 0.88);
 
-  --danger: #b84242;
-  --success: #287a55;
+  --success: #1f7a55;
 
   --shadow-card: 0 1px 2px rgba(27, 42, 34, 0.04), 0 12px 28px rgba(27, 42, 34, 0.06);
   --shadow-phone: 0 30px 60px rgba(11, 58, 44, 0.22), 0 2px 0 rgba(255, 255, 255, 0.6) inset;
@@ -58,35 +55,31 @@
 }
 
 html[data-theme='dark'] {
-  /* night palette (darkPalette) */
-  --bg: #101512;
-  --bg-sunken: #0b0f0d;
-  --surface: #181e1a;
-  --surface-high: #1f2722;
-  --surface-tint: #1b231e;
-  --border: #2a342e;
-  --border-strong: #3a463f;
+  /* Night: an indigo-black canvas, not a green one — the mascot's violet
+     lifts to #A99CFF so the brand survives on the dark ground. */
+  --bg: #0d0a1c;
+  --bg-sunken: #080614;
+  --surface: #161130;
+  --surface-high: #1f1840;
+  --surface-tint: #1b1438;
+  --border: #2c2452;
+  --border-strong: #3d3468;
 
-  --primary: #5fbf9b;
-  --primary-pressed: #7fd3b2;
-  --primary-soft: rgba(95, 191, 155, 0.14);
-  --primary-tint: #1d3a2f;
-  --gradient-from: #0b2a21;
-  --gradient-mid: #14483a;
-  --gradient-to: #1f6b55;
+  --primary: #a99cff;
+  --primary-soft: rgba(169, 156, 255, 0.16);
+  --primary-tint: #241b56;
+  --gradient-from: #150e4e;
+  --gradient-mid: #271a85;
+  --gradient-to: #3b2ab0;
 
-  --accent: #f08a63;
-  --accent-soft: rgba(240, 138, 99, 0.16);
+  --accent: #f0a2e6;
+  --accent-soft: rgba(240, 162, 230, 0.16);
   --sun: #f5c968;
-  --sky: #72b8d8;
-  --lilac: #a995d9;
-  --mint: #5fbf9b;
 
-  --text: #ecf2ec;
-  --text-muted: #a8b3ac;
-  --text-faint: #7e8a83;
+  --text: #edeaf7;
+  --text-muted: #ada6c6;
+  --text-faint: #857da0;
 
-  --danger: #e8837f;
   --success: #6fc79a;
 
   --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.3), 0 18px 40px rgba(0, 0, 0, 0.35);
@@ -98,32 +91,28 @@ html[data-theme='dark'] {
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme='light']) {
-    --bg: #101512;
-    --bg-sunken: #0b0f0d;
-    --surface: #181e1a;
-    --surface-high: #1f2722;
-    --surface-tint: #1b231e;
-    --border: #2a342e;
-    --border-strong: #3a463f;
+    --bg: #0d0a1c;
+    --bg-sunken: #080614;
+    --surface: #161130;
+    --surface-high: #1f1840;
+    --surface-tint: #1b1438;
+    --border: #2c2452;
+    --border-strong: #3d3468;
 
-    --primary: #5fbf9b;
-    --primary-pressed: #7fd3b2;
-    --primary-soft: rgba(95, 191, 155, 0.14);
-    --primary-tint: #1d3a2f;
-    --gradient-from: #0b2a21;
-    --gradient-mid: #14483a;
-    --gradient-to: #1f6b55;
+    --primary: #a99cff;
+    --primary-soft: rgba(169, 156, 255, 0.16);
+    --primary-tint: #241b56;
+    --gradient-from: #150e4e;
+    --gradient-mid: #271a85;
+    --gradient-to: #3b2ab0;
 
-    --accent: #f08a63;
-    --accent-soft: rgba(240, 138, 99, 0.16);
+    --accent: #f0a2e6;
+    --accent-soft: rgba(240, 162, 230, 0.16);
     --sun: #f5c968;
-    --sky: #72b8d8;
-    --lilac: #a995d9;
-    --mint: #5fbf9b;
 
-    --text: #ecf2ec;
-    --text-muted: #a8b3ac;
-    --text-faint: #7e8a83;
+    --text: #edeaf7;
+    --text-muted: #ada6c6;
+    --text-faint: #857da0;
 
     --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.3), 0 18px 40px rgba(0, 0, 0, 0.35);
     --shadow-phone: 0 30px 70px rgba(0, 0, 0, 0.55);
@@ -246,7 +235,7 @@ ol {
 .btn-primary {
   background: var(--primary);
   color: var(--on-primary);
-  box-shadow: 0 10px 24px rgba(15, 76, 58, 0.22);
+  box-shadow: 0 10px 24px rgba(58, 47, 184, 0.26);
 }
 
 .btn-ghost {
@@ -259,16 +248,16 @@ ol {
 }
 
 .btn-light {
-  background: #f4f8f3;
-  color: #0b3a2c;
+  background: #ffffff;
+  color: #1b1163;
 }
 .btn-outline-light {
   background: transparent;
-  color: #f4f8f3;
-  border-color: rgba(244, 248, 243, 0.45);
+  color: #f6f5ff;
+  border-color: rgba(246, 245, 255, 0.48);
 }
 .btn-outline-light:hover {
-  background: rgba(244, 248, 243, 0.1);
+  background: rgba(246, 245, 255, 0.12);
 }
 
 .btn-sm {
@@ -317,7 +306,7 @@ ol {
 
 .brand-mark {
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(11, 58, 44, 0.25);
+  box-shadow: 0 4px 12px rgba(37, 20, 162, 0.3);
 }
 
 .nav-links {
@@ -399,13 +388,9 @@ ol {
   position: absolute;
   inset: -20% -10% auto -20%;
   height: 640px;
-  background: radial-gradient(
-      circle at 18% 22%,
-      rgba(46, 139, 111, 0.22),
-      transparent 58%
-    ),
-    radial-gradient(circle at 74% 12%, rgba(242, 193, 78, 0.18), transparent 52%),
-    radial-gradient(circle at 88% 48%, rgba(233, 118, 79, 0.14), transparent 55%);
+  background: radial-gradient(circle at 18% 22%, rgba(69, 34, 201, 0.22), transparent 58%),
+    radial-gradient(circle at 74% 12%, rgba(61, 79, 225, 0.2), transparent 52%),
+    radial-gradient(circle at 88% 48%, rgba(194, 75, 224, 0.16), transparent 55%);
   filter: blur(8px);
   pointer-events: none;
 }
@@ -499,6 +484,15 @@ ol {
   text-underline-offset: 3px;
 }
 
+.iphone-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-left: 3px solid var(--border-strong);
+  padding-left: 10px;
+  max-width: 36em;
+}
+
 .apk-note {
   margin-top: 10px;
   font-size: 13.5px;
@@ -531,7 +525,7 @@ ol {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--primary-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.6L12 5.6' fill='none' stroke='%2323704d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+  background: var(--primary-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.6L12 5.6' fill='none' stroke='%233a2fb8' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
     center / 13px no-repeat;
 }
 
@@ -592,7 +586,9 @@ ol {
   font-size: 10px;
   line-height: 1.35;
 
-  /* the app's daylight palette */
+  /* The app's real daylight palette. The page wears the mascot's violet, but
+     the screens inside these phones must look like the app people will open —
+     forest green, parchment, tangerine. */
   --p-bg: #f7f4ed;
   --p-surface: #ffffff;
   --p-high: #edf1ea;
@@ -1152,7 +1148,7 @@ html[data-theme='dark'] .phone-screen {
   text-transform: uppercase;
 }
 .section-eyebrow.light {
-  color: rgba(244, 248, 243, 0.78);
+  color: rgba(246, 245, 255, 0.82);
 }
 
 .section-title {
@@ -1280,8 +1276,8 @@ html[data-theme='dark'] .phone-screen {
   padding: 48px 44px;
   border-radius: 32px;
   color: var(--on-dark);
-  background: linear-gradient(135deg, #0b3a2c 0%, #145241 52%, #22705a 100%);
-  box-shadow: 0 30px 60px rgba(11, 58, 44, 0.3);
+  background: linear-gradient(135deg, var(--gradient-from) 0%, var(--gradient-mid) 52%, var(--gradient-to) 100%);
+  box-shadow: 0 30px 60px rgba(27, 17, 99, 0.32);
   position: relative;
   overflow: hidden;
 }
@@ -1320,7 +1316,7 @@ html[data-theme='dark'] .phone-screen {
   color: var(--on-dark-muted);
 }
 .install li::marker {
-  color: rgba(244, 248, 243, 0.55);
+  color: rgba(246, 245, 255, 0.6);
   font-weight: 700;
 }
 
@@ -1331,8 +1327,8 @@ html[data-theme='dark'] .phone-screen {
   gap: 18px;
   padding: 22px;
   border-radius: 24px;
-  background: rgba(244, 248, 243, 0.08);
-  border: 1px solid rgba(244, 248, 243, 0.18);
+  background: rgba(246, 245, 255, 0.09);
+  border: 1px solid rgba(246, 245, 255, 0.2);
 }
 
 .download-side img {
@@ -1351,7 +1347,7 @@ html[data-theme='dark'] .phone-screen {
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
-  border-bottom: 1px dashed rgba(244, 248, 243, 0.18);
+  border-bottom: 1px dashed rgba(246, 245, 255, 0.2);
   padding-bottom: 7px;
 }
 .meta > div:last-child {
@@ -1359,7 +1355,7 @@ html[data-theme='dark'] .phone-screen {
   padding-bottom: 0;
 }
 .meta dt {
-  color: rgba(244, 248, 243, 0.66);
+  color: rgba(246, 245, 255, 0.7);
 }
 .meta dd {
   margin: 0;
@@ -1456,8 +1452,8 @@ html[data-theme='dark'] .phone-screen {
 /* ---------- footer ---------- */
 
 .site-footer {
-  background: #08251c;
-  color: #e4ece5;
+  background: #0a0720;
+  color: #e6e2f5;
   padding: 52px 0 26px;
 }
 
@@ -1468,11 +1464,11 @@ html[data-theme='dark'] .phone-screen {
 }
 
 .footer-brand .brand {
-  color: #f4f8f3;
+  color: #f6f5ff;
 }
 .footer-brand p {
   margin-top: 12px;
-  color: rgba(228, 236, 229, 0.66);
+  color: rgba(230, 226, 245, 0.68);
   font-size: 14px;
   max-width: 26em;
 }
@@ -1487,11 +1483,11 @@ html[data-theme='dark'] .phone-screen {
   font-size: 11.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(228, 236, 229, 0.5);
+  color: rgba(230, 226, 245, 0.54);
   margin-bottom: 2px;
 }
 .footer-col a {
-  color: rgba(228, 236, 229, 0.86);
+  color: rgba(230, 226, 245, 0.88);
   width: fit-content;
 }
 .footer-col a:hover {
@@ -1500,16 +1496,142 @@ html[data-theme='dark'] .phone-screen {
   text-underline-offset: 3px;
 }
 
+.footer-inline {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .footer-bottom {
   margin-top: 40px;
   padding-top: 20px;
-  border-top: 1px solid rgba(228, 236, 229, 0.14);
+  border-top: 1px solid rgba(230, 226, 245, 0.16);
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
   font-size: 12.5px;
-  color: rgba(228, 236, 229, 0.6);
+  color: rgba(230, 226, 245, 0.64);
+}
+
+/* ---------- legal pages ---------- */
+
+.legal-page {
+  padding: 40px 0 72px;
+}
+
+.legal {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.legal-kicker {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--primary);
+}
+
+.legal h1 {
+  font-size: clamp(30px, 4vw, 40px);
+  margin-top: 8px;
+}
+
+.legal-meta {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.legal-note {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tint);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.legal h2 {
+  font-size: 18px;
+  margin-top: 34px;
+  color: var(--primary);
+}
+
+.legal p {
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.legal ul {
+  margin-top: 10px;
+  padding-left: 20px;
+  display: grid;
+  gap: 7px;
+}
+
+.legal li::marker {
+  color: var(--primary);
+}
+
+.legal-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.legal-table th,
+.legal-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.legal-table th {
+  background: var(--surface-high);
+  font-weight: 700;
+}
+
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.legal-table code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--bg-sunken);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.legal-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legal-footer-links {
+  margin-top: 40px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--text-faint);
 }
 
 /* ---------- responsive ---------- */

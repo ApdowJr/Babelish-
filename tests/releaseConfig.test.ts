@@ -97,15 +97,22 @@ test('Play artwork exists at the sizes the console enforces', () => {
   }
 });
 
-test('eas.json defines the three profiles and submits to internal first', () => {
+test('eas.json defines the native profiles (APK + AAB + iPhone) and submits to internal first', () => {
   const eas = JSON.parse(read('eas.json')) as {
-    build: Record<string, { android?: { buildType?: string } }>;
+    build: Record<
+      string,
+      { android?: { buildType?: string }; ios?: { simulator?: boolean } }
+    >;
     submit: Record<string, { android?: { track?: string; releaseStatus?: string } }>;
   };
-  for (const profile of ['development', 'preview', 'production']) {
+  for (const profile of ['development', 'apk', 'preview', 'production']) {
     assert.ok(eas.build[profile], `missing build profile ${profile}`);
   }
+  // Direct-install APKs for testers/owner, AAB only for the Play upload.
+  assert.equal(eas.build.apk.android?.buildType, 'apk', 'apk profile must produce an .apk');
+  assert.equal(eas.build.preview.android?.buildType, 'apk', 'preview must produce an .apk');
   assert.equal(eas.build.production.android?.buildType, 'app-bundle', 'Play needs an AAB');
+  assert.equal(eas.build.production.ios?.simulator, false, 'production iOS must be a device build');
   assert.equal(eas.submit.production.android?.track, 'internal');
   assert.equal(eas.submit.production.android?.releaseStatus, 'draft');
 });
@@ -117,7 +124,7 @@ test('signing credentials and secrets are gitignored', () => {
   }
 });
 
-test('no server secret is referenced from browser-exposed config', () => {
+test('no server secret is referenced from app-exposed config', () => {
   const publicVars = read('.env.example')
     .split('\n')
     .filter((line) => line.trim().startsWith('EXPO_PUBLIC_'));
@@ -159,4 +166,43 @@ test('the Android notification channel matches between code and config', () => {
   assert.equal(plugin[1].defaultChannel, channel, 'a mismatch would hide the reminder');
   assert.equal(plugin[1].icon, './assets/notification-icon.png');
   assert.equal(plugin[1].color, '#0F4C3A');
+});
+
+test('eas.json configures public Supabase env vars for all cloud build profiles', () => {
+  const eas = JSON.parse(read('eas.json')) as {
+    build: Record<string, { env?: Record<string, string> }>;
+  };
+  for (const profile of ['development', 'apk', 'preview', 'production']) {
+    const env = eas.build[profile]?.env ?? {};
+    assert.match(env.EXPO_PUBLIC_SUPABASE_URL ?? '', /^https:\/\/[a-z0-9]+\.supabase\.co$/);
+    assert.match(env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '', /^sb_publishable_/);
+  }
+});
+
+test('STORE_RELEASE.md matches app version, privacy publishing step, and 25-language catalog', () => {
+  const storeDoc = read('docs/STORE_RELEASE.md');
+  assert.ok(storeDoc.includes(`\`${app.expo.version}\``), 'STORE_RELEASE.md version drifted from app.json');
+  // Native-only: there is no web app to link to. The doc must instead
+  // tell the owner to publish docs/PRIVACY.md at a public URL first.
+  assert.ok(storeDoc.includes('docs/PRIVACY.md'), 'STORE_RELEASE.md must point at docs/PRIVACY.md as the policy source');
+  assert.ok(!storeDoc.includes('babelish.vercel.app'), 'STORE_RELEASE.md must not link the removed web app');
+  assert.ok(storeDoc.includes('25 LANGUAGES, REAL COURSES'), 'STORE_RELEASE.md language count drifted');
+  assert.ok(!storeDoc.includes('Urdu'), 'STORE_RELEASE.md must not list unshipped languages');
+});
+
+test('ReviewScreen logs review_completed and LessonScreen resets state on routeKey changes', () => {
+  const reviewSrc = read('src/app/review.tsx');
+  assert.ok(
+    reviewSrc.includes("logEvent('review_completed')"),
+    'ReviewScreen must log review_completed so XP, streak, and badges update'
+  );
+  const lessonSrc = read('src/app/lesson/[id].tsx');
+  assert.ok(
+    lessonSrc.includes('if (activeKey !== routeKey)'),
+    'LessonScreen must reset player state when advancing to nextLessonId'
+  );
+  assert.ok(
+    lessonSrc.includes("exercise.type !== 'speak' && answered === null"),
+    'LessonScreen advance() must not deadlock on speak exercises'
+  );
 });

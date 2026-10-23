@@ -45,7 +45,19 @@ export function slotLabel(hour: number, minute: number): string {
  * an absence (ethical gamification: no dark patterns).
  */
 export function reminderTitle(): string {
-  return 'Zelvoca 🌍';
+  return 'Babelish 🌍';
+}
+
+/** Identifies this app's daily reminder without matching unrelated notifications. */
+export function isDailyReminderNotification(
+  title: string | null | undefined,
+  data: unknown,
+): boolean {
+  if (data && typeof data === 'object' && 'kind' in data) {
+    return (data as { kind?: unknown }).kind === 'babelish-daily-reminder';
+  }
+  // Backward compatibility for reminders scheduled before the marker existed.
+  return title === reminderTitle();
 }
 
 export function reminderBody(input: {

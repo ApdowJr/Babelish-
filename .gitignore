@@ -3,11 +3,18 @@
 # dependencies
 node_modules/
 
-# Expo
+# Expo (native-only: Android + iOS, no web)
 .expo/
 dist/
-web-build/
 expo-env.d.ts
+
+# Native build outputs — never commit binaries, download them from
+# GitHub Actions ("Build mobile (APK + iOS)") or EAS instead
+*.apk
+*.aab
+*.ipa
+*.app
+build-output/
 
 # Native
 .kotlin/
@@ -36,7 +43,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# generated native folders
+# generated native folders (created by `expo prebuild`, never edited by hand)
 /ios
 /android
 

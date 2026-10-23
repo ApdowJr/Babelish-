@@ -14,6 +14,7 @@ import { CrashScreen, ErrorBoundary as ScreenBoundary } from '@/components/Error
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { type Palette } from '@/theme/tokens';
 import { validateConfigurationAtStartup } from '@/lib/config';
+import { resolveRootRedirect } from '@/lib/authLinks';
 import { ThemeProvider, useTheme, useThemedStyles } from '@/theme/theme';
 
 // Keep the native splash up until our own animated one has painted: the two
@@ -67,36 +68,41 @@ export default function RootLayout() {
 
 /**
  * Auth gate: the signed-in learner gets the app (tabs + language detail),
- * everyone else gets the auth stack. Guards redirect automatically.
+ * everyone else gets the auth stack. Legal pages (`/privacy` and `/terms`)
+ * remain publicly reachable in every state for store policy compliance.
  */
 function RootNavigator() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
   const { ready: prefsReady, onboarded, reduceMotion } = usePreferences();
   const [splashDone, setSplashDone] = useState(false);
   const booting = loading || !prefsReady;
   const segments = useSegments();
 
   const signedIn = Boolean(user);
-  const inAuthGroup = segments[0] === '(auth)';
-  const inOnboarding = segments[0] === 'onboarding';
 
-  // Explicit auth redirects. Stack.Protected removes guarded screens from the
-  // navigator, but on web (SPA export) the implicit guard fallback can leave a
-  // logged-out first-time visitor on "/" with nothing to render ("Unmatched
-  // Route"). Send both directions to a real route explicitly. Declared before
-  // any early return so the hook order is identical on every render.
+  // Explicit auth redirects. Public legal pages (`/privacy`, `/terms`) and
+  // active password-recovery sessions are never redirected away.
   useEffect(() => {
     if (loading || !prefsReady) return;
-    if (!signedIn && !inAuthGroup) {
-      router.replace('/login');
-    } else if (signedIn && !onboarded && !inOnboarding) {
-      router.replace('/onboarding');
-    } else if (signedIn && onboarded && (inAuthGroup || inOnboarding)) {
-      router.replace('/');
+    const redirectTarget = resolveRootRedirect({
+      signedIn,
+      onboarded,
+      isPasswordRecovery,
+      segments,
+    });
+    if (redirectTarget) {
+      router.replace(redirectTarget);
     }
-  }, [loading, prefsReady, signedIn, onboarded, inAuthGroup, inOnboarding]);
+  }, [loading, prefsReady, signedIn, onboarded, isPasswordRecovery, segments]);
+
+  const legalHeaderOptions = {
+    headerShown: true,
+    headerStyle: { backgroundColor: colors.bg },
+    headerTintColor: colors.text,
+    headerShadowVisible: false,
+  };
 
   return (
     <View style={styles.root}>
@@ -114,20 +120,20 @@ function RootNavigator() {
               contentStyle: { backgroundColor: colors.bg },
             }}
           >
-            <Stack.Protected guard={signedIn}>
+            {/* Public legal pages — reachable signed-out, during onboarding, and signed-in */}
+            <Stack.Screen
+              name="privacy"
+              options={{ ...legalHeaderOptions, title: 'Privacy Policy' }}
+            />
+            <Stack.Screen
+              name="terms"
+              options={{ ...legalHeaderOptions, title: 'Terms' }}
+            />
+
+            <Stack.Protected guard={signedIn && !isPasswordRecovery}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
-        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="terms"
-          options={{
-            headerShown: true,
-            title: 'Terms',
-            headerStyle: { backgroundColor: colors.bg },
-            headerTintColor: colors.text,
-            headerShadowVisible: false,
-          }}
-        />
+              <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen
                 name="progress"
@@ -162,7 +168,7 @@ function RootNavigator() {
               />
             </Stack.Protected>
 
-            <Stack.Protected guard={!signedIn}>
+            <Stack.Protected guard={!signedIn || isPasswordRecovery}>
               <Stack.Screen name="(auth)" />
             </Stack.Protected>
           </Stack>

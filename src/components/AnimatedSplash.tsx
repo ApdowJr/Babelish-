@@ -21,6 +21,7 @@ import { useThemedStyles } from '@/theme/theme';
 
 const MIN_VISIBLE_MS = 900;
 const EXIT_MS = 380;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export function AnimatedSplash({
   ready,
@@ -54,8 +55,8 @@ export function AnimatedSplash({
     const timer = setTimeout(() => setMinElapsed(true), MIN_VISIBLE_MS);
     if (reduceMotion) {
       Animated.parallel([
-        Animated.timing(markOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.timing(copyOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(markOpacity, { toValue: 1, duration: 220, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(copyOpacity, { toValue: 1, duration: 260, useNativeDriver: USE_NATIVE_DRIVER }),
         Animated.timing(barWidth, { toValue: 1, duration: MIN_VISIBLE_MS, useNativeDriver: false }),
       ]).start();
       return () => clearTimeout(timer);
@@ -66,13 +67,13 @@ export function AnimatedSplash({
           toValue: 1,
           duration: 320,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
         Animated.spring(markScale, {
           toValue: 1,
           friction: 7,
           tension: 70,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
       ]),
       Animated.parallel([
@@ -80,13 +81,13 @@ export function AnimatedSplash({
           toValue: 1,
           duration: 340,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
         Animated.timing(copyShift, {
           toValue: 0,
           duration: 380,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
       ]),
     ]).start();
@@ -108,7 +109,7 @@ export function AnimatedSplash({
       toValue: 0,
       duration: EXIT_MS,
       easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start(() => onDone());
   }, [minElapsed, onDone, plateOpacity, ready]);
 
@@ -127,7 +128,7 @@ export function AnimatedSplash({
           style={{ opacity: markOpacity, transform: [{ scale: markScale }] }}
           accessibilityElementsHidden
         >
-          <BrandMark size={96} tone="light" />
+          <BrandMark size={112} tone="light" />
         </Animated.View>
         <Animated.View
           style={[

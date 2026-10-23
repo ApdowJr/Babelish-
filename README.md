@@ -1,23 +1,19 @@
 # Babelish 3.0 🌍
 
-**Learn any of 24 languages free — with an open-source tutor you can host yourself.**
+**Learn any of 25 languages free — with an open-source tutor you can host yourself.**
 
-Babelish is an AI language tutor that talks to you *only* in your target
-language. **You do not configure a model, download weights or paste a key** —
-open Speak and the tutor answers.
+Babelish is a **native-only** AI language tutor for **Android and iPhone** — there is no web version. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
 
-Behind it, the app calls its own tutor server, which fronts open-weight models
-(Qwen3-Next 80B on free endpoints by default). Voice input can run Whisper in
-the browser for free, and a labelled coach keeps every screen usable when the
-server is unreachable. Courses, review, the phrasebook and device audio never
-needed a model at all.
+Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live model is available only after the operator configures server-side provider secrets; otherwise the clearly labelled offline coach remains available. Courses, review, the phrasebook and device audio work without a hosted model.
 
-> 24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528 starter words
+> 📱 **APK + iPhone kaliya — web ma jiro.** Sida APK-ga loo helo (GitHub Actions /
+> EAS / local) iyo runta ku saabsan iPhone-ka: **`docs/BUILD_MOBILE.md`** (Soomaali + English).
+>
+> 🌐 **Website:** [`site/`](docs/WEBSITE.md) — a static, bilingual page that explains the
+> app, publishes the privacy policy and terms the stores require, and links the APK.
+
+> 25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550 starter words
 > bundled offline. Every lesson playable on the free plan.
-
-**Install:** [the APK](https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk)
-(side-load, debug-signed) · **Website:** [`site/`](site/README.md) ·
-**Play Store:** not published yet, see [`docs/STORE_RELEASE.md`](docs/STORE_RELEASE.md).
 
 ## What's new in 3.4
 
@@ -27,8 +23,8 @@ needed a model at all.
 | **Progress** | `/progress` — six-week streak calendar, level progress and an honest per-skill breakdown |
 | **Contrast** | Both palettes are tested against WCAG AA pair by pair; the daylight palette was darkened where it used to fail |
 | **Theming** | `useTheme()` / `useThemedStyles()`; the static `colors` export is gone so a screen cannot silently stay light |
-| **Website** | `site/` — a static, bilingual (EN/SO) landing page with a strict CSP and a real download button |
-| **APK** | GitHub Actions builds and attaches `babelish.apk` on a `v*` tag |
+| **Website** | `site/` — bilingual (EN/SO) static page, strict CSP, privacy + terms, real APK link |
+| **APK** | GitHub Actions attaches `babelish.apk` to a `v*` release |
 
 ## What's new in 3.3
 
@@ -68,16 +64,16 @@ needed a model at all.
 
 | Feature | Status |
 |---|---|
-| **Professional auth** — sign up / sign in / forgot password | ✅ Real Supabase or Neon auth; friendly errors |
+| **Professional auth** — sign up / sign in / forgot password | ✅ Supabase Auth; friendly errors |
 | **Demo mode** — full app without any keys | ✅ Clearly labeled, device-local accounts |
-| **24-language atlas** — real dialects, native names, scripts, speaker counts | ✅ `src/data/languages.ts` |
+| **25-language atlas** — real dialects, native names, scripts, speaker counts | ✅ `src/data/languages.ts` |
 | **Starter courses** — 4 chapters × 8 lessons for 23 languages, all offline | ✅ 1,518 starter exercises + 160 in the Spanish course |
 | **Spanish CEFR course** — 5 hand-authored chapters × 4 lessons × 8 exercises | ✅ Culture/grammar notes on every exercise |
 | **Lesson player** — choose · type · listen · speak with native TTS | ✅ Accent-lenient grading, XP + completion |
 | **Chapter unlocking** — chapter N opens at 70%+ on N−1 | ✅ Per-lesson scores on the language page |
 | **Spaced repetition** — missed words enter a Leitner queue (1/2/4/8/15 days) | ✅ Rebuilt review screen + Words tab |
-| **AI tutor** — conversation in 24 languages, level-aware | ✅ Hosted tutor server (zero setup) · coach fallback |
-| **Voice input** — record → Whisper → tutor reply | ✅ Server or in-browser Whisper; typing always available; failures explain themselves |
+| **AI tutor** — level-aware conversation; verified model coverage varies by language | ✅ Hosted tutor server (zero setup) · coach fallback |
+| **Voice input** — record → Whisper → tutor reply | ✅ Server Whisper when configured; typing always available; failures explain themselves |
 | **Native TTS** — hear every reply in a locale voice (`es-ES`, `ar-EG`, `ja-JP`…) | ✅ expo-speech, with replay + slow mode |
 | **Scenarios** — café, souk bargaining, konbini, job interview… | ✅ Chips switch context live |
 | **Translations** — toggle English under every AI message | ✅ Explanation language follows your native language |
@@ -93,55 +89,59 @@ needed a model at all.
 **Languages in the atlas:** Spanish, French, German, Italian, Portuguese, Dutch,
 Swedish, Polish, Russian, Ukrainian, Greek, Turkish, Arabic, Hebrew, Persian,
 Hindi, Bengali, Mandarin Chinese, Japanese, Korean, Vietnamese, Thai,
-Indonesian, Swahili. (Somali is not included — see
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §3 for why we did not fake it.)
+Indonesian, Swahili and Somali (Soomaali). Somali has a starter course; AI and speech-model coverage remains unverified until confirmed.
 
 ## Run it
 
 ```bash
 npm install
-cp .env.example .env    # optional — public Neon endpoints are baked in as defaults
-npx expo start          # scan the QR with Expo Go (SDK 58)
-npx expo start --web    # or run it in the browser
+cp .env.example .env
+# Add EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env
+npm run android        # Android emulator / device
+npm run ios            # iPhone simulator (Mac) / device
 ```
 
-The app is usable with **no model at all**: lessons, reviews, phrasebook and
-device audio work offline and the tutor shows the labelled coach. To give every
-learner a live tutor, configure the **server** once — no app rebuild, nothing
-for the learner to install:
+### Build the phone apps
 
 ```bash
-AI_API_KEY=sk-or-... npm run deploy:tutor
+npm run build:apk      # Android .apk — install directly on a phone (EAS)
+npm run build:aab      # Android .aab — Google Play upload (EAS)
+npm run build:iphone   # iOS build — App Store / TestFlight (paid Apple account needed)
 ```
 
-That one command deploys the `api` Function with the model chain in its
-environment — the key stays on the server, the app is untouched.
+No Expo account? Use **GitHub → Actions → “Build mobile (APK + iOS)”** and
+download the APK from the run's Artifacts. Full Soomaali + English guide:
+`docs/BUILD_MOBILE.md`. Babelish is native-only — `app.json` declares
+`platforms: ["android", "ios"]`; there is no `web` script any more, and
+`npm run check:release` fails if a web target is re-added.
 
-Free Qwen3 endpoints cover all 24 atlas languages. Prefer your own hardware?
-Point `AI_API_URL` at Ollama/llama.cpp/vLLM instead — see
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md) §7.
+The app keeps its authored curriculum bundled so lessons and reviews work
+offline. Supabase Auth handles accounts; Supabase PostgreSQL stores approved
+curriculum, lesson progress, vocabulary review, and learner reports with RLS.
+The AI tutor uses an optional owner-operated OpenAI-compatible gateway; model
+credentials must stay on that server. Without a gateway, the bundled offline
+coach remains available.
 
-Want a fully local preview with no backend? `EXPO_PUBLIC_NEON_DISABLED=1 npx
-expo start --web` runs the whole app in device-local demo mode.
+## Supabase setup
 
-## Connect real services (optional)
+1. Create or open the Babelish Supabase project.
+2. Copy its URL and **publishable key** into `.env` as `EXPO_PUBLIC_SUPABASE_URL`
+   and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. Enable email sign-in in Supabase Auth and configure email confirmation/reset
+   redirect URLs for the Android app.
+4. The development database schema and RLS migrations are tracked in
+   `supabase/schema.sql`. Test with two accounts before any production cutover.
+5. Never place a Supabase secret/service-role key or an AI provider key in the
+   Android app or any `EXPO_PUBLIC_*` variable.
 
-1. **Backend (Neon)** — the app is wired to a Neon branch: **Managed Better Auth**
-   (real accounts + password reset), the **`api` Function** (JWT-verified progress
-   sync + presigned Object Storage), **Lakebase Postgres** (`neon/schema.sql`) and
-   the **`assets`** bucket. `neon deploy` provisions everything and pulls the branch
-   endpoints into `.env.local`; `npm run neon:e2e` proves each service end to end.
-2. **Accounts (Supabase, legacy)** — create a free [Supabase](https://supabase.com)
-   project and put its URL and anon key in `.env`. Used only when Neon isn't configured.
-3. **Tutor server** — the `api` Function proxies chat and speech to the model
-   endpoint you configure (`AI_API_URL`, `AI_KEY`, `AI_MODELS`). The key stays in
-   the Function's environment; the app only holds the public backend URL. Free
-   hosted endpoints cost nothing per token but are rate-limited and rotate;
-   self-hosting costs electricity. Either way the learner sees "Tutor server" or
-   "Coach mode" — never a claim we cannot verify.
+## AI tutor
 
-The full matrix — local, self-hosted and external — is in
-[`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md).
+The app calls the Supabase `babelish-ai` Edge Function by default. It remains
+in honest offline-coach mode until the operator configures `AI_API_URL`,
+`AI_API_KEY`, and `AI_CHAT_MODEL` in Supabase Dashboard → Edge Functions →
+Secrets. Voice transcription additionally requires `AI_STT_API_URL`,
+`AI_STT_API_KEY`, and `AI_STT_MODEL`. Never put provider keys in the Android
+app, `.env`, GitHub, or chat. See `docs/AI_ARCHITECTURE.md` for details.
 
 ## Project structure
 
@@ -156,11 +156,11 @@ src/
     review.tsx          # daily Leitner review with real session stats
   components/           # Button · TextField · Chip · Logo · Screen · SectionHeader
                         # ProgressBar · StatTile · WeeklyBars · SegmentedControl · Pill
-  context/              # AuthContext (Neon Auth · Supabase · demo mode)
+  context/              # AuthContext (Supabase Auth · demo mode)
   lib/
     ai.ts               # app-facing tutor/voice API (tutorReply · transcribeSpeech · TTS)
     mic.ts              # microphone failure → actionable message (iframe/permission/device)
-    aiCore.ts           # prompt + strict JSON contract + script guard (shared w/ Function)
+    aiCore.ts           # tutor prompt + strict JSON contract + script guard
     models/
       catalog.ts        # model catalogue, language tables, licences
       config.ts         # defaults, URL sanitising, runtime planning, coverage gate
@@ -178,9 +178,9 @@ src/
     xp.ts               # published XP rules + lifetime/weekly/daily ledgers
   state/                # preferences · learning · profile · analytics
   data/
-    languages.ts        # 24-language atlas: dialects, scripts, difficulty, greetings
+    languages.ts        # 25-language atlas: dialects, scripts, difficulty, greetings
     starters.ts         # curated 22-word starter packs for every language
-    practice.ts         # per-scenario key phrases (+ starter fallback for all 24)
+    practice.ts         # per-scenario key phrases (+ starter fallback for all 25)
     curriculum/
       es/               # hand-authored CEFR Spanish course (5 chapters)
       samplers.ts       # deterministic 4-chapter starter courses for the other 23
@@ -188,22 +188,16 @@ src/
     palette.ts          # day + night palettes, mode resolution, contrast rules
     tokens.ts           # "warm atlas" spacing, type, radii, shadows
     theme.tsx           # ThemeProvider · useTheme · useThemedStyles
-functions/
-  api/index.ts          # Neon Function: state sync · tutor server (model chain) · storage · review
-neon/schema.sql         # Lakebase Postgres schema (app_state)
-supabase/schema.sql     # legacy tables + RLS
-site/                   # static landing page (EN/SO) — deploy with Root Directory = site
-scripts/                # curriculum drafts · neon e2e · zero-dep tests · local API smoke
-docs/AI_ARCHITECTURE.md # models, coverage, setup, hardware, privacy, limits
-docs/DEPLOYMENT.md      # how to deploy the backend, web and mobile builds
+supabase/schema.sql     # PostgreSQL tables + row-level security
+src/lib/supabaseLearning.ts # per-user progress and vocabulary sync
+scripts/                # curriculum drafts · zero-dependency tests
+docs/AI_ARCHITECTURE.md # model choices, coverage, privacy and limits
 docs/RELEASE_2_0.md     # the 2.0 release notes (atlas + free plan)
 ```
 
 ## Curriculum pipeline
 
-Content ships **bundled** (works offline & in demo mode). When the legacy
-Supabase backend is configured, **approved** chapters from that database
-override the bundle. Every language in the atlas has a course: Spanish is
+Content ships **bundled** (works offline & in demo mode). When Supabase is configured, **approved** chapters from PostgreSQL can override the bundle. Every language in the atlas has a course: Spanish is
 hand-authored, the other 23 are built by the deterministic starter-pack builder
 (`src/data/curriculum/samplers.ts`).
 
@@ -215,11 +209,10 @@ never automatic.
 ## Quality gates
 
 ```bash
-npm test                 # ✅ 105 unit tests / 14 files (atlas · models · courses · review · XP · AI · uploads)
-npm run smoke:local      # ✅ the real Function from source
-npm run neon:e2e         # ✅ 50 checks against the live deployed backend
-npx tsc --noEmit         # ✅ typecheck (app)
-npm run check:functions  # ✅ typecheck (functions)
-npx expo lint            # ✅ lint
-npx expo export --platform web   # ✅ production web build
+npm test
+npx tsc --noEmit
+npm run lint
+npm run check:release
+npm run build:android   # Android JS bundle
+npm run build:ios       # iOS JS bundle
 ```

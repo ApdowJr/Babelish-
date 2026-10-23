@@ -1,5 +1,7 @@
 import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
+import { SUPABASE_FUNCTIONS_URL, SUPABASE_PUBLISHABLE_KEY_VALUE } from '@/lib/supabase';
+import { buildAiGatewayTransport } from '@/lib/aiGateway';
 import { getLanguage, type Language } from '@/data/languages';
 import {
   buildSystemPrompt,
@@ -24,7 +26,6 @@ import {
   sttCandidates,
   sttModelForRuntime,
 } from '@/lib/models/config';
-import { NEON_API_URL } from '@/lib/neon';
 import type { RuntimeId } from '@/lib/models/types';
 import { EngineFailed, RequestCancelled } from '@/lib/models/types';
 import {
@@ -62,16 +63,37 @@ export const isAIConfigured = Boolean(
 );
 
 /** How a call reaches the app owner's gateway: base URL + learner JWT. */
-export type AiTransport = { apiBase: string; jwt?: string | null };
+export type AiTransport = {
+  apiBase?: string;
+  jwt?: string | null;
+  apiKey?: string | null;
+};
+
+/**
+ * Builds the default authenticated AI gateway transport (using
+ * `EXPO_PUBLIC_AI_GATEWAY_URL` when set, or `${SUPABASE_FUNCTIONS_URL}/babelish-ai`).
+ */
+export function createAiTransport(jwt?: string | null): AiTransport | null {
+  return buildAiGatewayTransport({
+    jwt,
+    envGatewayUrl: process.env.EXPO_PUBLIC_AI_GATEWAY_URL,
+    supabaseFunctionsUrl: SUPABASE_FUNCTIONS_URL,
+    supabasePublishableKey: SUPABASE_PUBLISHABLE_KEY_VALUE,
+  });
+}
 
 function gatewayContext(io?: AiTransport | null) {
-  // An owner-hosted deployment can point the app at its own gateway without a
-  // rebuild-time backend URL. Public address only — never a credential.
-  const configured = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
-  const base = io?.apiBase || configured || NEON_API_URL || undefined;
-  return {
-    gatewayBase: base || null,
+  const resolved = buildAiGatewayTransport({
     jwt: io?.jwt ?? null,
+    explicitBase: io?.apiBase,
+    envGatewayUrl: process.env.EXPO_PUBLIC_AI_GATEWAY_URL,
+    supabaseFunctionsUrl: SUPABASE_FUNCTIONS_URL,
+    supabasePublishableKey: io?.apiKey ?? SUPABASE_PUBLISHABLE_KEY_VALUE,
+  });
+  return {
+    gatewayBase: resolved?.apiBase ?? null,
+    jwt: resolved?.jwt ?? null,
+    apiKey: resolved?.apiKey ?? null,
     browserSupported: typeof WebAssembly === 'object',
   };
 }
@@ -294,7 +316,23 @@ export async function speakNative(text: string, ttsLocale: string, rate = 0.92):
 
   try {
     await Speech.stop().catch(() => undefined);
-    await speakWithCallbacks(trimmed, { language: ttsLocale, rate, pitch: 1.0 });
+    // Prefer an installed voice that matches the requested language/region.
+    // This stays on-device and does not send lesson text to a third-party API.
+    const voice = await Speech.getAvailableVoicesAsync()
+      .then((voices) => matchVoice(
+        voices.map((item) => ({
+          identifier: item.identifier,
+          language: item.language,
+        })),
+        ttsLocale
+      ))
+      .catch(() => null);
+    await speakWithCallbacks(trimmed, {
+      language: ttsLocale,
+      ...(voice?.identifier ? { voice: voice.identifier } : {}),
+      rate,
+      pitch: 1.0,
+    });
   } catch (err) {
     reportSpeechError(
       err instanceof Error && err.message
@@ -496,7 +534,10 @@ export async function transcribeSpeech(
   audioUri: string,
   languageId: string,
   io?: AiTransport | null,
-  opts: { signal?: AbortSignal } = {}
+  opts: {
+    signal?: AbortSignal;
+    onProgress?: (p: { loaded: number; total: number; pct: number; label: string }) => void;
+  } = {}
 ): Promise<string> {
   const settings = getModelSettings();
   const ctx = gatewayContext(io);
@@ -511,8 +552,10 @@ export async function transcribeSpeech(
   }
   // Gate per runtime: the browser uses its own Whisper model id, and a
   // language a model does not document must be opted into explicitly.
+  // The server gateway chooses its own STT model, so never block it client-side.
   const usable = candidates.filter(
     (runtime) =>
+      runtime === 'gateway' ||
       languageSupport(
         sttModelForRuntime(settings, runtime),
         languageId,
@@ -527,7 +570,9 @@ export async function transcribeSpeech(
   }
 
   const answer = await runTranscribe(settings, audioUri, languageId, ctx, {
+    platform: Platform.OS,
     signal: opts.signal,
+    onProgress: opts.onProgress,
   });
   if (!answer) {
     throw new Error(

@@ -54,6 +54,7 @@ export default function LessonScreen() {
     nextLessonId: string | null;
   } | null>(null);
 
+  const [activeKey, setActiveKey] = useState(`${languageId}:${lessonId}`);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
@@ -62,6 +63,19 @@ export default function LessonScreen() {
   const [results, setResults] = useState<StepResult[]>([]);
   const [finishing, setFinishing] = useState(false);
   const [summary, setSummary] = useState<{ score: number; xpEarned: number } | null>(null);
+
+  const routeKey = `${languageId}:${lessonId}`;
+  if (activeKey !== routeKey) {
+    setActiveKey(routeKey);
+    setStep(0);
+    setSelected(null);
+    setTyped('');
+    setAnswered(null);
+    setShowHint(false);
+    setResults([]);
+    setFinishing(false);
+    setSummary(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +102,6 @@ export default function LessonScreen() {
     };
   }, [languageId, lessonId]);
 
-  const routeKey = `${languageId}:${lessonId}`;
   const loaded = data?.key === routeKey;
   const lesson = loaded && data ? data.lesson : null;
   const nextLessonId = loaded && data ? data.nextLessonId : null;
@@ -124,7 +137,7 @@ export default function LessonScreen() {
   }
 
   function advance() {
-    if (!lesson || !exercise || answered === null) return;
+    if (!lesson || !exercise || (exercise.type !== 'speak' && answered === null)) return;
     const playable = exercise.type !== 'speak';
     const entry: StepResult | null =
       playable && exercise.vocab

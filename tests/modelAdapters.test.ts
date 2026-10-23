@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runChat, probeEngines } from '../src/lib/models/chat';
 import { readAudioBytes } from '../src/lib/models/audio';
+import { runTranscribe } from '../src/lib/models/stt';
 import { DEFAULT_SETTINGS, type ModelSettings } from '../src/lib/models/config';
 import { EngineFailed, QuotaExceeded } from '../src/lib/models/types';
 
@@ -270,3 +271,75 @@ test('readAudioBytes rejects an empty take and returns real bytes', async () => 
     ok.restore();
   }
 });
+
+test('gateway chat sends both Authorization and Supabase apikey headers', async () => {
+  const stub = stubFetch(() =>
+    json({ reply: '¡Hola!', translation: 'Hello!', tip: 'Friendly greeting.', model: 'gpt-test' })
+  );
+  try {
+    const out = await runChat(
+      { ...base, mode: 'server', ollamaUrl: '' },
+      call,
+      {
+        gatewayBase: 'https://dvgluivslmdrqsvlscmj.supabase.co/functions/v1/babelish-ai',
+        jwt: 'session-jwt',
+        apiKey: 'sb_publishable_key',
+      }
+    );
+    assert.equal(out?.text.includes('¡Hola!'), true);
+    const headers = stub.calls[0]?.init?.headers as Record<string, string>;
+    assert.equal(headers.Authorization, 'Bearer session-jwt');
+    assert.equal(headers.apikey, 'sb_publishable_key');
+  } finally {
+    stub.restore();
+  }
+});
+
+test('gateway STT treats 503 ai-not-configured as unavailable rather than crashing before fallback', async () => {
+  const audioBytes = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);
+  const stub = stubFetch((args) => {
+    if (args.url === 'blob:voice') return new Response(audioBytes);
+    return json({ error: 'ai-not-configured', message: 'Voice transcription is not configured.' }, 503);
+  });
+  try {
+    const out = await runTranscribe(
+      { ...base, mode: 'server', sttModel: 'whisper-base' },
+      'blob:voice',
+      'so',
+      {
+        gatewayBase: 'https://dvgluivslmdrqsvlscmj.supabase.co/functions/v1/babelish-ai',
+        jwt: 'session-jwt',
+        apiKey: 'sb_publishable_key',
+      }
+    );
+    // Notice sttModel='whisper-base' does not document 'so' locally,
+    // yet gateway STT still attempted the server call and cleanly returned null on 503!
+    assert.equal(out, null);
+    assert.equal(stub.calls.length, 2);
+  } finally {
+    stub.restore();
+  }
+});
+
+test('gateway STT surfaces 422 empty-transcript as a user-facing EngineFailed error', async () => {
+  const audioBytes = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);
+  const stub = stubFetch((args) => {
+    if (args.url === 'blob:voice') return new Response(audioBytes);
+    return json({ error: 'empty-transcript', message: 'No words were detected.' }, 422);
+  });
+  try {
+    await assert.rejects(
+      () =>
+        runTranscribe(
+          { ...base, mode: 'server' },
+          'blob:voice',
+          'es',
+          { gatewayBase: 'https://api.example.org', jwt: 'jwt' }
+        ),
+      (err: unknown) => err instanceof EngineFailed && /No words were detected/.test(err.message)
+    );
+  } finally {
+    stub.restore();
+  }
+});
+

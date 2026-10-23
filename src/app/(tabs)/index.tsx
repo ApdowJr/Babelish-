@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,10 +19,8 @@ import { FEATURED_LANGUAGES, LANGUAGES, getLanguage } from '@/data/languages';
 import { progressForLanguage } from '@/lib/catalog';
 import { activeToday, activityByDay, computeStreak, weekdayLabels, weakestSkill } from '@/lib/analytics';
 import { buildDailyPlan, planTotalMinutes } from '@/lib/dailyPlan';
-import { levelForXp, todayXp, weekKey, weeklyXp } from '@/lib/xp';
-import { rankLabel, tierForXp, weeklyProgress } from '@/lib/league';
-import { fetchLeague, postWeeklyXp } from '@/lib/neonApi';
-import { isNeonConfigured } from '@/lib/neon';
+import { levelForXp, todayXp, weeklyXp } from '@/lib/xp';
+import { tierForXp, weeklyProgress } from '@/lib/league';
 import { loadCurriculum } from '@/lib/curriculum/store';
 import { wordOfTheDay } from '@/lib/phrasebook';
 import { speakNative } from '@/lib/ai';
@@ -33,7 +31,7 @@ import { useTheme, useThemedStyles } from '@/theme/theme';
 export default function HomeScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const { user, isDemo, getAccessToken } = useAuth();
+  const { user, isDemo } = useAuth();
   const {
     targetLanguageId,
     activeLanguageIds,
@@ -66,7 +64,7 @@ export default function HomeScreen() {
     Animated.timing(fade, {
       toValue: 1,
       duration: 460,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [fade]);
 
@@ -106,29 +104,9 @@ export default function HomeScreen() {
   const level = levelForXp(analytics.xp.lifetime);
   const tier = tierForXp(analytics.xp.lifetime);
   const weekProgress = weeklyProgress(weeklyNow, tier);
-  const week = weekKey(now);
   const weekValues = activityByDay(analytics.events);
   const weekLabels = weekdayLabels();
 
-  const [rankText, setRankText] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    if (isDemo || !isNeonConfigured) return;
-    void (async () => {
-      try {
-        const jwt = await getAccessToken();
-        if (!jwt || cancelled) return;
-        await postWeeklyXp(jwt, week, weeklyNow);
-        const board = await fetchLeague(jwt, week);
-        if (!cancelled) setRankText(rankLabel(board.rank, board.total));
-      } catch {
-        // offline or leaderboard not deployed yet — the tier card stands alone
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [getAccessToken, isDemo, week, weeklyNow]);
 
   const plan = buildDailyPlan({
     dueCount,
@@ -495,7 +473,7 @@ export default function HomeScreen() {
           </View>
           <WeeklyBars values={weekValues} labels={weekLabels} height={54} />
           <Text style={styles.rhythmNote}>
-            {rankText ?? 'Tiers come from lifetime XP and never demote — the weekly bar is a guide.'}
+            {'Tiers come from lifetime XP and never demote — the weekly bar is a guide.'}
           </Text>
         </View>
 

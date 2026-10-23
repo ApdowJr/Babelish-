@@ -2,10 +2,14 @@ name: Android APK
 
 # Builds the installable APK — the file the landing page (site/) links to.
 #
-#   * every push to main and every pull request: build it, keep it as an
-#     artifact for 14 days, so a broken native config is caught early;
-#   * a tag like v3.4.0: same build, plus attach `babelish.apk` to that
-#     GitHub release, which is the URL https://…/releases/latest/download/babelish.apk
+#   * a tag like v3.4.0: build it and attach `babelish.apk` to that GitHub
+#     release — the URL https://…/releases/latest/download/babelish.apk that
+#     the landing page (site/) links to;
+#   * workflow_dispatch: build it by hand, no release, artifact only.
+#
+# It deliberately does NOT run on every pull request: `.github/workflows/
+# build-mobile.yml` already builds an APK on demand, and two 20-minute Gradle
+# jobs per PR would be waste.
 #
 # The build is signed with the generated debug keystore. That is deliberate and
 # documented: it is a side-loadable APK, not a Play Store upload. Play needs the
@@ -13,9 +17,7 @@ name: Android APK
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
 
 permissions:

@@ -167,8 +167,10 @@ test('the page does not claim a release that has not happened', () => {
 test('the landing page has both palettes and follows the device', () => {
   assert.match(css, /html\[data-theme='dark'\]\s*\{/);
   assert.match(css, /@media \(prefers-color-scheme: dark\)/);
-  assert.ok(css.includes('#101512'), 'the night canvas from the app palette');
-  assert.ok(css.includes('#f7f4ed'), 'the daylight canvas');
+  // The page wears the mascot's brand, sampled from the launcher icon.
+  assert.ok(css.includes('#3a2fb8'), 'the brand violet, from assets/icon.png');
+  assert.ok(css.includes('#0d0a1c'), 'the night canvas');
+  assert.ok(css.includes('#f6f4fb'), 'the daylight canvas');
   assert.ok(js.includes('prefers-color-scheme'), 'the toggle must know the OS state');
   assert.ok(js.includes("'babelish-theme'"), 'and remember an explicit choice');
   // No flash: the saved choice is applied in <head>, before the stylesheet.
@@ -177,8 +179,87 @@ test('the landing page has both palettes and follows the device', () => {
   assert.ok(read('site/theme-boot.js').includes('babelish-theme'));
 });
 
+test('the stylesheet has no dead or undefined custom properties', () => {
+  const defined = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]));
+  const used = new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]));
+  assert.deepEqual([...used].filter((name) => !defined.has(name)), [], 'undefined variables');
+  assert.deepEqual([...defined].filter((name) => !used.has(name)), [], 'unused variables');
+});
+
 test('reduced motion is respected', () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test('the site uses the app artwork that actually ships', () => {
+  const { readFileSync } = require('node:fs') as typeof import('node:fs');
+  for (const [siteFile, appFile] of [
+    ['site/assets/icon.png', 'assets/icon.png'],
+    ['site/assets/feature-graphic.png', 'assets/store/feature-graphic.png'],
+  ] as const) {
+    const siteBytes = readFileSync(path.join(root, siteFile));
+    const appBytes = readFileSync(path.join(root, appFile));
+    assert.ok(
+      siteBytes.equals(appBytes),
+      `${siteFile} is stale — copy ${appFile} into site/assets/`
+    );
+  }
+  // And the page must not describe a palette the icon does not use.
+  assert.ok(html.includes('assets/icon.png'));
+});
+
+test('the catalogue numbers on the page match the catalogue', () => {
+  const apps = [...html.matchAll(/<div class="stat"><b>([\d,]+)<\/b>/g)].map((m) =>
+    Number(m[1].replace(/,/g, ''))
+  );
+  assert.deepEqual(apps, [25, 101, 212, 1744, 550], 'languages · chapters · lessons · exercises · words');
+  // The README advertises the same numbers; if the curriculum grows, both move.
+  const readme = read('README.md');
+  for (const value of ['25 languages', '101 chapters', '212 lessons', '1,744 exercises', '550 starter words']) {
+    assert.ok(readme.includes(value), `README no longer says “${value}”`);
+  }
+});
+
+test('the legal pages the stores need are published here', () => {
+  for (const file of ['site/privacy.html', 'site/terms.html']) {
+    assert.ok(existsSync(path.join(root, file)), `${file} missing — stores need a URL`);
+  }
+  assert.ok(html.includes('href="privacy.html"'));
+  assert.ok(html.includes('href="terms.html"'));
+
+  // Keep the page honest: every section heading in the app's policy must be
+  // reachable on the website copy, or the two documents have drifted.
+  const appPrivacy = read('src/app/privacy.tsx');
+  const appHeadings = [...appPrivacy.matchAll(/<Text style=\{styles\.h2\}>([^<]+)<\/Text>/g)].map(
+    (m) => m[1].trim()
+  );
+  assert.ok(appHeadings.length >= 6, 'expected the app policy to have sections');
+  // HTML escapes “&” as &amp;; compare decoded text so the check is about
+  // the words, not the entity.
+  const decode = (value: string) => value.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+  const web = decode(read('site/privacy.html'));
+  for (const heading of appHeadings) {
+    assert.ok(web.includes(heading), `site/privacy.html is missing the “${heading}” section`);
+  }
+
+  const appTerms = read('src/app/terms.tsx');
+  const termHeadings = [...appTerms.matchAll(/<Text style=\{styles\.h2\}>([^<]+)<\/Text>/g)].map(
+    (m) => m[1].trim()
+  );
+  const termsWeb = decode(read('site/terms.html'));
+  for (const heading of termHeadings) {
+    assert.ok(termsWeb.includes(heading), `site/terms.html is missing the “${heading}” section`);
+  }
+});
+
+test('the site stays a site: it never promises a web app', () => {
+  // The app is native-only by owner decision. The marketing page may be a
+  // website, but nothing on it may suggest you can *use* Babelish in a browser.
+  const copy = (read('site/index.html') + read('site/app.js')).toLowerCase();
+  for (const claim of ['use it in your browser', 'open the web app', 'play in your browser', 'web version']) {
+    assert.ok(!copy.includes(claim), `“${claim}” contradicts the native-only decision`);
+  }
+  const app = JSON.parse(read('app.json')).expo;
+  assert.deepEqual(app.platforms, ['android', 'ios']);
 });
 
 /* ---------- the APK pipeline ---------- */
@@ -187,7 +268,7 @@ const workflow = read('.github/workflows/android-apk.yml');
 
 test('a workflow builds the APK from source', () => {
   assert.match(workflow, /assembleRelease/);
-  assert.match(workflow, /npx expo prebuild --platform android/);
+  assert.match(workflow, /expo prebuild --platform android/);
   assert.match(workflow, /uses: actions\/upload-artifact/);
   assert.match(workflow, /babelish\.apk/);
   assert.match(workflow, /npm ci/);
@@ -197,6 +278,9 @@ test('the workflow only publishes on a version tag', () => {
   assert.match(workflow, /tags: \['v\*'\]/);
   assert.match(workflow, /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   assert.match(workflow, /gh release (upload|create)/);
+  // It must not run on every PR — the repo already has build-mobile.yml for
+  // on-demand builds, and two APK jobs per PR is wasted CI.
+  assert.ok(!/pull_request:/.test(workflow), 'tag/dispatch only');
 });
 
 test('the APK is trimmed to the architectures phones actually use', () => {
@@ -221,6 +305,8 @@ test('the page files it references are in the repository', () => {
     'site/vercel.json',
     'site/assets/icon.png',
     'site/assets/feature-graphic.png',
+    'site/privacy.html',
+    'site/terms.html',
   ]) {
     assert.ok(existsSync(path.join(root, file)), `${file} is missing`);
   }

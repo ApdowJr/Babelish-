@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
@@ -13,25 +13,35 @@ import { useTheme, useThemedStyles } from '@/theme/theme';
 /**
  * Step 2 of password recovery: set the new password.
  *
- * Managed Auth has no hosted reset page (the auth host answers `400` for
- * `/reset-password/<token>`), so the app must finish the flow. The one-time
- * token arrives from the email link — as a query parameter
- * (`/reset-password?token=…`) or as a path segment (`/reset-password/…`); this
- * screen is mounted for both shapes and `useLocalSearchParams` exposes either
- * as `token`.
+ * Works with all Supabase Auth recovery callback shapes:
+ *   - an active `PASSWORD_RECOVERY` session established via `#access_token=…` or `?code=…`,
+ *   - `?token_hash=…&type=recovery` verified in `AuthContext`, or
+ *   - an explicit `token` query/path parameter (`/reset-password?token=…` or `/reset-password/<token>`).
  */
 export function ResetPasswordForm() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const params = useLocalSearchParams<{ token?: string | string[] }>();
-  const token = Array.isArray(params.token) ? params.token[0] : params.token;
-  const { resetPasswordWithToken } = useAuth();
+  const params = useLocalSearchParams<{ token?: string | string[]; token_hash?: string | string[] }>();
+  const rawToken = params.token ?? params.token_hash;
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  const {
+    user,
+    loading,
+    isPasswordRecovery,
+    authLinkError,
+    clearPasswordRecovery,
+    resetPasswordWithToken,
+    signOut,
+  } = useAuth();
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+
+  const hasRecoveryContext = Boolean(token || user || isPasswordRecovery);
+  const displayError = error ?? authLinkError;
 
   async function handleSubmit() {
     if (password.length < 8) {
@@ -42,8 +52,8 @@ export function ResetPasswordForm() {
       setError('Passwords don’t match.');
       return;
     }
-    if (!token) {
-      setError('This reset link is missing its token. Request a new one.');
+    if (!hasRecoveryContext) {
+      setError('This reset link is missing or expired. Request a new one.');
       return;
     }
     setError(null);
@@ -58,6 +68,25 @@ export function ResetPasswordForm() {
     }
   }
 
+  async function handleRequestNewLink() {
+    clearPasswordRecovery();
+    if (user) {
+      await signOut().catch(() => {});
+    }
+    router.replace('/forgot-password');
+  }
+
+  if (loading) {
+    return (
+      <Screen scroll>
+        <View style={styles.doneWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.doneText}>Verifying your reset link…</Text>
+        </View>
+      </Screen>
+    );
+  }
+
   if (done) {
     return (
       <Screen scroll>
@@ -66,10 +95,14 @@ export function ResetPasswordForm() {
             <Ionicons name="checkmark-circle-outline" size={34} color={colors.success} />
           </View>
           <Text style={styles.doneTitle}>Password updated</Text>
-          <Text style={styles.doneText}>Sign in with your new password to get back to learning.</Text>
+          <Text style={styles.doneText}>
+            {user
+              ? 'Your password has been saved and you’re signed in.'
+              : 'Sign in with your new password to get back to learning.'}
+          </Text>
           <Button
-            label="Back to sign in"
-            onPress={() => router.replace('/login')}
+            label={user ? 'Continue to Babelish' : 'Back to sign in'}
+            onPress={() => router.replace(user ? '/' : '/login')}
             style={{ alignSelf: 'stretch', marginTop: spacing.xl }}
           />
         </View>
@@ -85,18 +118,19 @@ export function ResetPasswordForm() {
         <Text style={styles.subtitle}>Pick something you’ll remember — at least 8 characters.</Text>
       </View>
 
-      {error ? (
+      {displayError ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{displayError}</Text>
         </View>
       ) : null}
 
-      {!token ? (
+      {!hasRecoveryContext && !displayError ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="link-outline" size={18} color={colors.danger} />
           <Text style={styles.errorText}>
-            This link is missing its reset code. Open the newest email, or request a new link.
+            This link is missing its reset code or has expired. Open the newest email, or request a
+            new link.
           </Text>
         </View>
       ) : null}
@@ -122,10 +156,15 @@ export function ResetPasswordForm() {
         onSubmitEditing={handleSubmit}
       />
 
-      <Button label="Set new password" onPress={handleSubmit} loading={busy} />
+      <Button
+        label="Set new password"
+        onPress={handleSubmit}
+        loading={busy}
+        disabled={!hasRecoveryContext}
+      />
 
       <Pressable
-        onPress={() => router.replace('/forgot-password')}
+        onPress={() => void handleRequestNewLink()}
         style={styles.back}
         hitSlop={8}
         accessibilityRole="link"

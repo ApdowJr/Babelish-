@@ -27,9 +27,9 @@ const QWEN_LANGUAGES = [
 ] as const;
 
 /**
- * Whisper's training languages (99 total). All 24 Babelish languages appear in
- * the official language table, including Somali-adjacent Swahili, Bengali,
- * Hebrew, Persian and Thai.
+ * Whisper's training languages (99 total). The 24 previously listed Babelish
+ * languages appear in the official language table. Somali is intentionally not
+ * marked verified here until its coverage is confirmed against the model card.
  */
 const WHISPER_LANGUAGES = [
   'es', 'fr', 'de', 'it', 'pt', 'nl', 'sv', 'pl', 'ru', 'uk', 'el', 'tr',
@@ -55,10 +55,10 @@ const PIPER_LANGUAGES = [
 ] as const;
 
 /**
- * Qwen3 (incl. Qwen3-Next 80B A3B) documents 119 languages and dialects; every
- * Babelish language appears in that table (Swahili is listed explicitly, as
- * are Bengali, Hebrew, Persian, Dutch, Swedish, Polish, Ukrainian and Greek).
- * Source: Qwen3 Technical Report §1 + the Qwen3 language table.
+ * Qwen3 (incl. Qwen3-Next 80B A3B) documents 119 languages and dialects. The
+ * table covers the 24 previously listed Babelish languages; Somali is not yet
+ * marked verified and remains subject to the app's explicit unverified-language
+ * gate until its coverage is confirmed. Source: Qwen3 language table.
  */
 const QWEN3_LANGUAGES = [
   'es', 'fr', 'de', 'it', 'pt', 'nl', 'sv', 'pl', 'ru', 'uk', 'el', 'tr',
@@ -313,8 +313,14 @@ MODELS.push(
 
 const INDEX = new Map(MODELS.map((model) => [model.id, model]));
 
+const MODEL_ALIASES: Record<string, string> = {
+  'onnx-community/whisper-base': 'whisper-base',
+  'onnx-community/whisper-small': 'whisper-small',
+  'onnx-community/Qwen2.5-0.5B-Instruct': 'qwen2.5:0.5b',
+};
+
 export function findModel(id: string): ModelSpec | null {
-  return INDEX.get(id) ?? null;
+  return INDEX.get(id) ?? INDEX.get(MODEL_ALIASES[id] ?? '') ?? null;
 }
 
 export function modelsFor(kind: ModelKind): ModelSpec[] {

@@ -3,6 +3,47 @@
 All notable changes to Babelish. The format follows Keep a Changelog and the
 project uses semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- **Native-only: Android APK + iPhone, no web.** At the owner's request the
+  web target was removed completely — `app.json` now declares
+  `platforms: ["android", "ios"]`, the Vercel web build config (now
+a disable-only `vercel.json` kill switch: `git.deploymentEnabled: false`) and the web-only
+  dependencies (`react-native-web`, `react-dom`, `@expo/metro-runtime`) are
+  gone, and `expo export --platform web` is refused by Expo itself. CI now
+  bundles **both** Android and iOS. `npm run check:release` and
+  `tests/nativeOnly.test.ts` fail if a web target is ever re-added.
+- New phone build paths: EAS `apk` profile (`npm run build:apk`),
+  `npm run build:aab` (Play), `npm run build:iphone`, a local
+  `scripts/build-apk-local.sh`, and a manual GitHub Actions workflow
+  (“Build mobile (APK + iOS)”) that produces a downloadable APK with no
+  Expo account. Guide (Soomaali + English): `docs/BUILD_MOBILE.md`.
+- The **GitHub Actions iOS job** now runs on an **Xcode 27** runner (Expo
+  SDK 58 requires Xcode 26.4+; the previous `macos-14` image failed
+  `xcodebuild` instantly with exit 66) and installs CocoaPods
+  dependencies explicitly. Verified end-to-end: the Android APK and the
+  unsigned iOS simulator build both complete and upload artifacts.
+- In-app leftovers of the web build were removed: the referral message no
+  longer links to a website, Settings data export uses the native share
+  sheet only, and the Settings voice badge reflects only the tutor-server
+  probe.
+
+### Fixed
+
+- **Supabase Preview check** failing on `main` with *"Remote migration
+  versions not found in local migrations directory."* Three migrations
+  had been applied remotely (`20261023042259`, `20261023042605`,
+  `20261023111245`) and later committed under different timestamps
+  (`…071500`, `…073000`, `…110000`); Supabase compares versions, not
+  names. The files are renamed to their remote-applied versions (SQL
+  verified statement-for-statement against the remote history), the
+  duplicated deny policy was removed from `ai_usage_daily`, and
+  `tests/migrations.test.ts` now pins the directory to the remote
+  history so it cannot drift again unnoticed. **No database change** —
+  the remote schema is untouched.
+
 ## [3.4.0] — 2026-10-22
 
 Night mode, a progress screen that explains the streak, and a theme system the
@@ -27,9 +68,12 @@ compiler enforces.
   confident percentage from one tap. Empty accounts get an honest empty state.
 - **A landing page** (`site/`): a static, dependency-free front page in English and
   Somali that explains the app, shows the three screens that matter, answers the
-  honest questions (no Play listing yet, what happens to microphone audio), and
-  offers one Android download. It ships a strict CSP, follows the OS colour
-  scheme, and never renders a dead download link.
+  honest questions (no Play listing yet, iPhone needs an Apple account, what
+  happens to microphone audio), and offers the Android download. It wears the
+  mascot's violet, ships a strict CSP, follows the OS colour scheme, and never
+  renders a dead download link. **The privacy policy and terms are published
+  here too** (`site/privacy.html`, `site/terms.html`) — the stores require a URL,
+  and the native app is not one.
 - **An APK you can actually install** (`.github/workflows/android-apk.yml`): on a
   `v*` tag the workflow runs the release gate, prebuilds the Android project,
   assembles a release APK for phone architectures, and attaches `babelish.apk`

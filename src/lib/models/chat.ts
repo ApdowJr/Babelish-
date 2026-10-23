@@ -36,7 +36,11 @@ function requireSupport(
   settings: ModelSettings,
   languageId: string | undefined
 ): void {
-  if (!languageId) return;
+  if (!languageId || runtime === 'gateway') return;
+  // The gateway owns model selection and enforces its own script validation.
+  // "server" is a transport label, not a catalogue model, so checking it here
+  // would incorrectly block every server-backed language unless users opted
+  // into unverified models in Settings.
   const support = languageSupport(model, languageId, settings.allowUnverified);
   if (support === 'ok') return;
   const language = getLanguage(languageId);
@@ -108,11 +112,21 @@ export async function probeOpenAI(base: string): Promise<string[]> {
 }
 
 /** Health-checks the app owner's gateway. */
-export async function probeGateway(base: string, jwt?: string | null) {
+export async function probeGateway(
+  base: string,
+  jwt?: string | null,
+  apiKey?: string | null
+) {
   try {
     const res = await getJson(
       `${base}/api/ai/status`,
-      { method: 'GET', headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} },
+      {
+        method: 'GET',
+        headers: {
+          ...(apiKey ? { apikey: apiKey } : {}),
+          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        },
+      },
       3_000
     );
     // Signed out (or an owner-hosted keyless gateway): not an error, just a
@@ -196,7 +210,7 @@ export async function probeEngines(
   const gatewayBase = ctx.gatewayBase ?? null;
   if (gatewayBase && settings.mode !== 'local' && settings.mode !== 'offline') {
     tasks.push(
-      probeGateway(gatewayBase, ctx.jwt)
+      probeGateway(gatewayBase, ctx.jwt, ctx.apiKey)
         .then((status) => {
           gateway = { configured: true, chat: status.chat, stt: status.stt, model: status.model };
           if (status.chat && !chatRuntime) {
@@ -219,23 +233,29 @@ export async function probeEngines(
     );
   }
 
-  if (settings.mode === 'browser' || (settings.mode === 'auto' && settings.browser.enabled)) {
+  await Promise.all(tasks);
+
+  const browserChatAllowed =
+    settings.mode === 'browser' || (settings.mode === 'auto' && settings.browser.enabled);
+  const browserSttAllowed =
+    settings.mode === 'browser' ||
+    ((settings.mode === 'auto' || settings.mode === 'server') && settings.browser.enabled);
+
+  if (browserChatAllowed || browserSttAllowed) {
     if (!browserSupported) {
       notes.push('Browser inference needs a web build with WebAssembly.');
     } else {
-      if (!chatRuntime) {
+      if (browserChatAllowed && !chatRuntime) {
         chatRuntime = 'browser';
         chatModel = settings.browser.chatModel;
       }
-      if (!sttRuntime) {
+      if (browserSttAllowed && !sttRuntime) {
         sttRuntime = 'browser';
         sttModel = settings.browser.sttModel;
       }
       notes.push('Browser models load on first use (first run downloads them).');
     }
   }
-
-  await Promise.all(tasks);
 
   if (settings.mode === 'offline') {
     notes.push('Offline coach selected — no model will be contacted.');
@@ -375,6 +395,7 @@ async function runGateway(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(ctx.apiKey ? { apikey: ctx.apiKey } : {}),
         ...(ctx.jwt ? { Authorization: `Bearer ${ctx.jwt}` } : {}),
       },
       body: JSON.stringify(gatewayBody(call)),

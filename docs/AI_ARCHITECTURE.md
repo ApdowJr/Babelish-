@@ -1,14 +1,10 @@
 # Babelish 3.0 — AI architecture
 
-Babelish teaches 24 languages. **The learner never configures a model.** They
+Babelish teaches 25 languages. **The learner never configures a model.** They
 open Speak and the tutor answers; the only configuration lives on the server
 that the app owner runs.
 
-The tutor is a hosted deployment of open-weight models (Qwen3-Next 80B via
-OpenRouter by default, or any OpenAI-compatible endpoint you host). Courses,
-review, the phrasebook and device audio need no model at all, and a labelled
-coach covers the tutor when the server is unreachable. No model screen ships in
-the app.
+The tutor uses a Supabase Edge Function that can call an operator-configured OpenAI-compatible provider. No provider is considered live until its server-side secrets are configured and a real reply is verified. Courses, review, the phrasebook and device audio need no hosted model, and the labelled offline coach remains available when the provider is not configured or unreachable. No model screen ships in the app.
 
 This document is the honest map: what runs where, which models were verified
 for which languages, how to set each one up, what it costs in hardware, and
@@ -20,8 +16,8 @@ what is **not** finished.
 
 | Plane | What it is | Runs on | Needs a server? | Cost to you |
 |---|---|---|---|---|
-| **On-device content** | 97 chapters · 204 lessons · 1,678 exercises · 528 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
-| **Tutor server** | Babelish's `api` Function → OpenRouter free Qwen3 endpoints (default) or any OpenAI-compatible server you host | A machine you rent or own | Yes | Free-tier requests are $0; self-hosting costs electricity and hardware |
+| **On-device content** | 101 chapters · 212 lessons · 1,744 exercises · 550 starter words · Leitner review · phrasebook · OS text-to-speech | The learner's phone/browser | No | Free |
+| **Tutor server** | Supabase `babelish-ai` Edge Function → operator-configured OpenAI-compatible provider | Supabase Edge Functions + provider | Yes for hosted AI | Depends on provider; offline coach costs no inference |
 | **On-device model** | Transformers.js Whisper (`whisper-base`) for voice input in the browser | The learner's browser | No (one ~150 MB download) | Free (bandwidth + battery) |
 | **External provider** | Optional. Any OpenAI-compatible endpoint, including paid ones | Someone else's servers | Yes | Whatever that provider charges |
 
@@ -90,13 +86,13 @@ blocked unless the learner flips *Use unverified languages* in Settings.
 
 | Model | Kind | Size (approx.) | Runtime(s) | Licence | Commercial use | Languages in the atlas documented by its card |
 |---|---|---|---|---|---|---|
-| **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **all 24** (Qwen3 documents 119 languages) |
-| Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 15: zh en es fr de it pt ru ja ko vi th ar id tr |
+| **Qwen3-Next 80B A3B Instruct (default, hosted)** | chat | 0 on device | tutor server (OpenRouter) | Apache-2.0 | yes | **24 of 25** (Somali is not yet model-verified; Qwen3 documents 119 languages) |
+| Qwen2.5 0.5B / 1.5B Instruct | chat | 0.4 / 1.0 GB | Ollama, OpenAI-compatible, gateway, browser | Apache-2.0 | yes | 14 of 25 atlas languages (English is documented but not an atlas target) |
 | Qwen2.5 3B Instruct | chat | 2 GB | Ollama, gateway | Qwen Research licence | **no** (research only) | same 15 |
 | Llama 3.2 3B Instruct | chat | 2 GB | Ollama, gateway | Llama 3.2 Community | check (700 M MAU cap) | 8: es fr de it pt hi th tr |
 | Aya Expanse 8B | chat | 5 GB | gateway | CC-BY-NC-4.0 | **no** | 20 (no bn/sw/th/vi) |
-| Whisper large-v3-turbo | stt | 1.6 GB | gateway, OpenAI-compatible | MIT | yes | all 24 |
-| Whisper base (Transformers.js) | stt | 0.15 GB | browser | MIT | yes | all 24 |
+| Whisper large-v3-turbo | stt | 1.6 GB | gateway, OpenAI-compatible | MIT | yes | 24 of 25; Somali unverified |
+| Whisper base (Transformers.js) | stt | 0.15 GB | browser | MIT | yes | 24 of 25; Somali unverified |
 | Kokoro-82M | tts | 0.3 GB | self-hosted TTS server | Apache-2.0 | yes | 7: es fr hi it pt ja zh |
 | Piper | tts | 0.06 GB/voice | self-hosted TTS server | MIT (voices vary) | yes | 16 verified voices (no sv/bn/id) |
 | OS voice (`expo-speech`) | tts | 0 | device | OS | n/a | whatever the device ships; checked at runtime |
@@ -108,13 +104,14 @@ pretend to offer it.
 
 ### What is *not* covered
 
-- **Somali (`so`) is not in the atlas.** The 24 shipped languages are
+- **Somali (`so`) is in the atlas as a starter course, but is not yet verified for the listed AI models.** The 24 previously shipped languages are
   `es fr de it pt nl sv pl ru uk el tr ar he fa hi bn zh ja ko vi th id sw`.
   Adding Somali requires a curated starter pack — guessing vocabulary would
   break the honesty rule, so it is left out rather than faked. Swahili (`sw`)
   is the nearest East African course and is covered by Whisper.
-- The default hosted Qwen3 model documents all 24 atlas languages, including
-  Swahili, Bengali, Hebrew and Persian. If you swap in Qwen2.5 instead, nine
+- The default hosted Qwen3 model documents 24 of 25 atlas languages, including
+  Swahili, Bengali, Hebrew and Persian. Somali is the one atlas language not yet
+  verified for this model family. If you swap in Qwen2.5 instead, nine
   languages (`nl sv pl uk el he fa hi bn sw`) are listed as unverified and are
   blocked unless you opt in — that is the catalogue being honest, not a bug.
 - No model is claimed to produce *perfect* grammar in any language. Lessons are
@@ -187,9 +184,9 @@ an honest "try again", not a fabricated grade.
 | Tier | Languages | Structure | Honest label |
 |---|---|---|---|
 | Authored | Spanish | 5 chapters · 20 lessons · grammar/culture notes | `A1 · in progress` — A2–B2 not finished |
-| Starter (validated) | 23 | 4 chapters · 8 lessons · 66 exercises each, built from the 22 verified starter words | `Starter course · A1–A2` — no native-reviewed grammar notes |
+| Starter (validated) | 24 | 4 chapters · 8 lessons · curated starter vocabulary and exercises | `Starter course · A1–A2` — no native-reviewed grammar notes |
 
-Totals: **24 languages · 97 chapters · 204 lessons · 1,678 exercises · 528
+Totals: **25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550
 starter words**, all bundled and validated by `tests/courses.test.ts` (unique
 ids, answerable exercises, options containing the answer, all four skills
 present, no placeholder lessons).
@@ -208,68 +205,43 @@ meaning, meaning → typed target), records every answer through
 
 ## 7. Setup
 
-The app ships with **no model configuration for the learner**. Everything below
-is an operator task, done once.
+The Android app uses Supabase Auth and the Supabase `babelish-ai` Edge Function
+by default. The bundled lessons, phrasebook, review and offline coach work even
+when no hosted model is configured.
 
-### 7.1 Hosted tutor server (recommended — zero setup for learners)
+### 7.1 Supabase hosted tutor
 
-Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints cover all
-24 languages at $0 per token:
+The Edge Function is deployed at
+`https://dvgluivslmdrqsvlscmj.supabase.co/functions/v1/babelish-ai`.
+The app uses this by default; `EXPO_PUBLIC_AI_GATEWAY_URL` is only an optional
+override. The function validates the Supabase session, limits input sizes,
+applies per-user daily quotas, and keeps provider keys on the server.
 
-```bash
-AI_API_KEY=sk-or-... npm run deploy:tutor
-```
+In Supabase Dashboard → Edge Functions → Secrets, configure these values
+without sharing them in chat or committing them to Git:
 
-`scripts/deploy-tutor.mjs` wraps the CLI call below and refuses to print the
-key; `AI_API_URL`, `AI_MODELS`, `AI_STT_ENABLED` and `AI_STT_MODEL` can be
-overridden as env vars.
+- `AI_API_URL`: OpenAI-compatible API base URL, e.g. `https://openrouter.ai/api/v1`
+- `AI_API_KEY`: newly rotated provider key
+- `AI_CHAT_MODEL`: model ID enabled for that provider
+- `AI_STT_API_URL`: full transcription endpoint, e.g. `https://api.openai.com/v1/audio/transcriptions`
+- `AI_STT_API_KEY`: speech provider key (may match the chat key only if the provider supports both)
+- `AI_STT_MODEL`: transcription model supported by that endpoint
 
-```bash
-neon functions deploy api --src functions/api/index.ts \
-  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
-  --env AI_API_URL=https://openrouter.ai/api/v1 \
-  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
-  --env AI_STT_ENABLED=false --wait
-```
+Until the secrets are set, status correctly reports that hosted AI is not
+configured and the bundled offline coach remains available. Never put provider
+keys or the Supabase service-role key in an `EXPO_PUBLIC_*` variable.
 
-No app rebuild is needed — the client discovers the tutor by probing
-`GET /api/ai/status` through the same backend URL it already uses, and the
-Speak screen's **Retry** action re-probes without a reload.
+### 7.2 Self-hosted model
 
-**Fallback chain.** `AI_MODELS` is tried in order. Free endpoints are retired
-without notice, so when one disappears the server moves to the next; a bad key,
-a rate limit or a timeout is returned as itself instead of being hidden.
-
-**Rate limits.** Free OpenRouter tiers allow roughly 20 requests/minute and
-50/day on an unfunded account (1,000/day after a one-time $10 credit purchase).
-The server adds its own budgets: 20 chat + 10 transcription per minute per
-signed-in learner, 6 + 2 per minute per anonymous IP.
-
-**A note on privacy.** Prompts leave the learner's device and reach the model
-provider you configured. The app says "Tutor server" — it does not claim the
-model runs locally. If that matters for your audience, use §7.2 instead.
-
-### 7.2 Self-hosted model (no account, no bill, real electricity)
-
-```bash
-ollama pull qwen2.5:1.5b          # ~1 GB, Apache-2.0
-OLLAMA_ORIGINS='*' ollama serve   # dev only — restrict in production
-
-neon functions deploy api --src functions/api/index.ts \
-  --env AI_API_URL=http://127.0.0.1:11434/v1 \
-  --env AI_MODEL=qwen2.5:1.5b --env AI_STT_ENABLED=false --wait
-```
-
-Any OpenAI-compatible server works the same way (llama.cpp, LM Studio, vLLM,
-LocalAI). Qwen2.5 documents 15 of the 24 languages; the other nine show as
-unverified rather than being silently guessed at.
-
+Any OpenAI-compatible server can be used behind the gateway (Ollama, llama.cpp,
+LM Studio, vLLM, or LocalAI). Use a private network or authenticated HTTPS
+gateway for real devices; a localhost URL on the phone does not refer to the
+developer's computer.
 ### 7.3 Voice input
 
-Priority: server transcription (if enabled) → **browser Whisper** → typing.
+Priority: Supabase server transcription (if configured) → **browser Whisper** → typing.
 
-- Server: `AI_STT_ENABLED=true` + `AI_STT_MODEL=openai/whisper-large-v3-turbo`.
-  Accurate, works on phones, **metered per second of audio** by the provider.
+- Server: configure `AI_STT_API_URL`, `AI_STT_API_KEY`, and `AI_STT_MODEL` as Edge Function secrets. Check the provider's audio limits and price before enabling it.
 - Browser: free and on-device. On web, tapping the mic when the server has no
   audio offers **one tap** to download `onnx-community/whisper-base` (~150 MB,
   cached afterwards). Nothing downloads until that tap.
@@ -367,8 +339,8 @@ Automated (`npm test`, 16 files, 116 tests):
   `ai-not-configured` both fall through to the coach instead of an error;
 - **microphone copy** (new): iframe, browser denial, insecure origin, missing
   device, busy device and native denial each produce their own actionable text;
-- offline coach for all 24 languages (labels, counts, scripts, scenarios);
-- course data: 24 courses, unique ids, answerable exercises, four skills,
+- offline coach for all 25 languages (labels, counts, scripts, scenarios);
+- course data: 25 courses, unique ids, answerable exercises, four skills,
   tier labels, catalogue totals;
 - review maths: grading, due order, grouping, clamping, Leitner intervals.
 

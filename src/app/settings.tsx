@@ -15,27 +15,27 @@ import {
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
 import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences, languageName } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
-import { useProfile } from '@/state/profile';
+import { DEFAULT_PROFILE, useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
+import { useSubscription } from '@/state/subscription';
 import { DAILY_GOALS, VOICE_SPEEDS } from '@/lib/preferenceRules';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { filterSettings } from '@/lib/settingsSearch';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder, sendTestReminder } from '@/lib/notifications';
-import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
+import { buildDataExport } from '@/lib/privacy';
+import { clearAllAccountLocalData } from '@/lib/scopedStorage';
 import { clearConversations } from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
-import { deleteAccount } from '@/lib/neonApi';
 import { buildPack, formatPackSize } from '@/lib/offline';
 import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
-import { fetchAiStatus, type AiStatus } from '@/lib/ai';
-import { NEON_API_URL } from '@/lib/neon';
+import { createAiTransport, fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
@@ -77,7 +77,7 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors, isDark } = useTheme();
-  const { user, signOut, isNeon, getAccessToken } = useAuth();
+  const { user, signOut, getAccessToken, isDemo } = useAuth();
   const prefs = usePreferences();
   const {
     setDailyGoal,
@@ -90,8 +90,9 @@ export default function SettingsScreen() {
     setThemeMode,
   } = prefs;
   const { progress, vocab, resetLearning } = useLearning();
-  const { profile } = useProfile();
+  const { profile, saveProfile } = useProfile();
   const { state: analytics, resetAnalytics } = useAnalytics();
+  const { resetSubscription } = useSubscription();
 
   const [query, setQuery] = useState('');
   const [languagePicker, setLanguagePicker] = useState(false);
@@ -99,20 +100,20 @@ export default function SettingsScreen() {
   const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
 
   const target = getLanguage(prefs.targetLanguageId);
-  const version = Constants.expoConfig?.version ?? '3.1.0';
+  const version = Constants.expoConfig?.version ?? '3.4.0';
 
   // A live probe, not a stored flag: the row must say what is true now.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const jwt = await getAccessToken().catch(() => null);
-      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
+      const status = await fetchAiStatus(createAiTransport(jwt));
       if (!cancelled) setAiStatus(status);
     })();
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken]);
+  }, [getAccessToken, user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +135,9 @@ export default function SettingsScreen() {
   }, [prefs.targetLanguageId]);
 
   const tutorLive = aiStatus?.chat === true;
+  // Native-only (Android + iOS): voice input goes through the tutor
+  // server's speech-to-text. There is no browser speech engine to fall
+  // back to, so the badge must reflect the server probe and nothing else.
   const voiceLive = aiStatus?.stt === true;
 
   async function pickReminder(hour: number, minute: number, turningOff: boolean) {
@@ -161,21 +165,25 @@ export default function SettingsScreen() {
   }
 
   function exportMyData() {
+    const payload = buildDataExport({
+      profile,
+      preferences: {
+        targetLanguageId: prefs.targetLanguageId,
+        nativeLanguageId: prefs.nativeLanguageId,
+        reminderKey: prefs.reminderKey,
+      },
+      progress,
+      vocab,
+      analytics,
+    });
+
+    // Native-only: the export leaves the device through the OS share
+    // sheet (Files, Mail, Drive, …) — there is no browser download.
     void Share.share({
       title: 'Babelish data export',
-      message: buildDataExport({
-        profile,
-        preferences: {
-          targetLanguageId: prefs.targetLanguageId,
-          nativeLanguageId: prefs.nativeLanguageId,
-          reminderKey: prefs.reminderKey,
-        },
-        progress,
-        vocab,
-        analytics,
-      }),
+      message: payload,
     }).catch(() => {
-      // Sharing dismissed — nothing to report.
+      showAlert('Export unavailable', 'Could not open the share sheet on this device.');
     });
   }
 
@@ -206,36 +214,80 @@ export default function SettingsScreen() {
   }
 
   function confirmDeleteAccount() {
+    if (!user) {
+      showAlert('Sign in required', 'Sign in to your account before requesting account deletion.');
+      return;
+    }
+    const client = supabase;
+    if (isDemo || !client) {
+      showAlert(
+        'Delete demo account?',
+        'This clears your local demo account, profile, progress, vocabulary and saved tutor conversations on this device. This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete permanently',
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  await clearLearningStorage(user.id);
+                  await clearConversations(ownerIdFor(user.id));
+                  await clearAllAccountLocalData(user.id);
+                  await resetAnalytics();
+                  await resetLearning();
+                  saveProfile(DEFAULT_PROFILE);
+                  await resetSubscription();
+                  await signOut();
+                } finally {
+                  showAlert('Account deleted', 'Your demo account and local learning data were deleted.');
+                  router.replace('/login');
+                }
+              })();
+            },
+          },
+        ]
+      );
+      return;
+    }
     showAlert(
-      'Delete account?',
-      'This removes your profile, progress, vocabulary and XP from this device and from Babelish servers. This cannot be undone.',
+      'Permanently delete account?',
+      'This deletes your Supabase account and cloud learning data. Your local Babelish profile, progress, vocabulary and saved tutor conversations on this device will also be cleared. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Delete permanently',
           style: 'destructive',
           onPress: () => {
             void (async () => {
-              let serverIssue = false;
               try {
-                if (isNeon) {
-                  const jwt = await getAccessToken();
-                  if (jwt) {
-                    const result = await deleteAccount(jwt);
-                    serverIssue = result.authUser === 'failed';
-                  }
-                }
+                const { error } = await client.functions.invoke('delete-account', { body: {} });
+                if (error) throw error;
               } catch {
-                // Server unreachable — the local wipe below still happens.
-              }
-              await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS]);
-              await clearConversations(ownerIdFor(user?.id ?? null));
-              signOut();
-              if (serverIssue) {
                 showAlert(
-                  'Account removal incomplete',
-                  'Your learning data was erased, but the account itself could not be removed from the server. Please try again later.'
+                  'Account not deleted',
+                  'The server could not confirm deletion. Your account was not reported as deleted; check your connection and try again.'
                 );
+                return;
+              }
+
+              // The server confirmed deletion. Clear local state separately so a
+              // device-storage hiccup cannot falsely claim the cloud account survived.
+              try {
+                await client.auth.signOut({ scope: 'local' });
+                await clearLearningStorage(user.id);
+                await clearConversations(ownerIdFor(user.id));
+                await clearAllAccountLocalData(user.id);
+                await resetAnalytics();
+                await resetLearning();
+                saveProfile(DEFAULT_PROFILE);
+                await resetSubscription();
+              } finally {
+                showAlert(
+                  'Account deleted',
+                  'Your Supabase account and cloud data were deleted, and saved data on this device was cleared.'
+                );
+                router.replace('/login');
               }
             })();
           },
@@ -294,7 +346,7 @@ export default function SettingsScreen() {
               // Raw stores first (speaking stats and the report queue are not
               // owned by a provider), then the providers, which also push the
               // empty state to the server so a sync cannot restore it.
-              await clearLearningStorage();
+              await clearLearningStorage(user?.id);
               await resetLearning();
               await resetAnalytics();
               showAlert(
@@ -391,26 +443,28 @@ export default function SettingsScreen() {
             keywords: 'native language translation',
             onPress: () => setLanguagePicker(true),
           },
-          {
-            id: 'reminder',
-            kind: 'chips',
-            icon: 'notifications-outline',
-            label: 'Daily reminder',
-            hint: prefs.reminderKey
-              ? `Set for ${prefs.reminderKey} — tap it again to turn it off.`
-              : 'Off — pick a time for one calm reminder.',
-            keywords: 'notification alarm time nudge',
-            options: reminderOptions,
-          },
-          {
-            id: 'test-reminder',
-            kind: 'nav',
-            icon: 'notifications-circle-outline',
-            label: 'Send a test reminder',
-            hint: 'Checks the permission without waiting for your reminder time',
-            keywords: 'notification test try check',
-            onPress: () => void testReminder(),
-          },
+          ...([
+                {
+                  id: 'reminder',
+                  kind: 'chips',
+                  icon: 'notifications-outline',
+                  label: 'Daily reminder',
+                  hint: prefs.reminderKey
+                    ? `Set for ${prefs.reminderKey} — tap it again to turn it off.`
+                    : 'Off — pick a time for one calm reminder.',
+                  keywords: 'notification alarm time nudge',
+                  options: reminderOptions,
+                },
+                {
+                  id: 'test-reminder',
+                  kind: 'nav',
+                  icon: 'notifications-circle-outline',
+                  label: 'Send a test reminder',
+                  hint: 'Checks the permission without waiting for your reminder time',
+                  keywords: 'notification test try check',
+                  onPress: () => void testReminder(),
+                },
+              ] as Row[]),
           {
             id: 'translation',
             kind: 'toggle',
@@ -480,7 +534,10 @@ export default function SettingsScreen() {
             kind: 'info',
             icon: 'mic-outline',
             label: 'Voice input',
-            hint: voiceLive ? 'Transcription is available' : 'Not configured — type your replies',
+            hint:
+              aiStatus?.stt === true
+                ? 'Transcription is available'
+                : 'Not configured — type your replies',
             detail: voiceLive ? 'Ready' : 'Off',
             keywords: 'speech microphone stt',
           },
@@ -500,9 +557,7 @@ export default function SettingsScreen() {
             value: prefs.reduceMotion,
             onChange: setReduceMotion,
           },
-          ...(Platform.OS === 'web'
-            ? []
-            : ([
+          ...([
                 {
                   id: 'system-settings',
                   kind: 'nav',
@@ -516,7 +571,7 @@ export default function SettingsScreen() {
                     );
                   },
                 },
-              ] as Row[])),
+              ] as Row[]),
         ],
       },
       {

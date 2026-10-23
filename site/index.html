@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Babelish — learn 24 languages free, with a tutor you can host yourself</title>
+    <title>Babelish — learn 25 languages free, with a tutor you can host yourself</title>
     <meta
       name="description"
-      content="Babelish is a free AI language tutor for 24 languages: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK."
+      content="Babelish is a free language tutor for 25 languages on Android and iPhone: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK."
     />
     <meta name="theme-color" content="#0B3A2C" />
     <link rel="icon" href="assets/icon.png" />
@@ -15,10 +15,10 @@
 
     <!-- Open Graph / Twitter: the same card everywhere, no tracking pixels. -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Babelish — learn 24 languages free" />
+    <meta property="og:title" content="Babelish — learn 25 languages free" />
     <meta
       property="og:description"
-      content="A free AI tutor for 24 languages. Real lessons, real voice practice, honest progress — and it works offline."
+      content="A free tutor for 25 languages. Real lessons, real voice practice, honest progress — and it works offline."
     />
     <meta property="og:image" content="assets/feature-graphic.png" />
     <meta property="og:url" content="https://zelvoca.app/" />
@@ -102,8 +102,9 @@
             </h1>
 
             <p class="lede" data-i18n="hero.lede">
-              Babelish is a free AI tutor for 24 languages. Real lessons, voice practice from the
-              first day, and a coach that keeps teaching when the internet does not.
+              Babelish is a free language tutor for Android and iPhone — 25 languages, real
+              lessons, voice practice from the first day, and a coach that keeps teaching when the
+              internet does not.
             </p>
 
             <div class="cta-row">
@@ -129,6 +130,10 @@
                 data-i18n="hero.releases"
                 >all releases</a
               >
+            </p>
+            <p class="iphone-note" data-i18n="hero.iphone">
+              iPhone build: the project compiles for iOS, but Apple will only install it through
+              TestFlight or the App Store — those need an Apple Developer account.
             </p>
             <p class="apk-note" id="apk-note" hidden data-i18n="hero.notPublished">
               No APK has been published yet — the release build is one workflow run away. See
@@ -311,11 +316,11 @@
       <!-- ── Numbers ──────────────────────────────────────────────────── -->
       <section class="band" aria-label="What ships in the app">
         <div class="wrap band-grid">
-          <div class="stat"><b>24</b><span data-i18n="stats.languages">languages</span></div>
-          <div class="stat"><b>97</b><span data-i18n="stats.chapters">chapters</span></div>
-          <div class="stat"><b>204</b><span data-i18n="stats.lessons">lessons</span></div>
-          <div class="stat"><b>1,678</b><span data-i18n="stats.exercises">exercises</span></div>
-          <div class="stat"><b>528</b><span data-i18n="stats.words">starter words</span></div>
+          <div class="stat"><b>25</b><span data-i18n="stats.languages">languages</span></div>
+          <div class="stat"><b>101</b><span data-i18n="stats.chapters">chapters</span></div>
+          <div class="stat"><b>212</b><span data-i18n="stats.lessons">lessons</span></div>
+          <div class="stat"><b>1,744</b><span data-i18n="stats.exercises">exercises</span></div>
+          <div class="stat"><b>550</b><span data-i18n="stats.words">starter words</span></div>
         </div>
         <p class="band-note wrap" data-i18n="stats.note">
           All bundled with the app. Every lesson is playable on the free plan, offline.
@@ -442,8 +447,9 @@
               <p class="section-eyebrow light" data-i18n="dl.eyebrow">GET BABELISH</p>
               <h2 data-i18n="dl.title">Install the Android app</h2>
               <p data-i18n="dl.body">
-                One signed APK, built from this repository by its own workflow. No account, no
-                subscription, no ads.
+                One signed APK, built from this repository by its own workflow, plus an iPhone
+                build for anyone with an Apple Developer account. No account, no subscription, no
+                ads.
               </p>
 
               <div class="cta-row">
@@ -474,7 +480,7 @@
               <img src="assets/icon.png" alt="Babelish app icon" width="96" height="96" />
               <dl class="meta">
                 <div><dt data-i18n="dl.version">Version</dt><dd id="meta-version">3.4.0</dd></div>
-                <div><dt data-i18n="dl.android">Android</dt><dd>7.0+</dd></div>
+                <div><dt data-i18n="dl.platform">Platform</dt><dd>Android 7+ · iPhone</dd></div>
                 <div><dt data-i18n="dl.size">Size</dt><dd id="meta-size">—</dd></div>
                 <div><dt data-i18n="dl.price">Price</dt><dd data-i18n="dl.free">Free</dd></div>
               </dl>
@@ -539,7 +545,17 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             <p data-i18n="faq.a4">
               Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Polish, Russian,
               Ukrainian, Greek, Turkish, Arabic, Hebrew, Persian, Hindi, Bengali, Mandarin, Japanese,
-              Korean, Vietnamese, Thai, Indonesian and Swahili.
+              Korean, Vietnamese, Thai, Indonesian, Swahili and Somali.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q7">Can I install it on an iPhone?</summary>
+            <p data-i18n="faq.a7">
+              The app compiles for iOS, but Apple does not allow installing an app outside
+              TestFlight or the App Store. Both need an Apple Developer account (US$99 a year), so
+              for now the iPhone build is for testing — Android is the platform you can install
+              today.
             </p>
           </details>
 
@@ -599,8 +615,8 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
 
         <nav class="footer-col" aria-label="Legal">
           <h4 data-i18n="footer.legal">Legal</h4>
-          <a href="https://zelvoca.app/privacy" data-i18n="footer.privacy">Privacy policy</a>
-          <a href="https://zelvoca.app/terms" data-i18n="footer.terms">Terms of service</a>
+          <a href="privacy.html" data-i18n="footer.privacy">Privacy policy</a>
+          <a href="terms.html" data-i18n="footer.terms">Terms of service</a>
         </nav>
 
         <nav class="footer-col" aria-label="Source">
@@ -618,6 +634,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
       <div class="wrap footer-bottom">
         <p>
           <span data-i18n="footer.rights">Babelish</span> · <span id="year">2026</span> ·
+          <a class="footer-inline" href="privacy.html" data-i18n="footer.privacy">Privacy</a> ·
           <span data-i18n="footer.made">no trackers on this page</span>
         </p>
         <p class="footer-note" data-i18n="footer.note">
