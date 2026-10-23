@@ -97,7 +97,11 @@ jobs:
   ios-simulator:
     name: iOS build (simulator — real iPhone needs Apple account)
     if: ${{ inputs.platform == 'ios' || inputs.platform == 'all' }}
-    runs-on: macos-14
+    # Expo SDK 58 requires Xcode 26.4+ (versions/v58 table); EAS's sdk-58
+    # image uses Xcode 27. Older macOS images only ship
+    # old Xcode, and xcodebuild fails immediately (exit 66) — verified,
+    # then fixed and re-verified on this runner (Xcode 27.1, pod 1.17).
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - name: Check out repository
@@ -120,6 +124,16 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: https://dvgluivslmdrqsvlscmj.supabase.co
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3gUzX0UPMmaxobj3bHULqw_hvmWLqYU
+
+      # prebuild normally runs pod install itself, but do it explicitly
+      # so a skipped/failed pod step surfaces here instead of as a
+      # cryptic xcodebuild exit 66 in the next step.
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: |
+          xcodebuild -version
+          pod --version
+          test -d Pods || pod install
 
       - name: Build for iPhone simulator (unsigned)
         run: |
