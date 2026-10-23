@@ -48,7 +48,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor."
+          "microphonePermission": "Babelish uses your microphone so you can practice speaking with your AI tutor.",
+          "enableBackgroundPlayback": false
         }
       ],
       [
