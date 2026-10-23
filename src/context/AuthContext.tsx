@@ -8,16 +8,6 @@ import {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { isNeonConfigured } from '@/lib/neon';
-import {
-  neonGetJwt,
-  neonGetSession,
-  neonRequestPasswordReset,
-  neonResetPassword,
-  neonSignIn,
-  neonSignOut,
-  neonSignUp,
-} from '@/lib/neonAuth';
 
 export type AppUser = {
   id: string;
@@ -27,27 +17,22 @@ export type AppUser = {
 
 type AuthContextValue = {
   user: AppUser | null;
-  /** True while the initial session check is running. */
   loading: boolean;
-  /** True when Supabase isn't configured — accounts are local to the device. */
   isDemo: boolean;
-  /** True when the Neon backend (Managed Auth) is configured and takes over. */
-  isNeon: boolean;
-  /** Mints a short-lived JWT for the Neon API; null outside Neon mode. */
+  /** Kept temporarily for UI compatibility while remaining Neon API calls are migrated. */
+  isNeon: false;
+  /** Returns the active Supabase access token, or null when signed out. */
   getAccessToken: () => Promise<string | null>;
   signUp: (params: { name: string; email: string; password: string }) => Promise<{ message?: string }>;
   signIn: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  /** Completes a reset with the one-time token from the email link. */
   resetPasswordWithToken: (token: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const DEMO_SESSION_KEY = 'babelish:demo-user';
 
-const DEMO_SESSION_KEY = 'zelvoca:demo-user';
-
-/** Turns provider error strings into something a human wants to read. */
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid login')) return 'Wrong email or password. Give it another try.';
@@ -70,48 +55,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe: (() => void) | undefined;
 
     async function bootstrap() {
-      if (isNeonConfigured) {
-        // Neon mode: restore the stored Managed Auth session, validating it
-        // against the auth server (clears it when expired/revoked).
-        const restored = await neonGetSession();
-        if (!mounted) return;
-        setUser(restored ? { id: restored.id, email: restored.email, displayName: restored.name } : null);
-        setLoading(false);
-        return;
-      }
       if (!supabase) {
-        // Demo mode: restore a local session if one exists.
         try {
           const stored = await AsyncStorage.getItem(DEMO_SESSION_KEY);
-          if (stored && mounted) setUser(JSON.parse(stored));
+          if (stored && mounted) setUser(JSON.parse(stored) as AppUser);
         } catch {
-          // ignore corrupt storage
+          // Ignore corrupt demo storage.
         }
         if (mounted) setLoading(false);
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
       setUser(session?.user ? toAppUser(session.user) : null);
       setLoading(false);
 
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
         setUser(nextSession?.user ? toAppUser(nextSession.user) : null);
       });
-
-      return () => subscription.unsubscribe();
+      unsubscribe = () => subscription.unsubscribe();
     }
 
-    bootstrap();
+    void bootstrap();
     return () => {
       mounted = false;
+      unsubscribe?.();
     };
   }, []);
 
@@ -122,24 +94,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (next) await AsyncStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(next));
         else await AsyncStorage.removeItem(DEMO_SESSION_KEY);
       } catch {
-        // non-fatal
+        // Local demo persistence is best effort.
       }
     }
 
     return {
       user,
       loading,
-      isDemo: !isSupabaseConfigured && !isNeonConfigured,
-      isNeon: isNeonConfigured,
+      isDemo: !isSupabaseConfigured,
+      isNeon: false,
       async getAccessToken() {
-        return isNeonConfigured ? neonGetJwt() : null;
+        if (!supabase) return null;
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.access_token ?? null;
       },
       async signUp({ name, email, password }) {
-        if (isNeonConfigured) {
-          const created = await neonSignUp({ name, email, password });
-          setUser({ id: created.id, email: created.email, displayName: created.name });
-          return {};
-        }
         if (!supabase) {
           await persistDemoUser({ id: `demo-${Date.now()}`, email, displayName: name });
           return { message: 'Created a demo account on this device.' };
@@ -150,63 +119,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           options: { data: { display_name: name } },
         });
         if (error) throw new Error(friendlyAuthError(error.message));
-        if (!data.session) {
-          return { message: 'Check your inbox to confirm your email, then sign in.' };
-        }
+        if (!data.session) return { message: 'Check your inbox to confirm your email, then sign in.' };
         return {};
       },
       async signIn(email, password) {
-        if (isNeonConfigured) {
-          const signed = await neonSignIn(email, password);
-          setUser({ id: signed.id, email: signed.email, displayName: signed.name });
-          return;
-        }
         if (!supabase) {
           const stored = await AsyncStorage.getItem(DEMO_SESSION_KEY);
-          const parsed = stored ? (JSON.parse(stored) as AppUser) : null;
-          await persistDemoUser(
-            parsed ?? {
-              id: `demo-${Date.now()}`,
-              email,
-              displayName: email.split('@')[0],
-            }
-          );
+          const parsed = stored ? JSON.parse(stored) as AppUser : null;
+          await persistDemoUser(parsed ?? {
+            id: `demo-${Date.now()}`,
+            email,
+            displayName: email.split('@')[0],
+          });
           return;
         }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw new Error(friendlyAuthError(error.message));
       },
       async resetPassword(email) {
-        if (isNeonConfigured) {
-          await neonRequestPasswordReset(email);
-          return;
-        }
-        if (!supabase) return;
+        if (!supabase) throw new Error('Password reset requires Supabase configuration.');
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw new Error(friendlyAuthError(error.message));
       },
-      async resetPasswordWithToken(token, newPassword) {
-        if (isNeonConfigured) {
-          await neonResetPassword(token, newPassword);
-          return;
-        }
-        if (!supabase) {
-          throw new Error('Password reset needs a real backend — this build is in demo mode.');
-        }
+      async resetPasswordWithToken(_token, newPassword) {
+        if (!supabase) throw new Error('Password reset requires Supabase configuration.');
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw new Error(friendlyAuthError(error.message));
       },
       async signOut() {
-        if (isNeonConfigured) {
-          await neonSignOut();
-          setUser(null);
-          return;
-        }
         if (!supabase) {
           await persistDemoUser(null);
           return;
         }
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) throw new Error(friendlyAuthError(error.message));
         setUser(null);
       },
     };
