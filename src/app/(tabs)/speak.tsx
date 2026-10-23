@@ -516,13 +516,8 @@ export default function SpeakScreen() {
     // While start() prepares, a second tap must be able to stop that same
     // clip — only reject it when there is nothing (yet) being recorded.
     if (!chatRecording && recorder.isBusy) return;
-    // No speech model: explain what would fix it instead of recording a clip
-    // that cannot be transcribed (and never point to a settings screen that
-    // does not exist in this build).
-    if (aiStatus && !voiceLive) {
-      explainVoiceUnavailable();
-      return;
-    }
+    // Microphone permission and recording must not depend on the STT probe.
+    // Transcription capability is reported after the user stops recording.
     if (chatRecording) {
       setChatRecording(false);
       const uri = await recorder.stop();
@@ -550,9 +545,13 @@ export default function SpeakScreen() {
           setQuotaNote(error.message);
           return;
         }
-        setVoiceError(
-          error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
-        );
+        if (aiStatus && !voiceLive) {
+          explainVoiceUnavailable();
+        } else {
+          setVoiceError(
+            error instanceof Error ? error.message : 'Voice input failed — try again or type instead.'
+          );
+        }
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
       }
@@ -617,20 +616,21 @@ export default function SpeakScreen() {
           setQuotaNote(error.message);
           return;
         }
-        setVoiceError(
-          error instanceof Error
-            ? error.message
-            : "Couldn't catch that — try again, or type the phrase instead."
-        );
+        if (aiStatus && !voiceLive) {
+          explainVoiceUnavailable();
+        } else {
+          setVoiceError(
+            error instanceof Error
+              ? error.message
+              : "Couldn't catch that — try again, or type the phrase instead."
+          );
+        }
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
       }
     } else {
       if (recorder.isBusy || practice?.phase === 'recording' || chatRecording) return;
-      if (aiStatus && !voiceLive) {
-        explainVoiceUnavailable();
-        return;
-      }
+      // Allow recording even when the STT capability probe is unavailable.
       // Barge-in here too: practising a phrase means speaking over the tutor.
       stopSpeaking();
       setSpeakingKey(null);
