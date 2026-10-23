@@ -117,10 +117,12 @@ coach remains available.
 
 ## AI tutor
 
-Set `EXPO_PUBLIC_AI_GATEWAY_URL` only if you have a compatible, secure tutor
-gateway. Provider credentials belong in that server's environment. Voice input
-and hosted inference depend on that gateway; native speech playback and the
-bundled coach work without it.
+The app calls the Supabase `babelish-ai` Edge Function by default. It remains
+in honest offline-coach mode until the operator configures `AI_API_URL`,
+`AI_API_KEY`, and `AI_CHAT_MODEL` in Supabase Dashboard → Edge Functions →
+Secrets. Voice transcription additionally requires `AI_STT_API_URL`,
+`AI_STT_API_KEY`, and `AI_STT_MODEL`. Never put provider keys in the Android
+app, `.env`, GitHub, or chat. See `docs/AI_ARCHITECTURE.md` for details.
 
 ## Project structure
 
