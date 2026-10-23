@@ -26,3 +26,6 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
       },
     })
   : null;
+
+// Edge Function base URL used by the Android AI tutor and account deletion.
+export const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
