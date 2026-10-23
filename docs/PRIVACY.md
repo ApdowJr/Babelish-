@@ -7,8 +7,7 @@ forms and the in-app privacy screen (Profile → PRIVACY)._
 
 Your practice stays on your phone. Babelish has **no ads, no third-party
 analytics, and no data brokers**. The only thing that ever syncs to a server
-is your progress and vocabulary — under **your own** Neon account, on a
-database branch you control. Microphone audio is transcribed on demand and
+is your progress and vocabulary — in your Supabase account, protected by Row Level Security (RLS). Microphone audio is transcribed on demand and
 never stored.
 
 ## What lives only on your device
@@ -25,9 +24,9 @@ items in the next section sync.
 
 | Data | Where | Why |
 |---|---|---|
-| Lesson progress (scores, timestamps) | Your Neon Postgres branch (`app_state`) | Resume on another device |
-| Vocabulary / spaced-repetition boxes | Same row | Keep review queues correct |
-| Weekly XP (a number, and a week key) | `weekly_xp` | Your rank on the weekly board |
+| Lesson progress (scores, timestamps) | Supabase PostgreSQL (`user_progress`) | Resume on another device |
+| Vocabulary / spaced-repetition boxes | Supabase PostgreSQL (`user_vocab`) | Keep review queues correct |
+| Weekly XP (a number, and a week key) | Stored locally for now | Personal progress summaries |
 
 The weekly board is **privacy-first by design**: you see your own rank and
 the number of participants — never another learner's identity, and they never
@@ -38,8 +37,7 @@ id so reviewers can follow up; they are never shown to other learners.
 
 - Pronunciation scoring happens **on your device**.
 - Optional cloud speech-to-text runs only when the operator has configured a
-  provider. In production the audio is sent to **Babelish's own backend** (a
-  Neon Function, `POST /api/ai/stt`), which forwards it to the AI provider
+  provider. When configured, audio is sent to the operator's chosen tutor gateway, which forwards it to the AI provider
   **for transcription only**; the audio is discarded immediately and only the
   transcribed phrase is kept as practice content. The provider's API key lives
   in the backend's configuration — never inside the app.
@@ -61,22 +59,21 @@ publishes itself.
 
 Babelish is general-audience (12+). It is not directed at children under 13 and
 does not knowingly collect their data. No ads, no tracking, no behavioral
-profiling — for anyone, of any age. See `docs/STORE_COMPLIANCE.md`.
+profiling — for anyone, of any age. See the app's current privacy and data-safety disclosures.
 
 ## Your rights
 
 - **Export everything** the app knows about you: Profile → PRIVACY →
   *Export my data* (JSON via the system share sheet).
 - **Delete everything**: Profile → PRIVACY → *Delete account* — wipes the
-  device and calls `DELETE /api/me`, which erases your rows from
-  `app_state`, `weekly_xp`, and `learner_reports`.
+  device and requires a secure Supabase account-deletion function. That server-side function is not yet configured; the app currently warns you and does not claim deletion succeeded.
 - No cookie banners, because there is nothing to consent to.
 
 ## Operators & subprocessors
 
 | Service | Role | Data |
 |---|---|---|
-| Neon (Lakebase Postgres + Managed Auth + Functions) | App backend | Account id/email, progress, vocab, weekly XP, reports |
+| Supabase (Lakebase Postgres + Managed Auth + Functions) | App backend | Account id/email, progress, vocab, weekly XP, reports |
 | OpenAI-compatible endpoint (optional, configurable) | STT + tutor | Audio (transient, STT only), conversation text |
 
 That's the whole list. Nothing else touches your data. AI provider keys are
