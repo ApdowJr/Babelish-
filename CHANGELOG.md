@@ -70,6 +70,19 @@ compiler enforces.
   breakdown (reading, listening, writing, speaking) with sample counts. Skills
   without enough answers say **"Not enough yet"** instead of drawing a
   confident percentage from one tap. Empty accounts get an honest empty state.
+- **A landing page** (`site/`): a static, dependency-free front page in English and
+  Somali that explains the app, shows the three screens that matter, answers the
+  honest questions (no Play listing yet, iPhone needs an Apple account, what
+  happens to microphone audio), and offers the Android download. It wears the
+  mascot's violet, ships a strict CSP, follows the OS colour scheme, and never
+  renders a dead download link. **The privacy policy and terms are published
+  here too** (`site/privacy.html`, `site/terms.html`) — the stores require a URL,
+  and the native app is not one.
+- **An APK you can actually install** (`.github/workflows/android-apk.yml`): on a
+  `v*` tag the workflow runs the release gate, prebuilds the Android project,
+  assembles a release APK for phone architectures, and attaches `babelish.apk`
+  to the GitHub release. It is debug-signed on purpose — side-loadable, not the
+  Play artifact.
 - **Contrast tests** (`tests/theme.test.ts`, `tests/progressCalendar.test.ts`):
   WCAG AA ratios are computed for every ink/surface pair in both palettes,
   plus guards that no file imports the static palette and that every themed
@@ -82,7 +95,9 @@ compiler enforces.
   reached 3.9:1. Muted text, warnings and tint inks were darkened for the same
   reason: the light theme now passes AA where it previously did not.
 - **`userInterfaceStyle`** is `automatic`, so the OS stops forcing light
-  chrome under a dark UI.
+  chrome under a dark UI. `expo-system-ui` is now a dependency, which is what
+  makes Android honour it, and the obsolete `edgeToEdgeEnabled` flag is gone
+  (Android 16 enforces edge-to-edge).
 - Version **3.4.0** (versionCode 30400, iOS build 3.4.0).
 
 ## [3.3.0] — 2026-10-22

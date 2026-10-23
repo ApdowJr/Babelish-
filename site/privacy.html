@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy policy — Babelish</title>
+    <meta name="description" content="What Babelish stores on your phone, what syncs to your account, and what happens to microphone audio." />
+    <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0D0A1C" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="assets/icon-128.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="theme-boot.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <nav class="nav" aria-label="Main">
+        <a class="brand" href="index.html" aria-label="Babelish home">
+          <img src="assets/icon-128.png" alt="" width="34" height="34" class="brand-mark" decoding="async" />
+          <span class="brand-name">Babelish</span>
+        </a>
+        <div class="nav-actions">
+          <a class="btn btn-sm btn-ghost" href="index.html">Back to the site</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main" class="legal-page">
+      <article class="legal">
+        <p class="legal-kicker">BABELISH</p>
+        <h1>Privacy Policy</h1>
+        <p class="legal-meta">Last updated: 2026-10-23 · this page is the same text as Settings → Privacy policy in the app</p>
+
+        <p class="legal-note">
+          This page is written in English, like the in-app policy. The app itself is not a
+          website: it runs on your phone, and this page exists so the policy is reachable
+          without installing anything.
+        </p>
+
+        <h2>The short version</h2>
+        <p>
+          Your practice stays on your phone. Babelish has no ads, no third-party analytics, and
+          no data brokers. The only thing that ever syncs to a server is your progress and
+          vocabulary — in your Supabase account, protected by Row Level Security (RLS).
+          Microphone audio is transcribed on demand and never stored.
+        </p>
+
+        <h2>What lives only on your device</h2>
+        <ul>
+          <li>Practice events, XP, streaks, league standing (computed locally)</li>
+          <li>Your learner profile (name, goals, interests)</li>
+          <li>Reminder settings (scheduling is a local OS notification — no push server)</li>
+          <li>The offline curriculum for every language (bundled in the app)</li>
+        </ul>
+        <p>
+          None of this leaves the device unless you sign in, and even then only the items in
+          the next section sync.
+        </p>
+
+        <h2>What syncs when you sign in</h2>
+        <div class="legal-table-wrap">
+          <table class="legal-table">
+            <thead>
+              <tr><th>Data</th><th>Where</th><th>Why</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Lesson progress (scores, timestamps)</td>
+                <td>Supabase PostgreSQL (<code>user_progress</code>)</td>
+                <td>Resume on another device</td>
+              </tr>
+              <tr>
+                <td>Vocabulary / spaced-repetition boxes</td>
+                <td>Supabase PostgreSQL (<code>user_vocab</code>)</td>
+                <td>Keep review queues correct</td>
+              </tr>
+              <tr>
+                <td>Weekly XP (a number, and a week key)</td>
+                <td>Stored locally for now</td>
+                <td>Your rank on the weekly board</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The weekly board is privacy-first by design: you see your own rank and the number of
+          participants — never another learner’s identity, and they never see yours. Reports
+          you file (“this sounds wrong”) are queued with your user id so reviewers can follow
+          up; they are never shown to other learners.
+        </p>
+
+        <h2>Microphone audio</h2>
+        <ul>
+          <li>
+            Word-match feedback is computed on your device from the transcript; it is not
+            acoustic pronunciation scoring.
+          </li>
+          <li>
+            Optional cloud speech-to-text (only if an OpenAI-compatible endpoint is configured)
+            receives the audio for transcription only; the audio is discarded immediately and
+            only the transcribed phrase is kept as practice content.
+          </li>
+          <li>
+            With no STT configured, audio never leaves the device — and the app says so
+            instead of pretending otherwise.
+          </li>
+        </ul>
+
+        <h2>AI tutor content</h2>
+        <p>
+          Tutor replies use the Supabase AI Edge Function when a provider is configured with
+          server-side secrets, or the clearly labelled bundled offline coach when no live model
+          is available. Conversation text is sent to the configured provider to generate the
+          reply and is not stored by Babelish. Every AI-generated item that could reach the
+          curriculum passes the human approval gate before publication — AI never publishes
+          itself.
+        </p>
+
+        <h2>Children</h2>
+        <p>
+          Babelish is general-audience (12+). It is not directed at children under 13 and does
+          not knowingly collect their data. No ads, no tracking, no behavioral profiling — for
+          anyone, of any age.
+        </p>
+
+        <h2>Your rights</h2>
+        <ul>
+          <li>
+            Export everything the app knows about you: Settings → Data &amp; storage → Export my
+            data (JSON via the system share sheet).
+          </li>
+          <li>
+            Delete your account: Settings → Danger zone → Delete account. After confirmation, a
+            protected Supabase Edge Function deletes your signed-in account; the app then clears
+            local learning data and saved conversations. If the server cannot confirm deletion,
+            the app reports failure.
+          </li>
+          <li>No cookie banners, because there is nothing to consent to.</li>
+        </ul>
+
+        <h2>Operators &amp; subprocessors</h2>
+        <div class="legal-table-wrap">
+          <table class="legal-table">
+            <thead>
+              <tr><th>Service</th><th>Role</th><th>Data</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Supabase Auth + PostgreSQL + Edge Functions</td>
+                <td>App backend</td>
+                <td>Account id/email, lesson progress, vocabulary, learner reports</td>
+              </tr>
+              <tr>
+                <td>OpenAI-compatible endpoint (optional, configured by the operator)</td>
+                <td>Speech-to-text + tutor</td>
+                <td>Audio (transient, transcription only), conversation text</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>That is the whole list. Nothing else touches your data.</p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about privacy: <a class="legal-link" href="mailto:support@zelvoca.app">support@zelvoca.app</a>.
+        </p>
+
+        <p class="legal-footer-links">
+          <a class="legal-link" href="terms.html">Terms of service</a>
+          <span aria-hidden="true">·</span>
+          <a class="legal-link" href="index.html">Babelish home</a>
+        </p>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-bottom">
+        <p>Babelish · <span id="year">2026</span> · no trackers on this page</p>
+        <p class="footer-note">This page loads no fonts, scripts or analytics from third parties.</p>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

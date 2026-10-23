@@ -39,8 +39,7 @@
       ],
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "edgeToEdgeEnabled": true
+      ]
     },
     "plugins": [
       "expo-router",

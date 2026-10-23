@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Babelish — learn 25 languages free, with a tutor you can host yourself</title>
+    <meta
+      name="description"
+      content="Babelish is a free language tutor for 25 languages on Android and iPhone: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK."
+    />
+    <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0D0A1C" media="(prefers-color-scheme: dark)" />
+    <!-- Small copies of the launcher icon, so a 34 px mark is not a 540 KB
+         download. The master asset stays byte-identical to the app's icon;
+         these are generated from it (see site/README.md). -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="assets/icon-128.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+    <!-- Open Graph / Twitter: the same card everywhere, no tracking pixels. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Babelish — learn 25 languages free" />
+    <meta
+      property="og:description"
+      content="A free tutor for 25 languages. Real lessons, real voice practice, honest progress — and it works offline."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Deliberately no og:image / og:url / canonical yet: all three must be
+         absolute, and the site does not have a domain of its own yet. Add them
+         with the real origin once it is deployed — site/README.md lists them. -->
+
+    <!-- Applies a saved choice before the first paint (see theme-boot.js), so
+         the page never flashes the other theme. Kept in a file, not inline, so
+         the deployed site can use a strict script-src. -->
+    <script src="theme-boot.js"></script>
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="a11y.skip">Skip to content</a>
+
+    <!-- ── Navigation ─────────────────────────────────────────────────── -->
+    <header class="site-header">
+      <nav class="nav" aria-label="Main">
+        <a class="brand" href="#top" aria-label="Babelish home">
+          <img src="assets/icon-128.png" alt="" width="34" height="34" class="brand-mark" decoding="async" />
+          <span class="brand-name">Babelish</span>
+        </a>
+
+        <div class="nav-links">
+          <a href="#features" data-i18n="nav.features">Features</a>
+          <a href="#how" data-i18n="nav.how">How it works</a>
+          <a href="#download" data-i18n="nav.download">Download</a>
+          <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        </div>
+
+        <div class="nav-actions">
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" class="lang-btn is-on" data-lang="en" aria-pressed="true">EN</button>
+            <button type="button" class="lang-btn" data-lang="so" aria-pressed="false">SO</button>
+          </div>
+          <button
+            type="button"
+            class="icon-btn"
+            id="theme-toggle"
+            aria-label="Switch theme"
+            data-i18n-aria-label="a11y.theme"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" class="icon-moon">
+              <path
+                d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" class="icon-sun">
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <path
+                d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+          <a class="btn btn-sm btn-primary" href="#download" data-i18n="nav.get">Get the app</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <!-- ── Hero ─────────────────────────────────────────────────────── -->
+      <section class="hero" id="top">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="dot"></span>
+              <span data-i18n="hero.badge">Free · no ads · open source</span>
+            </p>
+
+            <h1 data-i18n="hero.title">
+              Learn to <em>actually speak</em> a new language.
+            </h1>
+
+            <p class="lede" data-i18n="hero.lede">
+              Babelish is a free language tutor for Android and iPhone — 25 languages, real
+              lessons, voice practice from the first day, and a coach that keeps teaching when the
+              internet does not.
+            </p>
+
+            <div class="cta-row">
+              <a
+                class="btn btn-primary btn-lg"
+                id="apk-link"
+                href="https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk"
+                data-i18n="hero.cta"
+                >Download for Android</a
+              >
+              <a class="btn btn-ghost btn-lg" href="#how" data-i18n="hero.secondary"
+                >See how it works</a
+              >
+            </div>
+
+            <p class="fine-print">
+              <span data-i18n="hero.meta">APK · Android 7+ ·</span>
+              <span id="apk-size"></span>
+              <span aria-hidden="true">·</span>
+              <a
+                class="inline-link"
+                href="https://github.com/ApdowJr/Babelish-/releases"
+                data-i18n="hero.releases"
+                >all releases</a
+              >
+            </p>
+            <p class="iphone-note" data-i18n="hero.iphone">
+              iPhone build: the project compiles for iOS, but Apple will only install it through
+              TestFlight or the App Store — those need an Apple Developer account.
+            </p>
+            <p class="apk-note" id="apk-note" hidden data-i18n="hero.notPublished">
+              No APK has been published yet — the release build is one workflow run away. See
+              “Where is the Play Store listing?” below.
+            </p>
+
+            <ul class="hero-points">
+              <li data-i18n="hero.point1">No account needed to start</li>
+              <li data-i18n="hero.point2">Works offline</li>
+              <li data-i18n="hero.point3">No recordings stored</li>
+            </ul>
+          </div>
+
+          <!-- Phone cluster: the three screens that matter, rebuilt from the
+               app's own tokens. CSS only — no screenshots to go stale. -->
+          <div class="phones" aria-hidden="true">
+            <div class="phone phone-back">
+              <div class="phone-screen">
+                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                <div class="app-head">
+                  <div>
+                    <p class="app-greeting">Good morning,</p>
+                    <p class="app-name">Amina</p>
+                  </div>
+                  <div class="avatar">A</div>
+                </div>
+
+                <div class="hero-card">
+                  <p class="card-kicker">CONTINUE LEARNING</p>
+                  <p class="card-title">Spanish</p>
+                  <p class="card-sub">Ordering at a café · Chapter 2</p>
+                  <div class="card-bar"><span class="pct-62"></span></div>
+                  <div class="card-foot"><span>62%</span><span class="card-go">Continue ›</span></div>
+                </div>
+
+                <div class="tile-row">
+                  <div class="tile"><span class="tile-ico flame">▲</span><b>12</b><i>STREAK</i></div>
+                  <div class="tile"><span class="tile-ico sun">✦</span><b>40</b><i>XP TODAY</i></div>
+                  <div class="tile"><span class="tile-ico lilac">★</span><b>86</b><i>WORDS</i></div>
+                </div>
+
+                <p class="section-mini">WORD OF THE DAY</p>
+                <div class="word-card">
+                  <div>
+                    <b>hola</b>
+                    <span>hello</span>
+                  </div>
+                  <span class="speaker">◔</span>
+                </div>
+
+                <div class="tabbar">
+                  <span class="tab on">⌂</span><span class="tab">◈</span>
+                  <span class="tab-mic">◉</span>
+                  <span class="tab">▤</span><span class="tab">☺</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="phone phone-front">
+              <div class="phone-screen">
+                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                <div class="app-head">
+                  <div>
+                    <p class="app-greeting">Speak</p>
+                    <p class="app-name">Spanish · B1</p>
+                  </div>
+                  <span class="pill-live">LIVE</span>
+                </div>
+
+                <div class="phrase-card">
+                  <p class="phrase-target">¿Me trae la cuenta, por favor?</p>
+                  <p class="phrase-translation">Could you bring me the bill, please?</p>
+                  <div class="phrase-actions">
+                    <span>▷ Listen</span><span>🐢 Slow</span><span>⌨ Type</span>
+                  </div>
+                </div>
+
+                <div class="mic-wrap">
+                  <div class="mic-ring"></div>
+                  <div class="mic-orb">◉</div>
+                  <p class="mic-hint">Tap and say it</p>
+                </div>
+
+                <div class="score-card">
+                  <div class="score-head"><b>92%</b><span>word match</span></div>
+                  <div class="chips">
+                    <span class="ok">me</span><span class="ok">trae</span><span class="ok">la</span>
+                    <span class="ok">cuenta</span><span class="near">por</span><span class="ok">favor</span>
+                  </div>
+                </div>
+
+                <div class="tabbar">
+                  <span class="tab">⌂</span><span class="tab">◈</span>
+                  <span class="tab-mic on">◉</span>
+                  <span class="tab">▤</span><span class="tab">☺</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="phone phone-side">
+              <div class="phone-screen">
+                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                <div class="app-head">
+                  <div>
+                    <p class="app-greeting">Progress</p>
+                    <p class="app-name">Last 6 weeks</p>
+                  </div>
+                </div>
+
+                <div class="progress-hero">
+                  <div><b>12</b><i>day streak</i></div>
+                  <div><b>34</b><i>active days</i></div>
+                  <div><b>1.2k</b><i>lifetime XP</i></div>
+                </div>
+
+                <div class="calendar">
+                  <div class="cal-col">
+                    <em>Sep</em>
+                    <span class="c1"></span><span class="c0"></span><span class="c1"></span
+                    ><span class="c2"></span><span class="c0"></span><span class="c3"></span
+                    ><span class="c1"></span>
+                  </div>
+                  <div class="cal-col">
+                    <em></em>
+                    <span class="c2"></span><span class="c3"></span><span class="c1"></span
+                    ><span class="c0"></span><span class="c1"></span><span class="c2"></span
+                    ><span class="c3"></span>
+                  </div>
+                  <div class="cal-col">
+                    <em></em>
+                    <span class="c3"></span><span class="c2"></span><span class="c0"></span
+                    ><span class="c1"></span><span class="c3"></span><span class="c2"></span
+                    ><span class="c1"></span>
+                  </div>
+                  <div class="cal-col">
+                    <em></em>
+                    <span class="c1"></span><span class="c2"></span><span class="c3"></span
+                    ><span class="c0"></span><span class="c2"></span><span class="c3"></span
+                    ><span class="c1"></span>
+                  </div>
+                  <div class="cal-col">
+                    <em>Oct</em>
+                    <span class="c3"></span><span class="c1"></span><span class="c2"></span
+                    ><span class="c3"></span><span class="c2"></span><span class="c0"></span
+                    ><span class="c1"></span>
+                  </div>
+                  <div class="cal-col">
+                    <em></em>
+                    <span class="c2"></span><span class="c3"></span><span class="c3"></span
+                    ><span class="c1"></span><span class="c0"></span><span class="c2"></span
+                    ><span class="c3 today"></span>
+                  </div>
+                </div>
+
+                <div class="skills">
+                  <div class="skill"><span>Reading</span><b>82%</b></div>
+                  <div class="skill-bar"><i class="pct-82"></i></div>
+                  <div class="skill"><span>Listening</span><b>76%</b></div>
+                  <div class="skill-bar"><i class="pct-76"></i></div>
+                  <div class="skill"><span>Speaking</span><b>87%</b></div>
+                  <div class="skill-bar"><i class="pct-87"></i></div>
+                </div>
+
+                <div class="tabbar">
+                  <span class="tab">⌂</span><span class="tab">◈</span>
+                  <span class="tab-mic">◉</span>
+                  <span class="tab">▤</span><span class="tab on">☺</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mock-note" data-i18n="hero.mock">
+          Screens rebuilt from the app's own design tokens. Capture store screenshots from a real
+          device — these are illustrations, not recordings of a session.
+        </p>
+      </section>
+
+      <!-- ── Numbers ──────────────────────────────────────────────────── -->
+      <section class="band" aria-label="What ships in the app">
+        <div class="wrap band-grid">
+          <div class="stat"><b>25</b><span data-i18n="stats.languages">languages</span></div>
+          <div class="stat"><b>101</b><span data-i18n="stats.chapters">chapters</span></div>
+          <div class="stat"><b>212</b><span data-i18n="stats.lessons">lessons</span></div>
+          <div class="stat"><b>1,744</b><span data-i18n="stats.exercises">exercises</span></div>
+          <div class="stat"><b>550</b><span data-i18n="stats.words">starter words</span></div>
+        </div>
+        <p class="band-note wrap" data-i18n="stats.note">
+          All bundled with the app. Every lesson is playable on the free plan, offline.
+        </p>
+      </section>
+
+      <!-- ── Features ─────────────────────────────────────────────────── -->
+      <section class="section" id="features">
+        <div class="wrap">
+          <p class="section-eyebrow" data-i18n="features.eyebrow">WHY BABELISH</p>
+          <h2 class="section-title" data-i18n="features.title">
+            A tutor that tells you the truth
+          </h2>
+          <p class="section-lede" data-i18n="features.lede">
+            No fake “AI” badges, no invented fluency scores, no streak guilt. The app shows what it
+            can do and says so when it cannot.
+          </p>
+
+          <div class="cards">
+            <article class="card">
+              <span class="card-icon">💬</span>
+              <h3 data-i18n="f1.title">A tutor, not a phrasebook</h3>
+              <p data-i18n="f1.body">
+                Conversations in your target language, corrected gently. Your tutor knows your
+                goals, your job and what you struggle with — because you told it.
+              </p>
+            </article>
+
+            <article class="card">
+              <span class="card-icon">🎙️</span>
+              <h3 data-i18n="f2.title">Speak from the first day</h3>
+              <p data-i18n="f2.body">
+                Tap the orb, say the phrase, and see exactly which words matched — per word, not a
+                made-up “fluency” number. Audio is transcribed on demand and never stored.
+              </p>
+            </article>
+
+            <article class="card">
+              <span class="card-icon">✈️</span>
+              <h3 data-i18n="f3.title">Works without a connection</h3>
+              <p data-i18n="f3.body">
+                Courses, review, the phrasebook and device voices ship inside the app. On a plane,
+                in a blackout, on a slow network — the lessons still open.
+              </p>
+            </article>
+
+            <article class="card">
+              <span class="card-icon">🧭</span>
+              <h3 data-i18n="f4.title">Honest by design</h3>
+              <p data-i18n="f4.body">
+                When the model is unreachable the app says “bundled coach”, not “AI”. When there is
+                not enough data for a skill it says “not enough yet” instead of drawing a bar.
+              </p>
+            </article>
+
+            <article class="card">
+              <span class="card-icon">🔒</span>
+              <h3 data-i18n="f5.title">Your data stays yours</h3>
+              <p data-i18n="f5.body">
+                No ads, no third-party analytics, no brokers. Progress lives on your device, syncs
+                only when you sign in, and can be exported or deleted in two taps.
+              </p>
+            </article>
+
+            <article class="card">
+              <span class="card-icon">🌙</span>
+              <h3 data-i18n="f6.title">Dark mode that is actually dark</h3>
+              <p data-i18n="f6.body">
+                A full night palette for every screen, with contrast checked against WCAG AA —
+                not a filter over the day theme.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── How it works ─────────────────────────────────────────────── -->
+      <section class="section section-alt" id="how">
+        <div class="wrap">
+          <p class="section-eyebrow" data-i18n="how.eyebrow">HOW IT WORKS</p>
+          <h2 class="section-title" data-i18n="how.title">Three taps to a conversation</h2>
+
+          <ol class="steps">
+            <li>
+              <span class="step-num">01</span>
+              <h3 data-i18n="how.s1.title">Pick a language</h3>
+              <p data-i18n="how.s1.body">
+                Twenty-four from Spanish to Swahili, each with a complete starter course and a
+                phrasebook for real situations.
+              </p>
+            </li>
+            <li>
+              <span class="step-num">02</span>
+              <h3 data-i18n="how.s2.title">Practise out loud</h3>
+              <p data-i18n="how.s2.body">
+                Short exercises, then the Speak tab: listen, repeat, and read the word-by-word
+                match. Slow playback when a phrase will not stick.
+              </p>
+            </li>
+            <li>
+              <span class="step-num">03</span>
+              <h3 data-i18n="how.s3.title">Watch the streak grow</h3>
+              <p data-i18n="how.s3.body">
+                A six-week calendar that shows the days you actually practised, and which skill is
+                holding you back — with the sample count behind every number.
+              </p>
+            </li>
+          </ol>
+
+          <div class="quote">
+            <p data-i18n="how.quote">
+              “Missing a day never costs you anything. The streak is a mirror, not a debt.”
+            </p>
+            <span data-i18n="how.quoteBy">— the design note behind the streak</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Download ─────────────────────────────────────────────────── -->
+      <section class="section" id="download">
+        <div class="wrap">
+          <div class="download-card">
+            <div class="download-copy">
+              <p class="section-eyebrow light" data-i18n="dl.eyebrow">GET BABELISH</p>
+              <h2 data-i18n="dl.title">Install the Android app</h2>
+              <p data-i18n="dl.body">
+                One signed APK, built from this repository by its own workflow, plus an iPhone
+                build for anyone with an Apple Developer account. No account, no subscription, no
+                ads.
+              </p>
+
+              <div class="cta-row">
+                <a
+                  class="btn btn-light btn-lg"
+                  href="https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk"
+                  data-i18n="dl.cta"
+                  >Download the APK</a
+                >
+                <a
+                  class="btn btn-outline-light btn-lg"
+                  href="https://github.com/ApdowJr/Babelish-/releases"
+                  data-i18n="dl.secondary"
+                  >Release notes</a
+                >
+              </div>
+
+              <ol class="install">
+                <li data-i18n="dl.step1">Tap the download and open the file.</li>
+                <li data-i18n="dl.step2">
+                  Android asks once: allow installs from this source (your browser).
+                </li>
+                <li data-i18n="dl.step3">Open Babelish. Pick a language and start.</li>
+              </ol>
+            </div>
+
+            <div class="download-side">
+              <img src="assets/icon-192.png" alt="Babelish app icon" width="96" height="96" loading="lazy" decoding="async" />
+              <dl class="meta">
+                <div><dt data-i18n="dl.version">Version</dt><dd id="meta-version">3.4.0</dd></div>
+                <div><dt data-i18n="dl.platform">Platform</dt><dd>Android 7+ · iPhone</dd></div>
+                <div><dt data-i18n="dl.size">Size</dt><dd id="meta-size">—</dd></div>
+                <div><dt data-i18n="dl.price">Price</dt><dd data-i18n="dl.free">Free</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="build-note">
+            <h3 data-i18n="dl.buildTitle">Prefer to build it yourself?</h3>
+            <p data-i18n="dl.buildBody">
+              The APK is produced by the repository's own GitHub Actions workflow, from the same
+              commit as the tag. No binaries are committed.
+            </p>
+            <pre><code>npm ci
+npx expo prebuild --platform android
+cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
+            <p class="fine-print">
+              <a
+                class="inline-link"
+                href="https://github.com/ApdowJr/Babelish-/actions/workflows/android-apk.yml"
+                data-i18n="dl.buildLink"
+                >Watch the Android build workflow</a
+              >
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── FAQ ──────────────────────────────────────────────────────── -->
+      <section class="section section-alt" id="faq">
+        <div class="wrap narrow">
+          <p class="section-eyebrow" data-i18n="faq.eyebrow">QUESTIONS</p>
+          <h2 class="section-title" data-i18n="faq.title">Straight answers</h2>
+
+          <details class="faq-item" open>
+            <summary data-i18n="faq.q1">Is it really free?</summary>
+            <p data-i18n="faq.a1">
+              Yes. No ads, no subscription, no “premium” wall in front of the lessons. The tutor
+              server runs on open-weight models with free endpoints, and everything else — courses,
+              review, phrasebook, voices — runs on your device.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q2">Do I need an account?</summary>
+            <p data-i18n="faq.a2">
+              No. A guest profile keeps your progress on the device. Signing in is only for syncing
+              between devices and keeping your streak if you lose the phone.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q3">What happens to my microphone audio?</summary>
+            <p data-i18n="faq.a3">
+              It is transcribed when you ask for a score and then discarded. Recordings are never
+              saved to the device and never stored on a server. The microphone is only on while you
+              are holding the button.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q4">Which languages are included?</summary>
+            <p data-i18n="faq.a4">
+              Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Polish, Russian,
+              Ukrainian, Greek, Turkish, Arabic, Hebrew, Persian, Hindi, Bengali, Mandarin, Japanese,
+              Korean, Vietnamese, Thai, Indonesian, Swahili and Somali.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q7">Can I install it on an iPhone?</summary>
+            <p data-i18n="faq.a7">
+              The app compiles for iOS, but Apple does not allow installing an app outside
+              TestFlight or the App Store. Both need an Apple Developer account (US$99 a year), so
+              for now the iPhone build is for testing — Android is the platform you can install
+              today.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q5">Where is the Play Store listing?</summary>
+            <p data-i18n="faq.a5">
+              Not live yet. The store package, version code, permissions and artwork are ready, but
+              publishing needs a signed build and a review. Until then the APK here is the same app,
+              signed with a test key and installed directly.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary data-i18n="faq.q6">Is it safe to install an APK?</summary>
+            <p data-i18n="faq.a6">
+              This one is built in public by GitHub Actions from the source in this repository — you
+              can read the workflow and the commit it ran on. Android will still warn you, because
+              any app from outside the Play Store does.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <!-- ── Closing CTA ──────────────────────────────────────────────── -->
+      <section class="section closing">
+        <div class="wrap closing-inner">
+          <h2 data-i18n="close.title">Your first conversation is one tap away.</h2>
+          <p data-i18n="close.body">Free, offline-friendly, and honest about what it can do.</p>
+          <a
+            class="btn btn-primary btn-lg"
+            href="https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk"
+            data-i18n="close.cta"
+            >Download for Android</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div class="footer-brand">
+          <div class="brand">
+            <img src="assets/icon-128.png" alt="" width="28" height="28" class="brand-mark" decoding="async" />
+            <span class="brand-name">Babelish</span>
+          </div>
+          <p data-i18n="footer.tagline">
+            A free language tutor you can host yourself. Built in the open.
+          </p>
+        </div>
+
+        <nav class="footer-col" aria-label="App">
+          <h4 data-i18n="footer.app">App</h4>
+          <a href="#download" data-i18n="nav.download">Download</a>
+          <a href="#features" data-i18n="nav.features">Features</a>
+          <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        </nav>
+
+        <nav class="footer-col" aria-label="Legal">
+          <h4 data-i18n="footer.legal">Legal</h4>
+          <a href="privacy.html" data-i18n="footer.privacy">Privacy policy</a>
+          <a href="terms.html" data-i18n="footer.terms">Terms of service</a>
+        </nav>
+
+        <nav class="footer-col" aria-label="Source">
+          <h4 data-i18n="footer.source">Source</h4>
+          <a href="https://github.com/ApdowJr/Babelish-">GitHub</a>
+          <a href="https://github.com/ApdowJr/Babelish-/releases" data-i18n="footer.releases"
+            >Releases</a
+          >
+          <a href="https://github.com/ApdowJr/Babelish-/blob/main/README.md" data-i18n="footer.docs"
+            >Documentation</a
+          >
+        </nav>
+      </div>
+
+      <div class="wrap footer-bottom">
+        <p>
+          <span data-i18n="footer.rights">Babelish</span> · <span id="year">2026</span> ·
+          <a class="footer-inline" href="privacy.html" data-i18n="footer.privacy">Privacy</a> ·
+          <span data-i18n="footer.made">no trackers on this page</span>
+        </p>
+        <p class="footer-note" data-i18n="footer.note">
+          This page loads no fonts, scripts or analytics from third parties.
+        </p>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -8,6 +8,9 @@ Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live 
 
 > 📱 **APK + iPhone kaliya — web ma jiro.** Sida APK-ga loo helo (GitHub Actions /
 > EAS / local) iyo runta ku saabsan iPhone-ka: **`docs/BUILD_MOBILE.md`** (Soomaali + English).
+>
+> 🌐 **Website:** [`site/`](docs/WEBSITE.md) — a static, bilingual page that explains the
+> app, publishes the privacy policy and terms the stores require, and links the APK.
 
 > 25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550 starter words
 > bundled offline. Every lesson playable on the free plan.
@@ -20,6 +23,8 @@ Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live 
 | **Progress** | `/progress` — six-week streak calendar, level progress and an honest per-skill breakdown |
 | **Contrast** | Both palettes are tested against WCAG AA pair by pair; the daylight palette was darkened where it used to fail |
 | **Theming** | `useTheme()` / `useThemedStyles()`; the static `colors` export is gone so a screen cannot silently stay light |
+| **Website** | `site/` — bilingual (EN/SO) static page, strict CSP, privacy + terms, real APK link |
+| **APK** | GitHub Actions attaches `babelish.apk` to a `v*` release |
 
 ## What's new in 3.3
 
