@@ -13,10 +13,7 @@ least one iOS device and one Android device.
 - A **development build** (`eas build --profile development`, or
   `npx expo run:ios|android` locally). Expo Go only bundles its own native
   modules; audio/notification behaviour must be checked in a dev build.
-- Backend reachable: the app talks to the Neon Function by default (endpoints
-  are baked as build defaults). For live AI, the operator must have set
-  `AI_API_KEY` on the Function; otherwise expect the **honest** demo/disabled
-  states below (those are pass criteria too).
+- Backend reachable: the app talks to the Supabase `babelish-ai` Edge Function by default. For live AI, configure `AI_API_URL`, `AI_API_KEY`, and `AI_CHAT_MODEL` as Supabase Edge Function secrets; voice also needs `AI_STT_API_URL` and (optionally) `AI_STT_API_KEY`. Without these secrets, the app must show the honest offline coach/not-configured state.
 - A quiet room for the microphone rows.
 
 ## Rows
@@ -24,15 +21,15 @@ least one iOS device and one Android device.
 | # | Step | Expected | Result |
 |---|---|---|---|
 | 1 | Cold start with default config | No "demo mode" banner; Profile → APP STATUS shows AI tutor + voice status matching the backend's real `/api/ai/status` | ☐ |
-| 2 | Create a new account (email + password) | Real Managed Auth account; sign-out then sign-in restores the session; progress syncs | ☐ |
+| 2 | Create a new account (email + password) | Real Supabase Auth account; sign-out then sign-in restores the session; progress syncs | ☐ |
 | 3 | Password reset (if exposed) | Reset email arrives; link works | ☐ |
-| 4 | Delete account (Profile → PRIVACY) | Local wipe + `DELETE /api/me`; account can no longer sign in; confirmation is honest about failures | ☐ |
+| 4 | Delete account (Settings → Danger zone) | Supabase `delete-account` function removes the account; account can no longer sign in; confirmation is honest about failures | ☐ |
 | 5 | Speak tab → record (grant mic) | Permission prompt appears with the plain-language string; recording starts; transcript returns (live STT) or an actionable "not configured" message | ☐ |
 | 6 | Deny the mic permission | App explains how to enable it; no crash; typing fallback still works | ☐ |
 | 7 | TTS: tap a phrase | Audible, correct target-language voice; for a slow/repeat control, output matches; with a broken voice the Speak tab shows the error banner instead of silent failure | ☐ |
 | 8 | AI tutor (live key configured) | Reply is in the target language; Arabic/Chinese target never returns Latin text (script guard); rate limit shows the friendly 429 message after the budget | ☐ |
 | 9 | AI tutor (no key configured) | Messages are **explicitly labeled demo**, or an actionable error — never a fake "live" reply | ☐ |
-| 10 | `EXPO_PUBLIC_NEON_DISABLED=1` build | Demo mode is explicit and labeled; no real sync is implied | ☐ |
+| 10 | build without Supabase publishable key | Demo mode is explicit and labeled; no real sync is implied | ☐ |
 | 11 | Airplane mode | Practice/offline curriculum works; sync failures surface honestly and retry later | ☐ |
 | 12 | Background the app mid-recording | No crash; recording state is sane on return | ☐ |
 
