@@ -148,7 +148,9 @@ test('the document declares a language and real metadata', () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /<title>[^<]{20,}<\/title>/);
   assert.match(html, /name="description"\s+content="[^"]{60,}"/);
-  assert.match(html, /property="og:image"/);
+  assert.match(html, /property="og:title"/);
+  assert.match(html, /property="og:description"/);
+  assert.match(html, /name="twitter:card"/);
 });
 
 test('the page says which version it is describing', () => {
@@ -230,8 +232,49 @@ test('the site uses the app artwork that actually ships', () => {
       `${siteFile} is stale — copy ${appFile} into site/assets/`
     );
   }
-  // And the page must not describe a palette the icon does not use.
-  assert.ok(html.includes('assets/icon.png'));
+});
+
+test('the page ships small copies of the icon, not the 1,024 px master', () => {
+  // The master is 540 KB. As a 34 px header mark that is absurd on a phone in
+  // Bari, so the markup uses derivatives generated from the same file.
+  const pngSize = (file: string): [number, number] => {
+    const bytes = readFileSync(path.join(root, file));
+    assert.equal(bytes.toString('ascii', 12, 16), 'IHDR', `${file} is not a PNG`);
+    return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
+  };
+  for (const [file, size] of [
+    ['site/assets/favicon-32.png', 32],
+    ['site/assets/icon-128.png', 128],
+    ['site/assets/icon-192.png', 192],
+    ['site/assets/apple-touch-icon.png', 180],
+  ] as const) {
+    assert.deepEqual(pngSize(file), [size, size], `${file} has the wrong size`);
+  }
+
+  for (const page of ['site/index.html', 'site/privacy.html', 'site/terms.html']) {
+    const markup = read(page);
+    assert.ok(
+      !/(?:src|href)="assets\/icon\.png"/.test(markup),
+      `${page} downloads the 540 KB master for a small mark`
+    );
+    for (const img of markup.matchAll(/<img\b[^>]*>/g)) {
+      assert.match(img[0], /width="\d+"/, `${page}: ${img[0]} has no width`);
+      assert.match(img[0], /height="\d+"/, `${page}: ${img[0]} has no height`);
+      assert.match(
+        img[0],
+        /decoding="async"/,
+        `${page}: ${img[0]} blocks the parser while it decodes`
+      );
+    }
+  }
+
+  // Not a relative path: a canonical or og:url that points at a host the
+  // project does not serve is a claim about a deployment that has not happened.
+  assert.ok(
+    !/property="og:url"/.test(html),
+    'og:url must be absolute, so it waits for a domain'
+  );
+  assert.ok(!/rel="canonical"/.test(html), 'same for canonical');
 });
 
 test('the catalogue numbers on the page match the catalogue', () => {
@@ -331,6 +374,10 @@ test('the page files it references are in the repository', () => {
     'site/theme-boot.js',
     'site/vercel.json',
     'site/assets/icon.png',
+    'site/assets/icon-128.png',
+    'site/assets/icon-192.png',
+    'site/assets/apple-touch-icon.png',
+    'site/assets/favicon-32.png',
     'site/assets/feature-graphic.png',
     'site/privacy.html',
     'site/terms.html',

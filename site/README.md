@@ -23,7 +23,7 @@ iPhone); this folder is a static page that explains it. Nothing here imports
 | `app.js` | English/Somali switching, theme toggle, the honest-APK check |
 | `theme-boot.js` | Applies a saved theme before first paint (keeps the CSP strict) |
 | `vercel.json` | CSP, security headers, asset caching |
-| `assets/` | Byte-identical copies of the icon and store feature graphic |
+| `assets/` | Byte-identical copies of the icon and store feature graphic, plus small derivatives used in the markup |
 
 ## Brand
 
@@ -40,6 +40,41 @@ drift:
 cp assets/icon.png site/assets/icon.png
 cp assets/store/feature-graphic.png site/assets/feature-graphic.png
 ```
+
+The master is 1024 px and 540 KB; no page loads it. The markup uses four
+derivatives, regenerated from the master whenever it changes:
+
+| File | Pixels | Used for |
+|---|---|---|
+| `favicon-32.png` | 32² | browser tab |
+| `icon-128.png` | 128² | header and footer mark (34 px / 28 px) |
+| `icon-192.png` | 192² | the 96 px icon in the download card |
+| `apple-touch-icon.png` | 180² | home-screen bookmark on iOS |
+
+```bash
+python3 - <<'PY'
+from PIL import Image
+src = Image.open('assets/icon.png').convert('RGB')
+for name, px in [('favicon-32.png', 32), ('icon-128.png', 128),
+                 ('icon-192.png', 192), ('apple-touch-icon.png', 180)]:
+    src.resize((px, px), Image.LANCZOS).save(f'site/assets/{name}', optimize=True)
+PY
+```
+
+## Metadata that waits for a domain
+
+`index.html` deliberately has **no** `canonical`, `og:url` or `og:image`: all
+three must be absolute URLs, and the site does not own a host yet. A relative
+`og:image` is ignored by every crawler, so shipping one would only look like it
+works. Once a domain exists, add these to `<head>`:
+
+```html
+<link rel="canonical" href="https://YOUR-DOMAIN/" />
+<meta property="og:url" content="https://YOUR-DOMAIN/" />
+<meta property="og:image" content="https://YOUR-DOMAIN/assets/feature-graphic.png" />
+```
+
+`site/assets/feature-graphic.png` is kept for exactly that.
 
 ## Preview
 

@@ -29,7 +29,15 @@ The phone mock-ups inside the page deliberately keep the **app's own forest
 palette**, because they are meant to look like what opens on the phone.
 
 `site/assets/` holds byte-identical copies of `assets/icon.png` and
-`assets/store/feature-graphic.png`; a test fails if they drift.
+`assets/store/feature-graphic.png`; a test fails if they drift. The 540 KB
+master is never served to a page: the markup uses 32/128/180/192 px derivatives
+generated from it (`site/README.md` has the one-liner). A test also fails if a
+page starts downloading the master for a 34 px mark.
+
+`index.html` ships no `canonical`, `og:url` or `og:image` on purpose — all three
+need an absolute URL and the project does not own a host yet. Add them with the
+real origin after the first deploy; a test keeps them out until then, so the
+page never points a crawler at a domain that is not serving anything.
 
 ## Deploy
 

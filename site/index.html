@@ -10,9 +10,12 @@
     />
     <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0D0A1C" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" href="assets/icon.png" />
-    <link rel="apple-touch-icon" href="assets/icon.png" />
-    <link rel="canonical" href="https://zelvoca.app/" />
+    <!-- Small copies of the launcher icon, so a 34 px mark is not a 540 KB
+         download. The master asset stays byte-identical to the app's icon;
+         these are generated from it (see site/README.md). -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="assets/icon-128.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 
     <!-- Open Graph / Twitter: the same card everywhere, no tracking pixels. -->
     <meta property="og:type" content="website" />
@@ -21,9 +24,10 @@
       property="og:description"
       content="A free tutor for 25 languages. Real lessons, real voice practice, honest progress — and it works offline."
     />
-    <meta property="og:image" content="assets/feature-graphic.png" />
-    <meta property="og:url" content="https://zelvoca.app/" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- Deliberately no og:image / og:url / canonical yet: all three must be
+         absolute, and the site does not have a domain of its own yet. Add them
+         with the real origin once it is deployed — site/README.md lists them. -->
 
     <!-- Applies a saved choice before the first paint (see theme-boot.js), so
          the page never flashes the other theme. Kept in a file, not inline, so
@@ -39,7 +43,7 @@
     <header class="site-header">
       <nav class="nav" aria-label="Main">
         <a class="brand" href="#top" aria-label="Babelish home">
-          <img src="assets/icon.png" alt="" width="34" height="34" class="brand-mark" />
+          <img src="assets/icon-128.png" alt="" width="34" height="34" class="brand-mark" decoding="async" />
           <span class="brand-name">Babelish</span>
         </a>
 
@@ -478,7 +482,7 @@
             </div>
 
             <div class="download-side">
-              <img src="assets/icon.png" alt="Babelish app icon" width="96" height="96" />
+              <img src="assets/icon-192.png" alt="Babelish app icon" width="96" height="96" loading="lazy" decoding="async" />
               <dl class="meta">
                 <div><dt data-i18n="dl.version">Version</dt><dd id="meta-version">3.4.0</dd></div>
                 <div><dt data-i18n="dl.platform">Platform</dt><dd>Android 7+ · iPhone</dd></div>
@@ -599,7 +603,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
       <div class="wrap footer-grid">
         <div class="footer-brand">
           <div class="brand">
-            <img src="assets/icon.png" alt="" width="28" height="28" class="brand-mark" />
+            <img src="assets/icon-128.png" alt="" width="28" height="28" class="brand-mark" decoding="async" />
             <span class="brand-name">Babelish</span>
           </div>
           <p data-i18n="footer.tagline">
