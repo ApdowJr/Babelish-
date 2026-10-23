@@ -69,7 +69,7 @@ Create the app, then fill **App content**. Each answer below is what the code ac
 
 | Declaration | Answer | Why |
 |---|---|---|
-| Privacy policy URL | _Use the **verified Vercel production domain** + `/privacy`_ | The source is `docs/PRIVACY.md`; the public static copy is `website/privacy.html`, and terms are `website/terms.html` at `/terms`. Both stores require a public legal page even though the app itself is native-only. Do **not** paste an ephemeral PR preview URL, and do not describe the static page as a browser version of Babelish |
+| Privacy policy URL | `https://babelish.vercel.app/privacy` | The source is `docs/PRIVACY.md`; the public static copy is `website/privacy.html`. Terms are `website/terms.html`, served at `https://babelish.vercel.app/terms`. Both URLs were verified on the Vercel production deployment. Do **not** paste an ephemeral PR preview URL, and do not describe the static site as a browser version of Babelish |
 | Ads | **No ads** | no ad SDK in `package.json` |
 | In-app purchases | **No** | the plan screens are informational; nothing is sold |
 | Content rating | fill the questionnaire honestly | no violence, no user-generated public content, no gambling |

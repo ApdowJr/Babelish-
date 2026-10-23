@@ -183,14 +183,24 @@ test('STORE_RELEASE.md matches app version, privacy publishing step, and 25-lang
   const storeDoc = read('docs/STORE_RELEASE.md');
   assert.ok(storeDoc.includes(`\`${app.expo.version}\``), 'STORE_RELEASE.md version drifted from app.json');
   // Native-only: there is no browser app to link to. Stores instead get
-  // the static public copies under website/, using the verified
-  // production Vercel domain rather than an assumed or preview hostname.
+  // the static public copies under website/, served from the verified
+  // production hostname. (The hostname is now pinned because root,
+  // /privacy, and /terms were all fetched successfully after merge.)
   assert.ok(storeDoc.includes('docs/PRIVACY.md'), 'STORE_RELEASE.md must point at docs/PRIVACY.md as the policy source');
   assert.ok(storeDoc.includes('website/privacy.html'), 'STORE_RELEASE.md must identify the public static privacy page');
   assert.ok(storeDoc.includes('website/terms.html'), 'STORE_RELEASE.md must identify the public static terms page');
-  assert.ok(storeDoc.includes('/privacy') && storeDoc.includes('/terms'), 'STORE_RELEASE.md must give both clean legal routes');
-  assert.ok(storeDoc.includes('verified Vercel production domain'), 'STORE_RELEASE.md must require the verified production domain');
-  assert.ok(!storeDoc.includes('babelish.vercel.app'), 'STORE_RELEASE.md must not assume the old web-app hostname');
+  assert.ok(
+    storeDoc.includes('https://babelish.vercel.app/privacy'),
+    'STORE_RELEASE.md must give the verified production Privacy Policy URL'
+  );
+  assert.ok(
+    storeDoc.includes('https://babelish.vercel.app/terms'),
+    'STORE_RELEASE.md must give the verified production Terms URL'
+  );
+  assert.ok(
+    !storeDoc.includes('babelish-git-'),
+    'STORE_RELEASE.md must never point stores at an ephemeral Vercel preview hostname'
+  );
   assert.ok(!storeDoc.includes('GitHub Pages'), 'STORE_RELEASE.md must not send legal publishing back to GitHub Pages');
   assert.ok(storeDoc.includes('25 LANGUAGES, REAL COURSES'), 'STORE_RELEASE.md language count drifted');
   assert.ok(!storeDoc.includes('Urdu'), 'STORE_RELEASE.md must not list unshipped languages');
