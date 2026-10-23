@@ -152,6 +152,10 @@ export default function SpeakScreen() {
   const abortRef = useRef<AbortController | null>(null);
 
   const recorder = useVoiceRecorder();
+  // Web Speech API is a lightweight fallback for browsers that support it.
+  // Keep the recognition instance separate from expo-audio's recorded clip.
+  const browserRecognitionRef = useRef<any>(null);
+  const browserTranscriptHandledRef = useRef(false);
   const scenario = language.scenarios.find((s) => s.id === scenarioId);
   const phrases = scenario ? getPracticePhrases(language.id, scenario.id) : [];
 
@@ -512,6 +516,77 @@ export default function SpeakScreen() {
   async function toggleChatMic() {
     if (busy || practice?.phase === 'recording' || practice?.phase === 'scoring') {
       return;
+    }
+
+    // Browsers with Web Speech API can transcribe live speech without
+    // downloading a large Whisper model. This path is web-only; native builds
+    // continue to use expo-audio plus the configured STT runtime.
+    if (Platform.OS === 'web') {
+      const browserWindow = typeof window === 'undefined' ? null : (window as any);
+      const Recognition = browserWindow?.SpeechRecognition ?? browserWindow?.webkitSpeechRecognition;
+      if (Recognition) {
+        const active = browserRecognitionRef.current;
+        if (chatRecording && active) {
+          try { active.stop(); } catch { /* already stopping */ }
+          setChatRecording(false);
+          browserRecognitionRef.current = null;
+          return;
+        }
+        if (!chatRecording) {
+          stopSpeaking();
+          setSpeakingKey(null);
+          setVoiceError(null);
+          setVoiceHelp(null);
+          browserTranscriptHandledRef.current = false;
+          const recognition = new Recognition();
+          recognition.lang = language.ttsLocale;
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.maxAlternatives = 1;
+          recognition.onresult = (event: any) => {
+            if (browserTranscriptHandledRef.current) return;
+            const text = String(event.results?.[0]?.[0]?.transcript ?? '').trim();
+            if (!text) return;
+            browserTranscriptHandledRef.current = true;
+            browserRecognitionRef.current = null;
+            setChatRecording(false);
+            const history: ChatMessage[] = [...messages, { role: 'user', text, fromVoice: true }];
+            setMessages(history);
+            persist(history);
+            void respond(history);
+          };
+          recognition.onerror = (event: any) => {
+            browserRecognitionRef.current = null;
+            setChatRecording(false);
+            const reason = String(event?.error ?? '');
+            setVoiceError(
+              reason === 'not-allowed' || reason === 'service-not-allowed'
+                ? 'Microphone access was blocked. Allow microphone permission for Babelish in your browser settings.'
+                : reason === 'no-speech'
+                  ? 'No speech was detected — try again in a quiet place.'
+                  : 'Browser speech recognition failed. You can try recording again or type your reply.'
+            );
+          };
+          recognition.onend = () => {
+            browserRecognitionRef.current = null;
+            setChatRecording(false);
+            if (!browserTranscriptHandledRef.current) {
+              setVoiceError((current) => current ?? 'No speech was detected — try again or type your reply.');
+            }
+          };
+          try {
+            browserRecognitionRef.current = recognition;
+            setChatRecording(true);
+            recognition.start();
+            return;
+          } catch {
+            browserRecognitionRef.current = null;
+            setChatRecording(false);
+            setVoiceError('Could not start browser speech recognition. Check microphone permission or type your reply.');
+            return;
+          }
+        }
+      }
     }
     // While start() prepares, a second tap must be able to stop that same
     // clip — only reject it when there is nothing (yet) being recorded.
