@@ -4,11 +4,7 @@
 
 Babelish is an Android-first AI language tutor. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
 
-Behind it, the app calls its own tutor server, which fronts open-weight models
-(Qwen3-Next 80B on free endpoints by default). Voice input can run Whisper in
-the browser for free, and a labelled coach keeps every screen usable when the
-server is unreachable. Courses, review, the phrasebook and device audio never
-needed a model at all.
+Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live model is available only after the operator configures server-side provider secrets; otherwise the clearly labelled offline coach remains available. Browser Whisper can provide voice input where supported. Courses, review, the phrasebook and device audio work without a hosted model.
 
 > 25 languages · 101 chapters · 212 lessons · 1,744 exercises · 550 starter words
 > bundled offline. Every lesson playable on the free plan.
