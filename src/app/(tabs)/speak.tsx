@@ -48,7 +48,6 @@ import {
 import { ownerIdFor } from '@/lib/conversations';
 import { scoreBand, scorePronunciation } from '@/lib/pronunciation';
 import { showAlert } from '@/lib/alert';
-import { NEON_API_URL } from '@/lib/neon';
 import { loadSpeakingStats, recordPhraseAttempt, type SpeakingStats } from '@/lib/speaking';
 import { ensureRecordingReady, useVoiceRecorder } from '@/lib/voice';
 import { flushReportQueue, sendReport } from '@/lib/reports';
@@ -218,7 +217,8 @@ export default function SpeakScreen() {
   /** Transport for AI calls: JWT for the backend proxy when available. */
   async function aiIo() {
     const jwt = await getAccessToken().catch(() => null);
-    return jwt ? { apiBase: NEON_API_URL, jwt } : null;
+    const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+    return apiBase ? { apiBase, jwt } : null;
   }
 
   // Reset the conversation when the language or scenario changes — done
@@ -253,7 +253,8 @@ export default function SpeakScreen() {
     let cancelled = false;
     void (async () => {
       const jwt = await getAccessToken().catch(() => null);
-      const status = await fetchAiStatus({ apiBase: NEON_API_URL, jwt });
+      const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '');
+      const status = await fetchAiStatus(apiBase ? { apiBase, jwt } : null);
       if (!cancelled) setAiStatus(status);
     })();
     return () => {
