@@ -2,7 +2,7 @@
  * "Start over" — what a reset removes, and what it must never touch.
  *
  * A learner who wants a clean slate should not have to delete their account
- * (which also erases the profile, preferences and — on Neon — the auth user).
+ * (which also erases the profile, preferences and — in Supabase — the auth user).
  * This module is the single list of learning data, kept separate from
  * `LOCAL_DATA_KEYS` (the account-deletion list) on purpose:
  *
