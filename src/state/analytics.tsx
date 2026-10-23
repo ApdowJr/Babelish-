@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 import {
   EMPTY_ANALYTICS,
   activeToday,
@@ -9,11 +9,12 @@ import {
   type SkillTally,
 } from '@/lib/analytics';
 import { EMPTY_XP, XP_RULES, addXp, type XpReason, type XpState } from '@/lib/xp';
+import { readScopedItem, removeScopedItem, writeScopedItem } from '@/lib/scopedStorage';
 
 /**
- * Holds the learner's skill tallies + activity events + XP on-device and
- * persists every write. Aggregation logic lives in `@/lib/analytics` and
- * `@/lib/xp` (pure, tested).
+ * Holds the learner's skill tallies + activity events + XP on-device (isolated
+ * per account) and persists every write. Aggregation logic lives in
+ * `@/lib/analytics` and `@/lib/xp` (pure, tested).
  */
 type AnalyticsValue = {
   state: AnalyticsState;
@@ -80,27 +81,38 @@ function sanitize(raw: string | null): AnalyticsState {
 }
 
 export function AnalyticsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [state, setState] = useState<AnalyticsState>(EMPTY_ANALYTICS);
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY)
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) setState(EMPTY_ANALYTICS);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    readScopedItem(STORAGE_KEY, userId)
       .then((raw) => {
         if (!cancelled) setState(sanitize(raw));
       })
       .catch(() => {
-        // keep empty state
+        if (!cancelled) setState(EMPTY_ANALYTICS);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   /** Applies a state transition and persists the result (best-effort). */
   function commit(transform: (prev: AnalyticsState) => AnalyticsState) {
     setState((prev) => {
       const next = transform(prev);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      void writeScopedItem(STORAGE_KEY, JSON.stringify(next), userId);
       return next;
     });
   }
@@ -110,11 +122,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     xp: state.xp,
     resetAnalytics: async () => {
       setState(EMPTY_ANALYTICS);
-      try {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // Best effort: the ledger is already empty for this session.
-      }
+      await removeScopedItem(STORAGE_KEY, userId);
     },
     logSkillResult: (type, correct) => {
       const skill = skillForExerciseType(type);

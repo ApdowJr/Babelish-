@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 import { DEFAULT_PROFILE, normalizeLearnerProfile, type LearnerProfile } from '@/lib/learnerProfile';
+import { readScopedItem, writeScopedItem } from '@/lib/scopedStorage';
 
 // Re-exported so screens keep importing from one place.
 export { DEFAULT_PROFILE, GOAL_OPTIONS, INTEREST_OPTIONS, toggleChip } from '@/lib/learnerProfile';
@@ -20,26 +21,47 @@ const STORAGE_KEY = 'zelvoca:profile';
 const ProfileContext = createContext<ProfileValue | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [profile, setProfile] = useState<LearnerProfile>(DEFAULT_PROFILE);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
+    let cancelled = false;
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        setProfile(DEFAULT_PROFILE);
+        setReady(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    readScopedItem(STORAGE_KEY, userId)
       .then((raw) => {
-        if (!raw) return;
-        // One validator for stored data: a 3.1 blob has no avatar/bio, and a
-        // hand-edited one could contain anything.
+        if (cancelled) return;
+        if (!raw) {
+          setProfile(DEFAULT_PROFILE);
+          return;
+        }
         setProfile(normalizeLearnerProfile(JSON.parse(raw)));
       })
       .catch(() => {
-        // Unreadable storage keeps the defaults — the tutor still works.
+        if (!cancelled) setProfile(DEFAULT_PROFILE);
       })
-      .finally(() => setReady(true));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   function write(next: LearnerProfile) {
     setProfile(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+    void writeScopedItem(STORAGE_KEY, JSON.stringify(next), userId);
   }
 
   return (

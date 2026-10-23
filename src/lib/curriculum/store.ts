@@ -1,15 +1,20 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { bundledCurriculum } from '@/data/curriculum';
-import type { Chapter, Exercise, Lesson } from '@/lib/curriculum/types';
+import type { Chapter, Exercise, Lesson, VocabItem } from '@/lib/curriculum/types';
+import {
+  clearScopedProgress,
+  readScopedItem,
+  writeScopedItem,
+} from '@/lib/scopedStorage';
 
 /**
  * Curriculum service: approved content from Supabase when configured,
  * bundled content otherwise (demo mode / schema not run yet / offline).
- * Progress and vocabulary persist to Supabase AND AsyncStorage — the remote
- * write is attempted and the local write always happens, so nothing is lost
- * when tables are missing or the network drops.
+ *
+ * Local progress and vocabulary are stored per account (`zelvoca:progress:v1:u:<id>`)
+ * so offline lessons survive restarts and merge cleanly with Supabase when
+ * connectivity returns, while two accounts sharing one device never mix data.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PROGRESS_KEY = 'zelvoca:progress:v1';
 const VOCAB_KEY = 'zelvoca:vocab:v1';
@@ -148,145 +153,55 @@ export function isChapterUnlocked(
   return previous.lessons.every((lesson) => (progress[lesson.id]?.score ?? 0) >= 70);
 }
 
-/* ── Progress persistence (local always, remote when available) ─────────── */
+/* ── Progress persistence (account-scoped local cache; cloud sync in LearningProvider) ── */
 
-/**
- * Empties both local learning stores.
- *
- * Used by "Reset progress". Writes `{}` rather than removing the keys, so a
- * half-finished read can never resurrect a stale blob from a different
- * version's migration path.
- */
-export async function clearLearningStorage(): Promise<void> {
-  // Also clears the stores that are not part of the progress map, so a reset
-  // cannot leave a stale speaking score or a queued report behind.
-  await AsyncStorage.multiRemove(['zelvoca:analytics', 'zelvoca:speaking-stats', 'zelvoca:report-queue']).catch(
-    () => {}
-  );
-  try {
-    await AsyncStorage.multiSet([
-      [PROGRESS_KEY, '{}'],
-      [VOCAB_KEY, '{}'],
-    ]);
-  } catch {
-    // Storage unavailable: the in-memory reset already happened.
-  }
+export async function clearLearningStorage(userId?: string | null): Promise<void> {
+  await clearScopedProgress(userId);
 }
 
-export async function loadProgress(): Promise<Record<string, { score: number; completedAt: string }>> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('lesson_id, score, completed_at');
-      if (!error && data) {
-        return Object.fromEntries(
-          data.map((row: { lesson_id: string; score: number; completed_at: string }) => [
-            row.lesson_id,
-            { score: row.score, completedAt: row.completed_at },
-          ])
-        );
-      }
-    } catch {
-      // fall through to local
-    }
-  }
-  return readLocal(PROGRESS_KEY);
+export async function loadProgress(
+  userId?: string | null
+): Promise<Record<string, { score: number; completedAt: string }>> {
+  return readLocal(PROGRESS_KEY, userId);
+}
+
+export async function saveProgressMap(
+  progress: Record<string, { score: number; completedAt: string }>,
+  userId?: string | null
+): Promise<void> {
+  await writeScopedItem(PROGRESS_KEY, JSON.stringify(progress), userId);
 }
 
 export async function saveProgress(
   lessonId: string,
-  score: number
+  score: number,
+  userId?: string | null
 ): Promise<Record<string, { score: number; completedAt: string }>> {
   const completedAt = new Date().toISOString();
-  const current = await loadProgress();
+  const current = await loadProgress(userId);
   const previous = current[lessonId]?.score ?? 0;
   const next = { ...current, [lessonId]: { score: Math.max(previous, score), completedAt } };
-  await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
-  if (supabase) {
-    void (async () => {
-      try {
-        await supabase
-          .from('user_progress')
-          .upsert(
-            { lesson_id: lessonId, score: Math.max(previous, score), completed_at: completedAt },
-            { onConflict: 'user_id,lesson_id' }
-          );
-      } catch {
-        // remote write failed — local copy already saved
-      }
-    })();
-  }
+  await saveProgressMap(next, userId);
   return next;
 }
 
-export async function loadVocab(): Promise<
-  Record<string, import('@/lib/curriculum/types').VocabItem>
-> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('user_vocab').select('*');
-      if (!error && data) {
-        return Object.fromEntries(
-          data.map(
-            (row: {
-              item_key: string;
-              language_id: string;
-              target: string;
-              translation: string;
-              box: number;
-              due_at: string;
-              last_reviewed_at: string | null;
-            }) => [
-              row.item_key,
-              {
-                itemKey: row.item_key,
-                languageId: row.language_id,
-                target: row.target,
-                translation: row.translation,
-                box: row.box,
-                dueAt: row.due_at,
-                lastReviewedAt: row.last_reviewed_at ?? undefined,
-              },
-            ]
-          )
-        );
-      }
-    } catch {
-      // fall through to local
-    }
-  }
-  return readLocal(VOCAB_KEY);
+export async function loadVocab(userId?: string | null): Promise<Record<string, VocabItem>> {
+  return readLocal(VOCAB_KEY, userId);
 }
 
 export async function saveVocab(
-  items: Record<string, import('@/lib/curriculum/types').VocabItem>
+  items: Record<string, VocabItem>,
+  userId?: string | null
 ): Promise<void> {
-  await AsyncStorage.setItem(VOCAB_KEY, JSON.stringify(items));
-  if (supabase) {
-    const rows = Object.values(items).map((item) => ({
-      item_key: item.itemKey,
-      language_id: item.languageId,
-      target: item.target,
-      translation: item.translation,
-      box: item.box,
-      due_at: item.dueAt,
-      last_reviewed_at: item.lastReviewedAt ?? null,
-    }));
-    void (async () => {
-      try {
-        await supabase.from('user_vocab').upsert(rows, { onConflict: 'user_id,item_key' });
-      } catch {
-        // remote write failed — local copy already saved
-      }
-    })();
-  }
+  await writeScopedItem(VOCAB_KEY, JSON.stringify(items), userId);
 }
 
-async function readLocal<T>(key: string): Promise<T> {
+async function readLocal<T>(key: string, userId?: string | null): Promise<T> {
   try {
-    const raw = await AsyncStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : ({} as T);
+    const raw = await readScopedItem(key, userId);
+    if (!raw) return {} as T;
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' ? (parsed as T) : ({} as T);
   } catch {
     return {} as T;
   }

@@ -15,8 +15,7 @@ import {
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, SUPABASE_FUNCTIONS_URL } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { Screen } from '@/components/Screen';
 import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
@@ -29,12 +28,13 @@ import { LANGUAGES, getLanguage } from '@/data/languages';
 import { filterSettings } from '@/lib/settingsSearch';
 import { REMINDER_SLOTS, slotKey } from '@/lib/reminder';
 import { cancelDailyReminder, scheduleDailyReminder, sendTestReminder } from '@/lib/notifications';
-import { buildDataExport, LOCAL_DATA_KEYS } from '@/lib/privacy';
+import { buildDataExport } from '@/lib/privacy';
+import { clearAllAccountLocalData } from '@/lib/scopedStorage';
 import { clearConversations } from '@/lib/conversationStorage';
 import { ownerIdFor } from '@/lib/conversations';
 import { buildPack, formatPackSize } from '@/lib/offline';
 import { clearLearningStorage, loadCurriculum } from '@/lib/curriculum/store';
-import { fetchAiStatus, type AiStatus } from '@/lib/ai';
+import { createAiTransport, fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
@@ -105,14 +105,13 @@ export default function SettingsScreen() {
     let cancelled = false;
     void (async () => {
       const jwt = await getAccessToken().catch(() => null);
-      const apiBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/+$/, '') || `${SUPABASE_FUNCTIONS_URL}/babelish-ai`;
-      const status = await fetchAiStatus(apiBase ? { apiBase, jwt } : null);
+      const status = await fetchAiStatus(createAiTransport(jwt));
       if (!cancelled) setAiStatus(status);
     })();
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken]);
+  }, [getAccessToken, user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,9 +235,9 @@ export default function SettingsScreen() {
               // device-storage hiccup cannot falsely claim the cloud account survived.
               try {
                 await client.auth.signOut({ scope: 'local' });
-                await clearLearningStorage();
+                await clearLearningStorage(user.id);
                 await clearConversations(ownerIdFor(user.id));
-                await AsyncStorage.multiRemove([...LOCAL_DATA_KEYS, 'babelish:demo-user']);
+                await clearAllAccountLocalData(user.id);
                 resetAnalytics();
                 resetLearning();
               } finally {
@@ -305,7 +304,7 @@ export default function SettingsScreen() {
               // Raw stores first (speaking stats and the report queue are not
               // owned by a provider), then the providers, which also push the
               // empty state to the server so a sync cannot restore it.
-              await clearLearningStorage();
+              await clearLearningStorage(user?.id);
               await resetLearning();
               await resetAnalytics();
               showAlert(
