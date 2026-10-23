@@ -16,8 +16,8 @@ import {
   saveVocab,
 } from '@/lib/curriculum/store';
 import { LEITNER_DAYS, type VocabItem, type VocabSeed } from '@/lib/curriculum/types';
-import { isNeonConfigured } from '@/lib/neon';
-import { fetchNeonState, saveNeonState } from '@/lib/neonApi';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { fetchSupabaseState, saveSupabaseState } from '@/lib/supabaseLearning';
 import { lessonXp } from '@/lib/xp';
 
 type ProgressMap = Record<string, { score: number; completedAt: string }>;
@@ -121,14 +121,14 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   const [dueCount, setDueCount] = useState(0);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  /** Pushes a state snapshot to the Neon backend (no-op outside Neon mode). */
+  /** Pushes a state snapshot to the Supabase backend (no-op outside Neon mode). */
   const pushState = useCallback(
     async (nextProgress: ProgressMap, nextVocab: Record<string, VocabItem>) => {
-      if (!isNeonConfigured) return;
+      if (!isSupabaseConfigured) return;
       try {
         const jwt = await getAccessToken();
         if (!jwt) return;
-        await saveNeonState(jwt, { progress: nextProgress, vocab: nextVocab });
+        await saveSupabaseState(jwt, { progress: nextProgress, vocab: nextVocab });
         setLastSyncedAt(new Date().toISOString());
       } catch {
         // Offline or server unreachable: the device copy stays authoritative
@@ -147,13 +147,13 @@ export function LearningProvider({ children }: { children: ReactNode }) {
       .then(async ([nextProgress, nextVocab]) => {
         let mergedProgress = nextProgress;
         let mergedVocab = nextVocab;
-        if (isNeonConfigured) {
-          // Cloud sync: union the device copy with the server copy, then make
+        if (isSupabaseConfigured) {
+          // Cloud sync: union the device copy with the Supabase copy, then make
           // sure both sides hold the merged result.
           try {
             const jwt = await getAccessToken();
             if (jwt) {
-              const remote = await fetchNeonState(jwt);
+              const remote = await fetchSupabaseState(jwt);
               mergedProgress = mergeProgress(nextProgress, remote.progress);
               mergedVocab = mergeVocab(nextVocab, remote.vocab);
               for (const [lessonId, entry] of Object.entries(mergedProgress)) {
@@ -162,7 +162,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
                 }
               }
               await saveVocab(mergedVocab);
-              await saveNeonState(jwt, { progress: mergedProgress, vocab: mergedVocab });
+              await saveSupabaseState(jwt, { progress: mergedProgress, vocab: mergedVocab });
             }
           } catch {
             // Server unreachable: device state loads as usual.
@@ -172,7 +172,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
         setProgress(mergedProgress);
         setVocab(mergedVocab);
         setDueCount(countDue(mergedVocab));
-        if (isNeonConfigured && !cancelled) setLastSyncedAt(new Date().toISOString());
+        if (isSupabaseConfigured && !cancelled) setLastSyncedAt(new Date().toISOString());
         setReady(true);
       })
       .catch(() => {
@@ -270,7 +270,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
    * Clears progress locally and on the server.
    *
    * The cloud write matters: without it the next sync would merge the old
-   * server copy straight back, and the learner would watch their reset undo
+   * Supabase copy straight back, and the learner would watch their reset undo
    * itself a second later.
    */
   const resetLearning = useCallback<LearningValue['resetLearning']>(async () => {
