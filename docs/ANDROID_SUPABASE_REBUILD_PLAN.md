@@ -1,6 +1,6 @@
 # Babelish Android + Supabase Rebuild Plan
 
-Status: planning only. This branch is isolated from `main`; no production backend, secrets, user records, or deployments are changed by this document.
+Status: implementation in progress on this isolated branch. Supabase development project `dvgluivslmdrqsvlscmj` is active. Production `main`, existing Neon backend, existing accounts, and deployments have not been changed.
 
 ## Goal
 
@@ -84,13 +84,13 @@ All user-owned tables must have RLS enabled and policies that check `auth.uid() 
 - Tests and Android build pass before any production cutover.
 - Existing `main`, production database, existing accounts and current deployment remain unchanged until explicitly approved.
 
-## Open decisions before implementation
+## Remaining work before release
 
-1. Which Supabase project is the dedicated development/staging project?
-2. Should tutor conversation history be saved, and if so, for how long?
-3. Should existing Neon users be migrated later, or should the new Supabase backend start with new accounts?
-4. Which Android devices / minimum Android version must be supported?
+1. Complete removal of legacy Neon-only backend files, deployment scripts, and package dependencies after verifying no app imports remain.
+2. Implement a secure Supabase Edge Function for AI tutor proxy and account deletion.
+3. Decide whether existing Neon users should be migrated later or whether Supabase starts with new accounts.
+4. Confirm supported Android devices / minimum Android version.
 
 ## Safety boundary
 
-This plan does not create a Supabase project, execute SQL, migrate accounts/data, change app runtime behavior, alter production environment variables, or deploy. Those steps require separate implementation and verification.
+The Supabase development project has been inspected and two migrations were applied: learning tables/RLS plus content reports and RLS hardening. Android auth and learning sync have been switched on this branch. No Neon accounts/data were migrated, and production `main`, production environment variables, and deployments remain untouched.
