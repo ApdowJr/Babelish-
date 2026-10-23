@@ -32,8 +32,9 @@ Milkiiluhu wuxuu oggolaaday in Vercel mar kale deployment sameeyo, laakiin
   `package.json`-ka `build` script-kiisa Android, mana dhisi karo Expo web.
 - Bogga hore wuxuu dadka u diraa APK-ga GitHub Actions iyo macluumaad run ah
   oo iPhone ah. Ma laha lesson player, account login, form ama JavaScript.
-- URL-yada dadweynaha waa `/privacy` iyo `/terms` oo ku yaal domain-ka
-  production ee Vercel marka deployment-ka la xaqiijiyo.
+- URL-yada dadweynaha ee production waa
+  `https://babelish.vercel.app/privacy` iyo
+  `https://babelish.vercel.app/terms`.
 
 ### Sida APK-ga loo helo — 3 doorasho
 
@@ -107,11 +108,11 @@ npm run build:ios         # JS bundle iOS
 Bakhaarada (stores) waxay u baahan yihiin bog **privacy policy** oo
 internet ka furan — xitaa haddii app-ku web app lahayn. Nuqulka rasmiga ah
 wuxuu ku jiraa `docs/PRIVACY.md`, nuqulka static ee dadweynuhuna waa
-`website/privacy.html`. Marka production deployment-ka Vercel la xaqiijiyo,
-store-ka ku qor URL-ka production ee ku dhammaada `/privacy` (Terms-kuna
-waa `/terms`). Ha isticmaalin PR preview URL ku-meelgaar ah, hana u
-malayn in boggaas app-ku browser-ka ku shaqeeyo — waa sharci/download
-kaliya.
+`website/privacy.html`. Store-ka ku qor URL-ka production ee la xaqiijiyay:
+`https://babelish.vercel.app/privacy` (Terms:
+`https://babelish.vercel.app/terms`). Ha isticmaalin PR preview URL
+ku-meelgaar ah, hana u malayn in boggaas app-ku browser-ka ku shaqeeyo —
+waa sharci/download kaliya.
 
 ---
 
@@ -169,8 +170,10 @@ cannot run lessons or accounts.
   and says plainly that a physical iPhone still needs Apple Developer +
   TestFlight/App Store. It must never present the unsigned simulator build as
   an iPhone download.
-- Production routes are `/privacy` and `/terms`. Store consoles should use
-  the verified production domain, never an ephemeral PR preview URL.
+- Verified production legal URLs are
+  `https://babelish.vercel.app/privacy` and
+  `https://babelish.vercel.app/terms`. Store consoles should use those,
+  never an ephemeral PR preview URL.
 
 ### What was removed (web)
 
@@ -206,7 +209,8 @@ cannot run lessons or accounts.
   phone still talks to Supabase over HTTPS, as any native app does.
 - Store listings still need a public privacy URL (both stores require
   one even for native-only apps). The source policy is `docs/PRIVACY.md`;
-  the public static copy is `website/privacy.html`, served as `/privacy`
-  on the verified Vercel production domain (`website/terms.html` is
-  `/terms`). When legal copy changes, update the in-app route, docs, and
-  static page together; see `docs/STORE_RELEASE.md`.
+  the public static copy is `website/privacy.html`, served at
+  `https://babelish.vercel.app/privacy` (terms:
+  `https://babelish.vercel.app/terms`). When legal copy changes, update
+  the in-app route, docs, and static page together; see
+  `docs/STORE_RELEASE.md`.
