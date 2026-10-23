@@ -209,62 +209,35 @@ meaning, meaning → typed target), records every answer through
 
 ## 7. Setup
 
-The app ships with **no model configuration for the learner**. Everything below
-is an operator task, done once.
+The Android client no longer includes a bundled Neon API endpoint. Without an
+AI gateway, bundled lessons, local practice, and the labelled offline coach
+remain available. Hosted AI and cloud transcription require an operator-managed
+OpenAI-compatible gateway; its provider key must never be shipped in the app.
 
-### 7.1 Hosted tutor server (recommended — zero setup for learners)
+### 7.1 Hosted tutor gateway
 
-Deploy the `api` Function with an OpenRouter key. Free Qwen3 endpoints document 24 of 25 atlas languages; Somali remains unverified.
-The free endpoint costs $0 per token while available:
-
-```bash
-AI_API_KEY=sk-or-... npm run deploy:tutor
-```
-
-`scripts/deploy-tutor.mjs` wraps the CLI call below and refuses to print the
-key; `AI_API_URL`, `AI_MODELS`, `AI_STT_ENABLED` and `AI_STT_MODEL` can be
-overridden as env vars.
+Set `EXPO_PUBLIC_AI_GATEWAY_URL` to a secure gateway URL in the Android build
+environment. The gateway must implement the chat/status/transcription routes
+expected by Babelish and must enforce authentication, rate limits, and request
+limits. Keep `AI_API_KEY`, `AI_API_URL`, and model configuration on the server.
 
 ```bash
-neon functions deploy api --src functions/api/index.ts \
-  --env "AI_API_KEY=$OPENROUTER_API_KEY" \
-  --env AI_API_URL=https://openrouter.ai/api/v1 \
-  --env "AI_MODELS=qwen/qwen3-next-80b-a3b-instruct:free,qwen/qwen3-next-80b-a3b-instruct" \
-  --env AI_STT_ENABLED=false --wait
+# Example server-side environment only — do not put the provider key in the app.
+AI_API_URL=https://openrouter.ai/api/v1
+AI_API_KEY=your-server-side-key
+AI_APP_NAME=Babelish
 ```
 
-No app rebuild is needed — the client discovers the tutor by probing
-`GET /api/ai/status` through the same backend URL it already uses, and the
-Speak screen's **Retry** action re-probes without a reload.
+Do not deploy the old Neon Function or configure Neon environment variables.
+A Supabase Edge Function implementation is still required before the hosted
+AI tutor can be considered part of the Supabase-only backend.
 
-**Fallback chain.** `AI_MODELS` is tried in order. Free endpoints are retired
-without notice, so when one disappears the server moves to the next; a bad key,
-a rate limit or a timeout is returned as itself instead of being hidden.
+### 7.2 Self-hosted model
 
-**Rate limits.** Free OpenRouter tiers allow roughly 20 requests/minute and
-50/day on an unfunded account (1,000/day after a one-time $10 credit purchase).
-The server adds its own budgets: 20 chat + 10 transcription per minute per
-signed-in learner, 6 + 2 per minute per anonymous IP.
-
-**A note on privacy.** Prompts leave the learner's device and reach the model
-provider you configured. The app says "Tutor server" — it does not claim the
-model runs locally. If that matters for your audience, use §7.2 instead.
-
-### 7.2 Self-hosted model (no account, no bill, real electricity)
-
-```bash
-ollama pull qwen2.5:1.5b          # ~1 GB, Apache-2.0
-OLLAMA_ORIGINS='*' ollama serve   # dev only — restrict in production
-
-neon functions deploy api --src functions/api/index.ts \
-  --env AI_API_URL=http://127.0.0.1:11434/v1 \
-  --env AI_MODEL=qwen2.5:1.5b --env AI_STT_ENABLED=false --wait
-```
-
-Any OpenAI-compatible server works the same way (llama.cpp, LM Studio, vLLM,
-LocalAI). Qwen2.5 documents 14 of the 25 atlas languages; the other eleven show as
-unverified rather than being silently guessed at.
-
+Any OpenAI-compatible server can be used behind the gateway (Ollama, llama.cpp,
+LM Studio, vLLM, or LocalAI). Use a private network or authenticated HTTPS
+gateway for real devices; a localhost URL on the phone does not refer to the
+developer's computer.
 ### 7.3 Voice input
 
 Priority: server transcription (if enabled) → **browser Whisper** → typing.
