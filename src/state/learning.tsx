@@ -121,7 +121,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
   const [dueCount, setDueCount] = useState(0);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  /** Pushes a state snapshot to the Supabase backend (no-op outside Neon mode). */
+  /** Pushes a state snapshot to Supabase when configured. */
   const pushState = useCallback(
     async (nextProgress: ProgressMap, nextVocab: Record<string, VocabItem>) => {
       if (!isSupabaseConfigured) return;
