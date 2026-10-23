@@ -182,10 +182,16 @@ test('eas.json configures public Supabase env vars for all cloud build profiles'
 test('STORE_RELEASE.md matches app version, privacy publishing step, and 25-language catalog', () => {
   const storeDoc = read('docs/STORE_RELEASE.md');
   assert.ok(storeDoc.includes(`\`${app.expo.version}\``), 'STORE_RELEASE.md version drifted from app.json');
-  // Native-only: there is no web app to link to. The doc must instead
-  // tell the owner to publish docs/PRIVACY.md at a public URL first.
+  // Native-only: there is no browser app to link to. Stores instead get
+  // the static public copies under website/, using the verified
+  // production Vercel domain rather than an assumed or preview hostname.
   assert.ok(storeDoc.includes('docs/PRIVACY.md'), 'STORE_RELEASE.md must point at docs/PRIVACY.md as the policy source');
-  assert.ok(!storeDoc.includes('babelish.vercel.app'), 'STORE_RELEASE.md must not link the removed web app');
+  assert.ok(storeDoc.includes('website/privacy.html'), 'STORE_RELEASE.md must identify the public static privacy page');
+  assert.ok(storeDoc.includes('website/terms.html'), 'STORE_RELEASE.md must identify the public static terms page');
+  assert.ok(storeDoc.includes('/privacy') && storeDoc.includes('/terms'), 'STORE_RELEASE.md must give both clean legal routes');
+  assert.ok(storeDoc.includes('verified Vercel production domain'), 'STORE_RELEASE.md must require the verified production domain');
+  assert.ok(!storeDoc.includes('babelish.vercel.app'), 'STORE_RELEASE.md must not assume the old web-app hostname');
+  assert.ok(!storeDoc.includes('GitHub Pages'), 'STORE_RELEASE.md must not send legal publishing back to GitHub Pages');
   assert.ok(storeDoc.includes('25 LANGUAGES, REAL COURSES'), 'STORE_RELEASE.md language count drifted');
   assert.ok(!storeDoc.includes('Urdu'), 'STORE_RELEASE.md must not list unshipped languages');
 });

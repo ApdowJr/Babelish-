@@ -15,7 +15,7 @@
  *
  * Exit codes: 0 = clear to build, 1 = blockers, 2 = warnings only.
  */
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -149,28 +149,136 @@ if (JSON.stringify([...platforms].sort()) !== JSON.stringify(['android', 'ios'])
   block(`app.json platforms must be ["android","ios"] only, found ${JSON.stringify(platforms)}`);
 }
 if ('web' in app) block('app.json still has a "web" section — Babelish is native-only, remove it');
-// vercel.json is allowed ONLY as a kill switch that turns Vercel's Git
-// deployments OFF (git.deploymentEnabled: false — per Vercel's Git
-// Configuration docs, "To turn off automatic deployments for all
-// branches, set the property value to false"). The Vercel GitHub App is
-// still connected to this repo; without this file it tries to build a
-// web app that no longer exists and fails every PR check. Any key that
-// would actually build/deploy something is a blocker.
+// Vercel is allowed to deploy only the committed static download/legal site
+// in website/. Framework Preset Other (framework: null) plus empty
+// install/build commands prevent Vercel from falling back to package.json's
+// Android Expo export. Any config or output drift could revive a browser app
+// or publish generated files, so the contract is intentionally exact.
 try {
   const vercel = JSON.parse(read('vercel.json'));
-  const topKeys = Object.keys(vercel).filter((key) => key !== '$schema');
-  if (vercel['$schema'] !== undefined && vercel['$schema'] !== 'https://openapi.vercel.sh/vercel.json') {
-    block('vercel.json $schema must be Vercel\'s own schema URL');
+  const expectedVercel = {
+    $schema: 'https://openapi.vercel.sh/vercel.json',
+    framework: null,
+    installCommand: '',
+    buildCommand: '',
+    outputDirectory: 'website',
+    cleanUrls: true,
+    trailingSlash: false,
+    git: { deploymentEnabled: true },
+    headers: [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'",
+          },
+          { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=()' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+    ],
+  };
+  const stable = (value) =>
+    Array.isArray(value)
+      ? value.map(stable)
+      : value && typeof value === 'object'
+        ? Object.fromEntries(
+            Object.entries(value)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([key, child]) => [key, stable(child)])
+          )
+        : value;
+  if (JSON.stringify(stable(vercel)) !== JSON.stringify(stable(expectedVercel))) {
+    block('vercel.json drifted from the exact static download/legal-site contract');
   }
-  if (JSON.stringify(topKeys) !== JSON.stringify(['git'])) {
-    block(`vercel.json may only contain "git" (deployments off), found: ${topKeys.join(', ') || '(none)'}`);
+
+  const websiteRoot = path.join(root, 'website');
+  if (!existsSync(websiteRoot)) {
+    block('website/ is missing — Vercel must deploy only the static download/legal site');
+  } else {
+    const listFiles = (dir, base = dir) =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        return entry.isDirectory()
+          ? listFiles(full, base)
+          : [path.relative(base, full).split(path.sep).join('/')];
+      });
+    const websiteFiles = listFiles(websiteRoot).sort();
+    const expectedWebsiteFiles = [
+      '404.html',
+      'feature-graphic.png',
+      'icon.png',
+      'index.html',
+      'privacy.html',
+      'robots.txt',
+      'styles.css',
+      'terms.html',
+    ];
+    if (JSON.stringify(websiteFiles) !== JSON.stringify(expectedWebsiteFiles)) {
+      block(`website/ must contain exactly ${expectedWebsiteFiles.join(', ')}; found: ${websiteFiles.join(', ') || '(none)'}`);
+    }
+    if (websiteFiles.some((file) => /\.(?:cjs|js|jsx|mjs|ts|tsx)$/i.test(file))) {
+      block('website/ contains JavaScript/TypeScript — the public site must be static HTML/CSS only');
+    }
+
+    const maybeRead = (file) => (existsSync(path.join(root, file)) ? read(file) : '');
+    const index = maybeRead('website/index.html');
+    const privacy = maybeRead('website/privacy.html');
+    const terms = maybeRead('website/terms.html');
+    const notFound = maybeRead('website/404.html');
+    const robots = maybeRead('website/robots.txt');
+    const styles = maybeRead('website/styles.css');
+    const allSiteText = [index, privacy, terms, notFound, robots, styles].join('\n');
+    for (const forbidden of [/<script\b/i, /<iframe\b/i, /<form\b/i, /_expo\b/i, /expo\s+export/i, /react-native-web/i, /localhost/i, /127\.0\.0\.1/]) {
+      if (forbidden.test(allSiteText)) block(`website/ contains forbidden web-app marker: ${forbidden}`);
+    }
+
+    const requiredIndexText = [
+      app.version,
+      'https://github.com/ApdowJr/Babelish-/actions/runs/39998390132',
+      'babelish-android-apk',
+      '2026-11-22',
+      'ZIP',
+      'APK',
+      'not a web app',
+      'cannot be installed on a physical iPhone',
+      'Apple Developer Program ($99/year)',
+      'TestFlight',
+      'href="/privacy"',
+      'href="/terms"',
+    ];
+    for (const text of requiredIndexText) {
+      if (!index.includes(text)) block(`website/index.html is missing required text: ${text}`);
+    }
+    if (!privacy.includes('Last updated: 2026-10-23') || !privacy.includes('support@zelvoca.app')) {
+      block('website/privacy.html date or support contact drifted');
+    }
+    if (!privacy.includes('JSON via the system share sheet') || privacy.includes('JSON download on web')) {
+      block('website/privacy.html must describe only the native system-share-sheet export');
+    }
+    if (!terms.includes('Last updated: 2026-10-23') || !terms.includes('support@zelvoca.app')) {
+      block('website/terms.html date or support contact drifted');
+    }
+    if (robots.trim() !== 'User-agent: *\nAllow: /') {
+      block('website/robots.txt must be exactly the permissive two-line policy');
+    }
+
+    const sameBytes = (left, right) =>
+      existsSync(path.join(root, left)) &&
+      existsSync(path.join(root, right)) &&
+      readFileSync(path.join(root, left)).equals(readFileSync(path.join(root, right)));
+    if (!sameBytes('website/icon.png', 'assets/store/play-icon-512.png')) {
+      block('website/icon.png must be an exact copy of assets/store/play-icon-512.png');
+    }
+    if (!sameBytes('website/feature-graphic.png', 'assets/store/feature-graphic.png')) {
+      block('website/feature-graphic.png must be an exact copy of assets/store/feature-graphic.png');
+    }
   }
-  const gitKeys = Object.keys(vercel.git ?? {});
-  if (JSON.stringify(gitKeys) !== JSON.stringify(['deploymentEnabled']) || vercel.git?.deploymentEnabled !== false) {
-    block('vercel.json git must be exactly {"deploymentEnabled": false} — no Vercel deployment may ever run');
-  }
-} catch {
-  block('vercel.json is missing or invalid — keep the disable-only kill switch so the connected Vercel app never builds this native-only repo');
+} catch (error) {
+  block(`vercel.json/website validation failed: ${error.message}`);
 }
 const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 for (const webDep of ['react-native-web', 'react-dom', '@expo/metro-runtime']) {
@@ -180,17 +288,22 @@ for (const webScript of ['web', 'build:web']) {
   if (pkg.scripts?.[webScript]) block(`package.json script "${webScript}" is a web target — remove it`);
 }
 if (!blockers.some((msg) => /web|vercel|platforms/i.test(msg))) {
-  ok('native-only: Android + iOS only, no web deps/scripts, Vercel deployments disabled');
+  ok('native-only app: Android + iOS only; Vercel serves only the static download/legal site');
 }
 
 // ── legal + eas ─────────────────────────────────────────────────────────────
-for (const route of ['src/app/privacy.tsx', 'src/app/terms.tsx']) {
+for (const route of ['src/app/privacy.tsx', 'src/app/terms.tsx', 'website/privacy.html', 'website/terms.html']) {
   if (!existsSync(path.join(root, route))) block(`${route} is missing — both stores need reachable legal pages`);
 }
-if (!existsSync(path.join(root, 'src/app/privacy.tsx')) || !existsSync(path.join(root, 'src/app/terms.tsx'))) {
+if (
+  !existsSync(path.join(root, 'src/app/privacy.tsx')) ||
+  !existsSync(path.join(root, 'src/app/terms.tsx')) ||
+  !existsSync(path.join(root, 'website/privacy.html')) ||
+  !existsSync(path.join(root, 'website/terms.html'))
+) {
   // already reported above
 } else {
-  ok('privacy and terms routes exist');
+  ok('privacy and terms exist in-app and as public static pages');
 }
 
 let eas = null;

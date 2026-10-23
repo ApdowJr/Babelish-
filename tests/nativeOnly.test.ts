@@ -4,16 +4,29 @@
  * shaqeyo web lama rabo" — convert to APK only, work on Android and
  * iPhone, no web).
  *
- * These tests read the real config files so the web target cannot creep
- * back in through a dependency, a script, a deployment file, or CI.
+ * These tests read the real config files so the Expo web target cannot creep
+ * back in through a dependency, a script, a deployment file, or CI. The one
+ * approved public web surface is the committed static download/legal site in
+ * `website/`; it contains no app bundle, routes, scripts, or lesson player.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
+const listFiles = (relativeDir: string): string[] => {
+  const base = path.join(root, relativeDir);
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      return entry.isDirectory()
+        ? walk(full)
+        : [path.relative(base, full).split(path.sep).join('/')];
+    });
+  return walk(base).sort();
+};
 
 test('app.json targets exactly Android + iOS and declares no web section', () => {
   const app = JSON.parse(read('app.json')) as {
@@ -51,25 +64,128 @@ test('the phone build scripts exist (APK, AAB, iPhone)', () => {
   assert.ok(existsSync(path.join(root, 'scripts/build-apk-local.sh')), 'local APK script missing');
 });
 
-test('no web deployment happens: vercel.json is a disable-only kill switch', () => {
-  // The Vercel GitHub App is still connected to this repo. With no
-  // vercel.json it auto-detects a web build and fails every PR (that
-  // was the PR #34 "Vercel: FAILURE" check). Vercel's documented fix is
-  // git.deploymentEnabled: false — "To turn off automatic deployments
-  // for all branches, set the property value to false" — so no
-  // deployment is ever created. The file must contain NOTHING else:
-  // any build/framework/output key would mean a web app is back.
+test('Vercel deploys only the static download/legal site, never the Expo app', () => {
+  // The owner approved a static download/legal page after the native-only
+  // conversion, not a browser version of Babelish. Keep the config exact:
+  // Framework Preset Other (`null`), empty install/build commands so Vercel
+  // cannot fall back to package.json's Android export, and output limited to
+  // committed static files under website/.
   const vercel = JSON.parse(read('vercel.json')) as Record<string, unknown>;
   assert.deepEqual(vercel, {
     $schema: 'https://openapi.vercel.sh/vercel.json',
-    git: { deploymentEnabled: false },
+    framework: null,
+    installCommand: '',
+    buildCommand: '',
+    outputDirectory: 'website',
+    cleanUrls: true,
+    trailingSlash: false,
+    git: { deploymentEnabled: true },
+    headers: [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'",
+          },
+          { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=()' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+    ],
   });
-  assert.ok(!existsSync(path.join(root, 'assets/favicon.png')), 'web favicon must stay removed');
+  assert.ok(!existsSync(path.join(root, 'assets/favicon.png')), 'Expo web favicon must stay removed');
   const ignore = read('.gitignore');
-  assert.ok(!ignore.includes('web-build/'), '.gitignore should not mention web builds');
+  assert.ok(!ignore.includes('web-build/'), '.gitignore should not mention Expo web builds');
   for (const bin of ['*.apk', '*.aab', '*.ipa']) {
     assert.ok(ignore.includes(bin), `${bin} binaries must be gitignored, not committed`);
   }
+});
+
+test('the Vercel output is only static download/legal files with honest platform copy', () => {
+  assert.deepEqual(listFiles('website'), [
+    '404.html',
+    'feature-graphic.png',
+    'icon.png',
+    'index.html',
+    'privacy.html',
+    'robots.txt',
+    'styles.css',
+    'terms.html',
+  ]);
+
+  const index = read('website/index.html');
+  const privacy = read('website/privacy.html');
+  const terms = read('website/terms.html');
+  const notFound = read('website/404.html');
+  const styles = read('website/styles.css');
+  const allSiteText = [index, privacy, terms, notFound, styles, read('website/robots.txt')].join('\n');
+
+  for (const forbidden of [
+    /<script\b/i,
+    /<iframe\b/i,
+    /<form\b/i,
+    /_expo\b/i,
+    /expo\s+export/i,
+    /react-native-web/i,
+    /localhost/i,
+    /127\.0\.0\.1/,
+  ]) {
+    assert.ok(!forbidden.test(allSiteText), `static site must not contain ${forbidden}`);
+  }
+
+  const app = JSON.parse(read('app.json')) as { expo: { version: string } };
+  assert.ok(index.includes(app.expo.version), 'download page version drifted from app.json');
+  assert.ok(
+    index.includes('https://github.com/ApdowJr/Babelish-/actions/runs/39998390132'),
+    'Android card must link the real successful APK run'
+  );
+  assert.ok(index.includes('babelish-android-apk'), 'Android instructions must name the real artifact');
+  assert.ok(index.includes('not a web app'), 'landing page must say it is not a web app');
+  assert.ok(
+    index.includes('cannot be installed on a physical iPhone'),
+    'iPhone copy must not pretend the simulator build installs on a real device'
+  );
+  assert.ok(index.includes('Apple Developer Program ($99/year)'), 'iPhone cost must stay explicit');
+  assert.ok(index.includes('href="/privacy"') && index.includes('href="/terms"'), 'legal links missing');
+
+  for (const heading of [
+    'The short version',
+    'What lives only on your device',
+    'What syncs when you sign in',
+    'Microphone audio',
+    'AI tutor content',
+    'Children',
+    'Your rights',
+  ]) {
+    assert.ok(privacy.includes(heading), `static privacy is missing: ${heading}`);
+    assert.ok(read('src/app/privacy.tsx').includes(heading), `app privacy heading drifted: ${heading}`);
+  }
+  assert.ok(privacy.includes('Operators &amp; subprocessors'), 'static privacy subprocessors missing');
+  assert.ok(privacy.includes('Last updated: 2026-10-23'), 'static privacy date drifted');
+  assert.ok(privacy.includes('JSON via the system share sheet'), 'static privacy must describe the native export');
+  assert.ok(!privacy.includes('JSON download on web'), 'static privacy must not revive a web download claim');
+
+  for (const heading of [
+    'The short version',
+    'Your account',
+    'Acceptable use',
+    'The AI tutor is a learning aid',
+    'Free service, honest limits',
+    'Your content, our software',
+    'Availability and liability',
+    'Ending it',
+    'Privacy',
+    'Contact',
+  ]) {
+    assert.ok(terms.includes(heading), `static terms is missing: ${heading}`);
+    assert.ok(read('src/app/terms.tsx').includes(heading), `app terms heading drifted: ${heading}`);
+  }
+  assert.ok(terms.includes('Last updated: 2026-10-23'), 'static terms date drifted');
+  assert.ok(terms.includes('support@zelvoca.app'), 'static terms support contact missing');
+  assert.equal(read('website/robots.txt').trim(), 'User-agent: *\nAllow: /');
 });
 
 test('CI bundles Android + iOS and never the web platform', () => {
@@ -114,4 +230,7 @@ test('the build guide documents APK + the honest iPhone limits in Somali and Eng
   assert.match(guide, /Apple Developer/);
   assert.match(guide, /\$99/, 'guide must state the Apple Developer cost honestly');
   assert.match(guide, /GitHub Actions/);
+  assert.match(guide, /website\/privacy\.html/, 'guide must identify the static public privacy copy');
+  assert.match(guide, /static download\/legal/i, 'guide must keep the Vercel exception narrow');
+  assert.ok(!guide.includes('deploymentEnabled: false'), 'guide must not describe the removed kill switch as current');
 });
