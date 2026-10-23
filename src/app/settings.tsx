@@ -75,7 +75,7 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors, isDark } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, getAccessToken } = useAuth();
   const prefs = usePreferences();
   const {
     setDailyGoal,
