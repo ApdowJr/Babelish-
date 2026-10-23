@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * Local review dashboard — the Phase 4 human-approval gate, runnable today
- * without deploying anything. Serves the SAME shared logic the `api` Function
- * exposes at /admin (functions/api/admin.ts) straight against DATABASE_URL.
+ * Local review dashboard — a human-approval gate backed by PostgreSQL.
+ * Uses the shared review logic in functions/api/admin.ts against DATABASE_URL.
  *
  * Run:   npm run review:dashboard       → http://127.0.0.1:8788/admin
  * Auth:  HTTP Basic — admin / $ADMIN_PASSWORD (default "zelvoca", localhost only)
  *
- * Reads .env.local (written by `neon deploy`). Never prints secrets.
+ * Reads DATABASE_URL from .env.local or the shell; never prints secrets.
  */
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
