@@ -33,5 +33,9 @@ test('progressKeysForUser and deletionKeysForUser isolate second accounts from f
   const deleteOwner = deletionKeysForUser('user-a', 'user-a');
   const deleteSecond = deletionKeysForUser('user-b', 'user-a');
   assert.ok(deleteOwner.includes(LEGACY_OWNER_KEY));
+  assert.ok(deleteOwner.includes('zelvoca:subscription:u:user-a'));
+  assert.ok(deleteOwner.includes('zelvoca:subscription'));
   assert.ok(!deleteSecond.includes(LEGACY_OWNER_KEY));
+  assert.ok(deleteSecond.includes('zelvoca:subscription:u:user-b'));
+  assert.ok(!deleteSecond.includes('zelvoca:subscription'));
 });

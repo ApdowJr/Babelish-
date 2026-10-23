@@ -42,7 +42,7 @@ export default function ReviewScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const { vocab, ready, reviewWord, wordsMastered } = useLearning();
-  const { state: analytics } = useAnalytics();
+  const { state: analytics, logEvent } = useAnalytics();
   const { targetLanguageId } = usePreferences();
 
   // Snapshot the due queue ONCE when the store is ready — recomputing it as
@@ -96,6 +96,9 @@ export default function ReviewScreen() {
 
   function advance() {
     if (!queue || index >= queue.length - 1) {
+      if (queue && queue.length > 0 && !done) {
+        logEvent('review_completed');
+      }
       setDone(true);
       return;
     }

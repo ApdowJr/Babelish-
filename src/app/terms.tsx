@@ -16,7 +16,7 @@ export default function TermsRoute() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Babelish — Terms of Service</Text>
-      <Text style={styles.meta}>Last updated: 2026-10-22 · applies to Babelish 3.2 and later</Text>
+      <Text style={styles.meta}>Last updated: 2026-10-23 · applies to Babelish 3.4 and later</Text>
 
       <Text style={styles.h2}>The short version</Text>
       <Text style={styles.p}>

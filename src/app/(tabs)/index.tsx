@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,7 +64,7 @@ export default function HomeScreen() {
     Animated.timing(fade, {
       toValue: 1,
       duration: 460,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [fade]);
 

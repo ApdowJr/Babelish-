@@ -21,8 +21,9 @@ import { showAlert } from '@/lib/alert';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences, languageName } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
-import { useProfile } from '@/state/profile';
+import { DEFAULT_PROFILE, useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
+import { useSubscription } from '@/state/subscription';
 import { DAILY_GOALS, VOICE_SPEEDS } from '@/lib/preferenceRules';
 import { LANGUAGES, getLanguage } from '@/data/languages';
 import { filterSettings } from '@/lib/settingsSearch';
@@ -76,7 +77,7 @@ const VOICE_LABELS: Record<(typeof VOICE_SPEEDS)[number], string> = {
 export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors, isDark } = useTheme();
-  const { user, signOut, getAccessToken } = useAuth();
+  const { user, signOut, getAccessToken, isDemo } = useAuth();
   const prefs = usePreferences();
   const {
     setDailyGoal,
@@ -89,8 +90,9 @@ export default function SettingsScreen() {
     setThemeMode,
   } = prefs;
   const { progress, vocab, resetLearning } = useLearning();
-  const { profile } = useProfile();
+  const { profile, saveProfile } = useProfile();
   const { state: analytics, resetAnalytics } = useAnalytics();
+  const { resetSubscription } = useSubscription();
 
   const [query, setQuery] = useState('');
   const [languagePicker, setLanguagePicker] = useState(false);
@@ -98,7 +100,7 @@ export default function SettingsScreen() {
   const [pack, setPack] = useState<{ chapters: number; exercises: number; kb: number } | null>(null);
 
   const target = getLanguage(prefs.targetLanguageId);
-  const version = Constants.expoConfig?.version ?? '3.1.0';
+  const version = Constants.expoConfig?.version ?? '3.4.0';
 
   // A live probe, not a stored flag: the row must say what is true now.
   useEffect(() => {
@@ -132,8 +134,17 @@ export default function SettingsScreen() {
     };
   }, [prefs.targetLanguageId]);
 
+  const webSpeechSupported =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    Boolean(
+      (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
+        .SpeechRecognition ??
+        (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
+          .webkitSpeechRecognition
+    );
   const tutorLive = aiStatus?.chat === true;
-  const voiceLive = aiStatus?.stt === true;
+  const voiceLive = aiStatus?.stt === true || webSpeechSupported;
 
   async function pickReminder(hour: number, minute: number, turningOff: boolean) {
     if (turningOff) {
@@ -160,21 +171,50 @@ export default function SettingsScreen() {
   }
 
   function exportMyData() {
+    const payload = buildDataExport({
+      profile,
+      preferences: {
+        targetLanguageId: prefs.targetLanguageId,
+        nativeLanguageId: prefs.nativeLanguageId,
+        reminderKey: prefs.reminderKey,
+      },
+      progress,
+      vocab,
+      analytics,
+    });
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      try {
+        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `babelish-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showAlert('Export downloaded', 'Your Babelish data export was saved as a JSON file.');
+        return;
+      } catch {
+        // Fall through to Share / clipboard below.
+      }
+    }
+
     void Share.share({
       title: 'Babelish data export',
-      message: buildDataExport({
-        profile,
-        preferences: {
-          targetLanguageId: prefs.targetLanguageId,
-          nativeLanguageId: prefs.nativeLanguageId,
-          reminderKey: prefs.reminderKey,
-        },
-        progress,
-        vocab,
-        analytics,
-      }),
-    }).catch(() => {
-      // Sharing dismissed — nothing to report.
+      message: payload,
+    }).catch(async () => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(payload);
+          showAlert('Export copied', 'Your Babelish data export JSON was copied to your clipboard.');
+          return;
+        } catch {
+          // Ignore clipboard errors.
+        }
+      }
+      showAlert('Export unavailable', 'Could not open the share sheet on this device.');
     });
   }
 
@@ -205,9 +245,40 @@ export default function SettingsScreen() {
   }
 
   function confirmDeleteAccount() {
+    if (!user) {
+      showAlert('Sign in required', 'Sign in to your account before requesting account deletion.');
+      return;
+    }
     const client = supabase;
-    if (!user || !client) {
-      showAlert('Sign in required', 'Sign in to your Supabase account before requesting account deletion.');
+    if (isDemo || !client) {
+      showAlert(
+        'Delete demo account?',
+        'This clears your local demo account, profile, progress, vocabulary and saved tutor conversations on this device. This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete permanently',
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  await clearLearningStorage(user.id);
+                  await clearConversations(ownerIdFor(user.id));
+                  await clearAllAccountLocalData(user.id);
+                  await resetAnalytics();
+                  await resetLearning();
+                  saveProfile(DEFAULT_PROFILE);
+                  await resetSubscription();
+                  await signOut();
+                } finally {
+                  showAlert('Account deleted', 'Your demo account and local learning data were deleted.');
+                  router.replace('/login');
+                }
+              })();
+            },
+          },
+        ]
+      );
       return;
     }
     showAlert(
@@ -238,12 +309,14 @@ export default function SettingsScreen() {
                 await clearLearningStorage(user.id);
                 await clearConversations(ownerIdFor(user.id));
                 await clearAllAccountLocalData(user.id);
-                resetAnalytics();
-                resetLearning();
+                await resetAnalytics();
+                await resetLearning();
+                saveProfile(DEFAULT_PROFILE);
+                await resetSubscription();
               } finally {
                 showAlert(
                   'Account deleted',
-                  'Your Supabase account was deleted. If this device still shows saved learning data, clear Babelish storage in Android settings.'
+                  'Your Supabase account and cloud data were deleted, and saved data on this device was cleared.'
                 );
                 router.replace('/login');
               }
@@ -401,26 +474,30 @@ export default function SettingsScreen() {
             keywords: 'native language translation',
             onPress: () => setLanguagePicker(true),
           },
-          {
-            id: 'reminder',
-            kind: 'chips',
-            icon: 'notifications-outline',
-            label: 'Daily reminder',
-            hint: prefs.reminderKey
-              ? `Set for ${prefs.reminderKey} — tap it again to turn it off.`
-              : 'Off — pick a time for one calm reminder.',
-            keywords: 'notification alarm time nudge',
-            options: reminderOptions,
-          },
-          {
-            id: 'test-reminder',
-            kind: 'nav',
-            icon: 'notifications-circle-outline',
-            label: 'Send a test reminder',
-            hint: 'Checks the permission without waiting for your reminder time',
-            keywords: 'notification test try check',
-            onPress: () => void testReminder(),
-          },
+          ...(Platform.OS === 'web'
+            ? []
+            : ([
+                {
+                  id: 'reminder',
+                  kind: 'chips',
+                  icon: 'notifications-outline',
+                  label: 'Daily reminder',
+                  hint: prefs.reminderKey
+                    ? `Set for ${prefs.reminderKey} — tap it again to turn it off.`
+                    : 'Off — pick a time for one calm reminder.',
+                  keywords: 'notification alarm time nudge',
+                  options: reminderOptions,
+                },
+                {
+                  id: 'test-reminder',
+                  kind: 'nav',
+                  icon: 'notifications-circle-outline',
+                  label: 'Send a test reminder',
+                  hint: 'Checks the permission without waiting for your reminder time',
+                  keywords: 'notification test try check',
+                  onPress: () => void testReminder(),
+                },
+              ] as Row[])),
           {
             id: 'translation',
             kind: 'toggle',
@@ -490,7 +567,12 @@ export default function SettingsScreen() {
             kind: 'info',
             icon: 'mic-outline',
             label: 'Voice input',
-            hint: voiceLive ? 'Transcription is available' : 'Not configured — type your replies',
+            hint:
+              aiStatus?.stt === true
+                ? 'Transcription is available'
+                : webSpeechSupported
+                  ? 'Browser speech recognition is available'
+                  : 'Not configured — type your replies',
             detail: voiceLive ? 'Ready' : 'Off',
             keywords: 'speech microphone stt',
           },

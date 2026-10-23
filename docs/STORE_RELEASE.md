@@ -14,7 +14,7 @@ Run `npm run check:release` before every upload — it blocks the mistakes that 
 | App name / slug | Babelish / `babelish` | `app.json` |
 | Android package | `app.zelvoca.babelish` | `app.json` |
 | iOS bundle id | `app.zelvoca.babelish` | `app.json` |
-| Version | `3.2.0` (must match `package.json`) | `app.json`, `package.json` |
+| Version | `3.4.0` (must match `package.json`) | `app.json`, `package.json` |
 | Android versionCode | `30400` = major·10000 + minor·100 + patch | `app.json` |
 | Permissions | `RECORD_AUDIO`, `POST_NOTIFICATIONS` only | `app.json` |
 | iOS mic string | set | `app.json` → `ios.infoPlist` |
@@ -62,7 +62,7 @@ Create the app, then fill **App content**. Each answer below is what the code ac
 
 | Declaration | Answer | Why |
 |---|---|---|
-| Privacy policy URL | `https://zelvoca.app/privacy` | `/privacy` is a real route, not a placeholder |
+| Privacy policy URL | `https://babelish.vercel.app/privacy` | `/privacy` is a real route, not a placeholder |
 | Ads | **No ads** | no ad SDK in `package.json` |
 | In-app purchases | **No** | the plan screens are informational; nothing is sold |
 | Content rating | fill the questionnaire honestly | no violence, no user-generated public content, no gambling |
@@ -106,11 +106,11 @@ are learning, gently recasts your mistakes with the reason, and follows up on wh
 actually said. It knows which lesson you are on, so its examples match the course you are
 working through — not a generic textbook.
 
-── 24 LANGUAGES, REAL COURSES ──
-Spanish, French, Arabic, Hindi, Swahili, Bengali, Urdu, Persian, Turkish, Indonesian,
-Japanese, Korean, Mandarin, German, Portuguese, Italian, Russian, Dutch, Swedish, Polish,
-Ukrainian, Greek, Hebrew and Somali. 101 chapters, 212 lessons and 1,744 exercises ship
-inside the app and work offline.
+── 25 LANGUAGES, REAL COURSES ──
+Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Polish, Russian, Ukrainian,
+Greek, Turkish, Arabic, Hebrew, Persian, Hindi, Bengali, Mandarin Chinese, Japanese,
+Korean, Vietnamese, Thai, Indonesian, Swahili and Somali. Offline chapters, lessons and
+exercises ship inside the app and work without an internet connection.
 
 ── A REAL VOICE ──
 Tap the mic, speak your reply, and see the transcript. Play any line again, or slow it
@@ -145,13 +145,11 @@ in the repository.
 **What's new** (≤ 500 chars):
 
 ```
-New in 3.2:
-• A profile you control — avatar, bio, interests and goals, used to make the tutor talk
-  about your life instead of someone else's.
-• A redesigned, searchable Settings screen: reminders, voice speed, read-aloud,
-  translations and reduced motion.
-• A new look — mark, app icon and animated splash.
-• Terms of Service are now in the app.
+New in 3.4:
+• Full Supabase Auth, progress sync, spaced-repetition sync and in-app account deletion.
+• 25 bundled offline language courses with browser + cloud speech recognition support.
+• Per-account local storage isolation on shared devices and JSON data export on web & mobile.
+• Public Privacy Policy and Terms of Service routes accessible before and after sign-in.
 ```
 
 ---

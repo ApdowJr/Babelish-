@@ -35,8 +35,17 @@ export default function EditProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { profile, saveProfile } = useProfile();
+  const { profile, ready, saveProfile } = useProfile();
   const [draft, setDraft] = useState<LearnerProfile>(profile);
+  const [hydrated, setHydrated] = useState(ready);
+  const [dirty, setDirty] = useState(false);
+
+  if (ready && !hydrated) {
+    setHydrated(true);
+    if (!dirty) {
+      setDraft(profile);
+    }
+  }
 
   const changed = useMemo(
     () => (Object.keys(draft) as (keyof LearnerProfile)[]).some((key) => {
@@ -56,6 +65,7 @@ export default function EditProfileScreen() {
     draft.goals.length;
 
   function patch(update: Partial<LearnerProfile>) {
+    setDirty(true);
     setDraft((current) => ({ ...current, ...update }));
   }
 

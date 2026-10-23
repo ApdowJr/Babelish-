@@ -1,4 +1,4 @@
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,10 +53,30 @@ export default function ProfileScreen() {
   const myReferralCode = referralCode(user?.id ?? 'babelish-demo');
 
   function shareReferral() {
-    void Share.share({
-      message: `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get supporter perks at launch. https://zelvoca.app`,
-    }).catch(() => {
-      // sharing dismissed — nothing to do
+    const message = `I'm learning ${target.name} with Babelish 🌍 — use my code ${myReferralCode} when you sign up and we both get supporter perks at launch. https://babelish.vercel.app`;
+    if (Platform.OS === 'web') {
+      const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+      if (nav?.share) {
+        void nav.share({ title: 'Learn with me on Babelish', text: message }).catch(() => {});
+        return;
+      }
+      if (nav?.clipboard?.writeText) {
+        void nav.clipboard
+          .writeText(message)
+          .then(() => {
+            showAlert('Invite copied', `Copied your invite link and code (${myReferralCode}) to the clipboard.`);
+          })
+          .catch(() => {
+            showAlert('Your invite code', message);
+          });
+        return;
+      }
+      showAlert('Your invite code', message);
+      return;
+    }
+
+    void Share.share({ message }).catch(() => {
+      showAlert('Your invite code', message);
     });
   }
 
@@ -335,7 +355,7 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Ionicons name="globe-outline" size={14} color={colors.textFaint} />
         <Text style={styles.footerText}>
-          Babelish v{Constants.expoConfig?.version ?? '3.2.0'} · {LANGUAGES.length} languages · free
+          Babelish v{Constants.expoConfig?.version ?? '3.4.0'} · {LANGUAGES.length} languages · free
         </Text>
       </View>
       <Text style={styles.footerSub}>Made for curious people everywhere.</Text>
