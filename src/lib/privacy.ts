@@ -6,7 +6,7 @@
  * Babelish's privacy stance (docs/PRIVACY.md):
  *  - practice events, XP, streaks and profile live ON THIS DEVICE;
  *  - cloud sync covers progress + vocabulary only, under the learner's own
- *    Neon account — never ads, never third-party trackers;
+ *    Supabase account — never ads, never third-party trackers;
  *  - microphone audio is transcribed (when cloud STT is configured) and then
  *    discarded — it is never stored by Babelish.
  */
