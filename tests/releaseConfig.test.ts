@@ -160,3 +160,39 @@ test('the Android notification channel matches between code and config', () => {
   assert.equal(plugin[1].icon, './assets/notification-icon.png');
   assert.equal(plugin[1].color, '#0F4C3A');
 });
+
+test('eas.json configures public Supabase env vars for all cloud build profiles', () => {
+  const eas = JSON.parse(read('eas.json')) as {
+    build: Record<string, { env?: Record<string, string> }>;
+  };
+  for (const profile of ['development', 'preview', 'production']) {
+    const env = eas.build[profile]?.env ?? {};
+    assert.match(env.EXPO_PUBLIC_SUPABASE_URL ?? '', /^https:\/\/[a-z0-9]+\.supabase\.co$/);
+    assert.match(env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '', /^sb_publishable_/);
+  }
+});
+
+test('STORE_RELEASE.md matches app version, live privacy URL, and 25-language catalog', () => {
+  const storeDoc = read('docs/STORE_RELEASE.md');
+  assert.ok(storeDoc.includes(`\`${app.expo.version}\``), 'STORE_RELEASE.md version drifted from app.json');
+  assert.ok(storeDoc.includes('https://babelish.vercel.app/privacy'), 'STORE_RELEASE.md missing live privacy URL');
+  assert.ok(storeDoc.includes('25 LANGUAGES, REAL COURSES'), 'STORE_RELEASE.md language count drifted');
+  assert.ok(!storeDoc.includes('Urdu'), 'STORE_RELEASE.md must not list unshipped languages');
+});
+
+test('ReviewScreen logs review_completed and LessonScreen resets state on routeKey changes', () => {
+  const reviewSrc = read('src/app/review.tsx');
+  assert.ok(
+    reviewSrc.includes("logEvent('review_completed')"),
+    'ReviewScreen must log review_completed so XP, streak, and badges update'
+  );
+  const lessonSrc = read('src/app/lesson/[id].tsx');
+  assert.ok(
+    lessonSrc.includes('if (activeKey !== routeKey)'),
+    'LessonScreen must reset player state when advancing to nextLessonId'
+  );
+  assert.ok(
+    lessonSrc.includes("exercise.type !== 'speak' && answered === null"),
+    'LessonScreen advance() must not deadlock on speak exercises'
+  );
+});

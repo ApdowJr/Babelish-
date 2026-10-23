@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 import {
   consumeScenario,
   canStartScenario,
@@ -8,12 +8,13 @@ import {
   type ScenarioDecision,
   type ScenarioState,
 } from '@/lib/plans';
+import { readScopedItem, removeScopedItem, writeScopedItem } from '@/lib/scopedStorage';
 
 /**
  * Free tier = 1 new scenario per day, premium = unlimited — enforced
- * on-device like every other Zelvoca state (billing integration ships at
- * launch; the beta code stands in until then). The day rolls lazily, so
- * midnight needs no timer and no network.
+ * on-device per account like every other Babelish state (billing integration
+ * ships at launch; the beta code stands in until then). The day rolls lazily,
+ * so midnight needs no timer and no network.
  */
 type SubscriptionValue = {
   scenario: ScenarioState;
@@ -26,6 +27,8 @@ type SubscriptionValue = {
   redeem: (code: string) => string | null;
   /** Leave premium (used by tests / support). */
   resetToFree: () => void;
+  /** Clears stored subscription state for the active account (account deletion). */
+  resetSubscription: () => Promise<void>;
 };
 
 const STORAGE_KEY = 'zelvoca:subscription';
@@ -50,25 +53,36 @@ function sanitize(raw: string | null): ScenarioState {
 }
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [scenario, setScenario] = useState<ScenarioState>(emptyScenarioState());
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY)
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) setScenario(emptyScenarioState());
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    readScopedItem(STORAGE_KEY, userId)
       .then((raw) => {
         if (!cancelled) setScenario(sanitize(raw));
       })
       .catch(() => {
-        // keep defaults
+        if (!cancelled) setScenario(emptyScenarioState());
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   function commit(next: ScenarioState) {
     setScenario(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+    void writeScopedItem(STORAGE_KEY, JSON.stringify(next), userId);
   }
 
   const value: SubscriptionValue = {
@@ -83,6 +97,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return result.label;
     },
     resetToFree: () => commit({ ...scenario, plan: 'free' }),
+    resetSubscription: async () => {
+      setScenario(emptyScenarioState());
+      await removeScopedItem(STORAGE_KEY, userId);
+    },
   };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

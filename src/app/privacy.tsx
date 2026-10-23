@@ -88,8 +88,8 @@ export default function PrivacyRoute() {
       <Text style={styles.h2}>Your rights</Text>
       <View style={styles.ul}>
         <Text style={styles.li}>
-          • Export everything the app knows about you: Profile → PRIVACY → Export my data (JSON via
-          the system share sheet).
+          • Export everything the app knows about you: Settings → Data & storage → Export my data
+          (JSON download on web or via the system share sheet on mobile).
         </Text>
         <Text style={styles.li}>
           • Delete your account: Settings → Danger zone → Delete account. After confirmation, a protected Supabase Edge Function deletes your signed-in account; the app then clears local learning data and saved conversations. If the server cannot confirm deletion, the app reports failure.
