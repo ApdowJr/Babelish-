@@ -1,29 +1,25 @@
-name: APK doctor
+name: APK verification
 
-# Temporary: opens the APK that is already published and prints exactly what is
-# wrong with it. Android only says "package appears to be invalid"; this says
-# whether the file is signed, with which schemes, for which ABIs, and whether it
-# is an APK at all. Writes reports/apk-doctor.md so the result can be read from
-# a machine that cannot download release assets.
+# Opens the APK that is actually published and prints what is inside it:
+# signature schemes, certificate, alignment, ABIs and manifest flags. Android
+# only says "package appears to be invalid"; this says why.
+#
+# Run it after every release. It downloads the asset through the same URL the
+# download button uses, so it also proves that URL still resolves.
 
 on:
-  push:
-    paths:
-      - '.github/workflows/apk-doctor.yml'
-      - '.apk-doctor-trigger'
   workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays: catch a release asset that rotted
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
       - name: Download the published APK
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,70 +33,64 @@ jobs:
           set -uo pipefail
           APK=/tmp/apk/babelish.apk
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
-          mkdir -p reports
-          exec > >(tee reports/apk-doctor.md) 2>&1
+          {
+            echo "## The file"
+            echo '```'
+            ls -l "$APK"
+            sha256sum "$APK"
+            echo "size: $(stat -c%s "$APK") bytes"
+            echo "zip magic: $(head -c 2 "$APK")"
+            echo "APK Sig Block 42 count: $(grep -a -c 'APK Sig Block 42' "$APK" || true)"
+            echo '```'
+            echo
+            echo "## Zip integrity"
+            echo '```'
+            unzip -t "$APK" 2>&1 | tail -2
+            echo '```'
+            echo
+            echo "## Contents"
+            echo '```'
+            echo '--- signature files (v1 / JAR signing) ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
+            echo '--- ABIs ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^lib/' | cut -d/ -f2 | sort -u
+            echo '```'
+            echo
+            echo "## Signature"
+            echo '```'
+            "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" 2>&1 || echo '(apksigner failed)'
+            echo '```'
+            echo
+            echo "## Alignment"
+            echo '```'
+            "$BUILD_TOOLS/zipalign" -c -P 16 4 "$APK" && echo 'zipalign 16 KiB: OK'
+            echo '```'
+            echo
+            echo "## Manifest"
+            echo '```'
+            "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E '^package|minSdkVersion|targetSdkVersion|native-code|testOnly|application-label:'
+            echo '--- flags ---'
+            "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" 2>&1 | grep -E 'extractNativeLibs|testOnly|debuggable' || true
+            echo '```'
+          } | tee apk-report.md
+          {
+            echo '### Published APK'
+            sed -n '/## Signature/,$p' apk-report.md
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "# APK doctor"
-          echo
-          echo "build-tools: $BUILD_TOOLS"
-          echo
-          echo "## The file"
-          echo '```'
-          ls -l "$APK"
-          sha256sum "$APK"
-          echo "size: $(stat -c%s "$APK") bytes"
-          echo "zip magic: $(head -c 2 "$APK")"
-          echo "APK Sig Block 42 count: $(grep -a -c 'APK Sig Block 42' "$APK" || true)"
-          echo '```'
-          echo
-          echo "## Zip integrity"
-          echo '```'
-          unzip -t "$APK" 2>&1 | tail -3
-          echo '```'
-          echo
-          echo "## Contents"
-          echo '```'
-          unzip -l "$APK" | head -6
-          echo '--- manifest / dex / libs ---'
-          unzip -l "$APK" | awk '{print $4}' | grep -E '^AndroidManifest\.xml$|^classes[0-9]*\.dex$|^lib/' | head -40
-          echo '--- signature files ---'
-          unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
-          echo '```'
-          echo
-          echo "## Signature"
-          echo '```'
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" 2>&1 || echo "(apksigner failed)"
-          echo '```'
-          echo
-          echo "## Alignment"
-          echo '```'
-          "$BUILD_TOOLS/zipalign" -c -v 4 "$APK" 2>&1 | tail -5 || echo "(zipalign failed)"
-          echo '```'
-          echo
-          echo "## 16 KiB alignment (Android 15+ devices with 16 KB pages)"
-          echo '```'
-          "$BUILD_TOOLS/zipalign" -c -P 16 -v 4 "$APK" 2>&1 | tail -4 || echo "(not 16 KiB aligned)"
-          echo '--- page size of the native libs (p_align must be 0x4000) ---'
-          for so in lib/arm64-v8a/libreactnative.so lib/arm64-v8a/libhermesvm.so; do
-            unzip -p "$APK" "$so" > /tmp/lib.so 2>/dev/null || continue
-            echo "$so: $(readelf -lW /tmp/lib.so 2>/dev/null | awk '/LOAD/ {print $NF}' | sort -u | tr '\n' ' ')"
-          done
-          echo '```'
-          echo
-          echo "## Manifest"
-          echo '```'
-          "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E '^package|sdkVersion|targetSdkVersion|native-code|testOnly|application-label:' || true
-          echo '--- first lines ---'
-          "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | head -15 || true
-          echo '--- application flags ---'
-          "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" 2>&1 | grep -E 'extractNativeLibs|testOnly|isSplitRequired|debuggable|versionCode|compileSdkVersion' || true
-          echo '```'
-
-      - name: Commit the report
+      - name: Fail if the published file would not install
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add reports/apk-doctor.md
-          git commit -m 'chore: apk doctor report'
-          git push
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' apk-report.md
+          grep -q 'Number of signers: 1' apk-report.md
+          grep -q 'zipalign 16 KiB: OK' apk-report.md
+          grep -q "native-code: 'arm64-v8a'" apk-report.md
+          echo "the published APK passes every install gate"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-report
+          path: apk-report.md
+          retention-days: 30
