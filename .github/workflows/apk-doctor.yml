@@ -7,6 +7,10 @@ name: APK doctor
 # a machine that cannot download release assets.
 
 on:
+  push:
+    paths:
+      - '.github/workflows/apk-doctor.yml'
+      - '.apk-doctor-trigger'
   workflow_dispatch:
 
 permissions:
