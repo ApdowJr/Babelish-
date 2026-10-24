@@ -139,10 +139,22 @@ test('the Vercel output is only static download/legal files with honest platform
   const app = JSON.parse(read('app.json')) as { expo: { version: string } };
   assert.ok(index.includes(app.expo.version), 'download page version drifted from app.json');
   assert.ok(
-    index.includes('https://github.com/ApdowJr/Babelish-/actions/runs/39998390132'),
-    'Android card must link the real successful APK run'
+    index.includes('https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk'),
+    'Android card must link the release APK itself, not an Actions artifact'
   );
-  assert.ok(index.includes('babelish-android-apk'), 'Android instructions must name the real artifact');
+  // The Android card must not send anyone to an artifact (a ZIP behind a
+  // login) — that is how "package appears to be invalid" happens. The iPhone
+  // section may still link the simulator run as evidence; it is not a download.
+  const androidCard = index.slice(index.indexOf('id="download"'), index.indexOf('id="iphone"'));
+  assert.ok(
+    !androidCard.includes('/actions/runs/'),
+    'the Android download must be the APK itself, not an Actions artifact'
+  );
+  assert.ok(index.includes('babelish.apk.sha256'), 'the published checksum must be findable');
+  assert.ok(
+    index.includes('package appears to be invalid'),
+    'the page must answer the install error people actually hit'
+  );
   assert.ok(index.includes('not a web app'), 'landing page must say it is not a web app');
   assert.ok(
     index.includes('cannot be installed on a physical iPhone'),

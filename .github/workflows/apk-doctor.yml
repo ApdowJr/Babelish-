@@ -1,0 +1,96 @@
+name: APK verification
+
+# Opens the APK that is actually published and prints what is inside it:
+# signature schemes, certificate, alignment, ABIs and manifest flags. Android
+# only says "package appears to be invalid"; this says why.
+#
+# Run it after every release. It downloads the asset through the same URL the
+# download button uses, so it also proves that URL still resolves.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays: catch a release asset that rotted
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download the published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern 'babelish.apk' --dir /tmp/apk --clobber
+          ls -l /tmp/apk
+
+      - name: Inspect
+        run: |
+          set -uo pipefail
+          APK=/tmp/apk/babelish.apk
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          {
+            echo "## The file"
+            echo '```'
+            ls -l "$APK"
+            sha256sum "$APK"
+            echo "size: $(stat -c%s "$APK") bytes"
+            echo "zip magic: $(head -c 2 "$APK")"
+            echo "APK Sig Block 42 count: $(grep -a -c 'APK Sig Block 42' "$APK" || true)"
+            echo '```'
+            echo
+            echo "## Zip integrity"
+            echo '```'
+            unzip -t "$APK" 2>&1 | tail -2
+            echo '```'
+            echo
+            echo "## Contents"
+            echo '```'
+            echo '--- signature files (v1 / JAR signing) ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
+            echo '--- ABIs ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^lib/' | cut -d/ -f2 | sort -u
+            echo '```'
+            echo
+            echo "## Signature"
+            echo '```'
+            "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" 2>&1 || echo '(apksigner failed)'
+            echo '```'
+            echo
+            echo "## Alignment"
+            echo '```'
+            "$BUILD_TOOLS/zipalign" -c -P 16 4 "$APK" && echo 'zipalign 16 KiB: OK'
+            echo '```'
+            echo
+            echo "## Manifest"
+            echo '```'
+            "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E '^package|minSdkVersion|targetSdkVersion|native-code|testOnly|application-label:'
+            echo '--- flags ---'
+            "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" 2>&1 | grep -E 'extractNativeLibs|testOnly|debuggable' || true
+            echo '```'
+          } | tee apk-report.md
+          {
+            echo '### Published APK'
+            sed -n '/## Signature/,$p' apk-report.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if the published file would not install
+        run: |
+          set -euo pipefail
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' apk-report.md
+          grep -q 'Number of signers: 1' apk-report.md
+          grep -q 'zipalign 16 KiB: OK' apk-report.md
+          grep -q "native-code: 'arm64-v8a'" apk-report.md
+          echo "the published APK passes every install gate"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-report
+          path: apk-report.md
+          retention-days: 30

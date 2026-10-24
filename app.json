@@ -2,7 +2,7 @@
   "expo": {
     "name": "Babelish",
     "slug": "babelish",
-    "version": "3.4.0",
+    "version": "3.4.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": [
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.zelvoca.babelish",
-      "buildNumber": "3.4.0",
+      "buildNumber": "3.4.1",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Babelish uses your microphone so you can practise speaking with your AI tutor.",
         "ITSAppUsesNonExemptEncryption": false
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "app.zelvoca.babelish",
-      "versionCode": 30400,
+      "versionCode": 30401,
       "adaptiveIcon": {
         "backgroundColor": "#3125B5",
         "foregroundImage": "./assets/android-icon-foreground.png",

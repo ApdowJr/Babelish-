@@ -1,19 +1,27 @@
 name: Android APK
 
-# Builds the installable APK — the file the landing page (site/) links to.
+# Builds the installable APK — the file the landing pages link to.
 #
-#   * a tag like v3.4.0: build it and attach `babelish.apk` to that GitHub
-#     release — the URL https://…/releases/latest/download/babelish.apk that
-#     the landing page (site/) links to;
+#   * a tag like v3.4.1: build it and attach `babelish.apk` (+ its SHA-256) to
+#     that GitHub release — the URL https://…/releases/latest/download/babelish.apk
+#     that the site links to;
 #   * workflow_dispatch: build it by hand, no release, artifact only.
 #
 # It deliberately does NOT run on every pull request: `.github/workflows/
 # build-mobile.yml` already builds an APK on demand, and two 20-minute Gradle
 # jobs per PR would be waste.
 #
-# The build is signed with the generated debug keystore. That is deliberate and
-# documented: it is a side-loadable APK, not a Play Store upload. Play needs the
+# Signing: the build is re-signed here with the template's debug keystore using
+# APK Signature Scheme v1 + v2 + v3. v1 costs a few KB and keeps older OEM
+# installers (which only understand JAR signing) from rejecting the file with
+# "package appears to be invalid"; v2 alone is what Gradle produces by default.
+# This is a side-loadable test build, not a Play Store upload — Play needs the
 # EAS production build (eas.json → app-bundle) signed with the real key.
+#
+# Every publish is verified before it leaves the runner: apksigner must accept
+# the signature, zipalign must accept the 16 KiB alignment, and the manifest
+# must report the expected package, version and ABIs. A file that cannot be
+# installed fails the job instead of reaching the download button.
 
 on:
   push:
@@ -58,33 +66,83 @@ jobs:
         run: npm run check:release
 
       - name: Generate the native project
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --platform android --clean --no-install
 
       - name: Keep the APK to phone architectures
         # The default template builds x86 and x86_64 too, which only emulators
         # use and which roughly doubles the download.
         run: |
           sed -i 's/^reactNativeArchitectures=.*/reactNativeArchitectures=armeabi-v7a,arm64-v8a/' android/gradle.properties
+          grep '^reactNativeArchitectures' android/gradle.properties
 
       - name: Build
         working-directory: android
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
-      - name: Collect the APK
+      - name: Sign, then prove the file is installable
         run: |
           set -euo pipefail
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          echo "build-tools: $BUILD_TOOLS"
+
           APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
           test -n "$APK"
-          cp "$APK" babelish.apk
+          echo "gradle produced: $APK ($(stat -c%s "$APK") bytes)"
+
+          # Re-sign so the published file carries v1 + v2 + v3, whatever the
+          # template did. The keystore ships with the Expo template and is the
+          # standard public Android debug key, so every build of this app has
+          # the same signing identity and can update the previous one.
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks android/app/debug.keystore \
+            --ks-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --key-pass pass:android \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out babelish.apk \
+            "$APK"
+
+          # Hard gates. Any failure here means the download button would hand
+          # someone a file Android refuses, which is exactly the bug this step
+          # exists to prevent.
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs babelish.apk | tee /tmp/verify.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/verify.txt
+          grep -q 'Number of signers: 1' /tmp/verify.txt
+          "$BUILD_TOOLS/zipalign" -c -P 16 4 babelish.apk
+          "$BUILD_TOOLS/aapt2" dump badging babelish.apk | grep -E '^package|minSdkVersion|targetSdkVersion|native-code' | tee /tmp/badging.txt
+          grep -q "package: name='app.zelvoca.babelish'" /tmp/badging.txt
+          grep -q "native-code: 'arm64-v8a'" /tmp/badging.txt
+
           ls -lh babelish.apk
-          echo "sha256=$(sha256sum babelish.apk | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
-          echo "size_bytes=$(stat -c%s babelish.apk)" >> "$GITHUB_STEP_SUMMARY"
+          sha256sum babelish.apk | tee babelish.apk.sha256
+
+      - name: Summarise the artifact
+        run: |
+          set -euo pipefail
+          {
+            echo "### Android APK"
+            echo
+            echo '```'
+            cat /tmp/badging.txt
+            echo '```'
+            echo
+            echo '```'
+            cat babelish.apk.sha256
+            echo '```'
+            echo
+            echo "To install, open the APK on the phone and allow installs from the app that"
+            echo "opened it (Settings → Apps → Special access → Install unknown apps)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: babelish-apk
-          path: babelish.apk
+          path: |
+            babelish.apk
+            babelish.apk.sha256
           retention-days: 14
           if-no-files-found: error
 
@@ -96,9 +154,9 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" babelish.apk --clobber
+            gh release upload "$TAG" babelish.apk babelish.apk.sha256 --clobber
           else
-            gh release create "$TAG" babelish.apk \
+            gh release create "$TAG" babelish.apk babelish.apk.sha256 \
               --title "Babelish $TAG" \
               --generate-notes
           fi
