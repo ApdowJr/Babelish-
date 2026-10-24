@@ -238,10 +238,9 @@ try {
 
     const requiredIndexText = [
       app.version,
-      'https://github.com/ApdowJr/Babelish-/actions/runs/39998390132',
-      'babelish-android-apk',
-      '2026-11-22',
-      'ZIP',
+      'https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk',
+      'babelish.apk.sha256',
+      'Install unknown apps',
       'APK',
       'not a web app',
       'cannot be installed on a physical iPhone',

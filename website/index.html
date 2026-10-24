@@ -36,7 +36,7 @@
       <div class="wrap">
         <div class="hero-grid">
           <div>
-            <span class="eyebrow">Android + iPhone kaliya • Version 3.4.0</span>
+            <span class="eyebrow">Android + iPhone kaliya • Version 3.4.1</span>
             <h1>Baro luuqado adigoo <span>run ahaantii ku hadlaya.</span></h1>
             <p class="lead">
               Babelish waa app taleefan oo aad ku barato 25 luuqadood: cashirro offline ah,
@@ -77,31 +77,40 @@
         <div class="cards">
           <article class="card">
             <span class="status available">✓ Android — hadda waa la heli karaa</span>
-            <h3>APK si toos ah loo rakibo</h3>
+            <h3>Soo deji APK-ga tooska ah</h3>
             <p>
-              APK-gan waxaa soo saaray GitHub Actions, waana mid debug-key lagu saxiixay oo
-              tijaabo toos ah loogu talagalay. Google Play lama gelin karo; Play Store-ka
+              Faylka waxaa si toos ah uga soo deji karaa boggan: <code>babelish.apk</code>,
+              oo lagu saxiixay debug-key (v1 + v2 + v3) oo tijaabo toos ah loogu talagalay.
+              Ma aha ZIP, mana aha artifact Actions. Google Play lama gelin karo; Play Store-ka
               waxaa loo isticmaalaa AAB saxiixan.
             </p>
             <div class="cta-row">
-              <a class="button primary" href="https://github.com/ApdowJr/Babelish-/actions/runs/39998390132">
-                Fur APK-ga GitHub ku jira
+              <a class="button primary" href="https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk">
+                Soo deji babelish.apk
               </a>
-              <a class="button secondary" href="https://github.com/ApdowJr/Babelish-/actions/workflows/build-mobile.yml">
-                Dhammaan mobile builds
+              <a class="button secondary" href="https://github.com/ApdowJr/Babelish-/releases">
+                Dhammaan releases
               </a>
             </div>
             <h4>Sida loo rakibo</h4>
             <ol class="steps">
-              <li>Fur run-ka GitHub Actions ee kor ku xusan.</li>
-              <li>Hoos u deg ilaa qaybta <strong>Artifacts</strong>.</li>
-              <li>Soo deji artifact-ka <code>babelish-android-apk</code> (ZIP), kadib fur ZIP-ka.</li>
-              <li>Faylka <code>.apk</code> u wareeji taleefanka Android oo taabo si aad u rakibto.</li>
-              <li>Haddii Android ku weydiiyo, oggolow <strong>Install unknown apps</strong> app-ka faylka furaya.</li>
+              <li>Taabo badhanka sare. Faylka waa <code>.apk</code> — ha furin ZIP.</li>
+              <li>Marka Android weydiiyo, oggolow <strong>Install unknown apps</strong> app-ka faylka furaya (Settings → Apps → Special access).</li>
+              <li>Taabo <strong>Install</strong>. Rakibadu waxay qaadataa ilbiriqsiyo.</li>
+            </ol>
+            <h4>“App not installed as package appears to be invalid”?</h4>
+            <p>
+              Fariintan waxaa soo saaray installer-ka Android, ma aha app-ka. Saddex wax ayaa
+              caadi ahaan hagaajiya:
+            </p>
+            <ol class="steps">
+              <li><strong>Ka saar Babelish-kii hore</strong> (Settings → Apps → Babelish → Uninstall), kadib mar kale rakib.</li>
+              <li><strong>Mar kale soo deji</strong> — download aan dhammaad lahayn waa sababta ugu badan; faylku waa ~47 MB.</li>
+              <li><strong>Fur faylka Chrome ama Files app-ka</strong>, ma aha app kale oo ZIP u malaynaya.</li>
             </ol>
             <p class="small">
-              Artifact-kan gaarka ah wuxuu GitHub ka dhacayaa 2026-11-22. Intaa ka dib, isticmaal
-              run guulaysta oo cusub oo ka mid ah workflow-ga “Build mobile (APK + iOS)”.
+              SHA-256-ga faylka la daabacay waxaa laga helaa release-ka (<code>babelish.apk.sha256</code>).
+              Haddii aad computer haysato: <code>sha256sum babelish.apk</code>.
             </p>
           </article>
 
@@ -164,11 +173,13 @@
       <div class="wrap english-box">
         <h2 id="english-title">English summary</h2>
         <p>
-          Babelish 3.4.0 is a native-only Android and iPhone language-learning app. This page is
+          Babelish 3.4.1 is a native-only Android and iPhone language-learning app. This page is
           <strong>not a web app</strong>: it is a static download and legal-information page only.
         </p>
         <p>
-          Android users can download the tested direct-install APK from the GitHub Actions run above.
+          Android users can download the tested direct-install APK straight from the release link above
+          (an APK file, not a ZIP); if Android says the package is invalid, uninstall an older copy,
+          download again, and open the file from Chrome or the Files app.
           A physical iPhone install is not available yet; it requires the
           Apple Developer Program ($99/year) plus TestFlight or the App Store.
           The existing iOS artifact is an unsigned simulator build and

@@ -5,7 +5,37 @@ project uses semantic versioning.
 
 ## [Unreleased]
 
+## [3.4.1] — 2026-10-24
+
+A build people could not install. Nothing in the app changed; what changed is
+how the file is produced, published and described.
+
+### Fixed
+
+- **“App not installed as package appears to be invalid.”** The APK itself was
+  sound — a runner unpacked the published file and checked it, not guessed:
+  valid zip, APK Signature Scheme v2, 16 KiB-aligned, `armeabi-v7a` +
+  `arm64-v8a`, `minSdk 24`. What was wrong was everything around it:
+  - the public page told people to download a **GitHub Actions artifact** (a
+    ZIP, behind a login) and open the `.apk` inside it — unwrap it wrong, or
+    rename the ZIP to `.apk`, and Android says exactly this. The page now links
+    `releases/latest/download/babelish.apk` directly and answers the error.
+  - the build was signed **v2-only**, which older OEM installers reject even
+    though the format is legal. The workflow now re-signs with v1 + v2 + v3.
+  - `versionCode` never moved between releases, so an older install could not
+    be updated in place. It is `30401` now, and a same-version rebuild is a
+    no-op the installer refuses.
+  - `npm run check:release` was still *requiring* the artifact-run link that
+    caused the problem, so the wrong path could not be corrected without
+    also fixing the gate. It now requires the direct APK URL and the checksum
+    file instead.
+- **The publish step verifies before it uploads.** `apksigner verify`, a
+  16 KiB `zipalign` check and `aapt2 dump badging` must all pass, and the
+  release now carries `babelish.apk.sha256` beside the APK. A file Android
+  would refuse fails the job instead of reaching the download button.
+
 ### Changed
+
 
 - **Native-only app; static download/legal page on Vercel.** At the owner's
   request the Expo web target remains removed completely — `app.json` now

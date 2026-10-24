@@ -1,6 +1,6 @@
 {
   "name": "babelish",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
