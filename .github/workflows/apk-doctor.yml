@@ -77,11 +77,23 @@ jobs:
           "$BUILD_TOOLS/zipalign" -c -v 4 "$APK" 2>&1 | tail -5 || echo "(zipalign failed)"
           echo '```'
           echo
+          echo "## 16 KiB alignment (Android 15+ devices with 16 KB pages)"
+          echo '```'
+          "$BUILD_TOOLS/zipalign" -c -P 16 -v 4 "$APK" 2>&1 | tail -4 || echo "(not 16 KiB aligned)"
+          echo '--- page size of the native libs (p_align must be 0x4000) ---'
+          for so in lib/arm64-v8a/libreactnative.so lib/arm64-v8a/libhermesvm.so; do
+            unzip -p "$APK" "$so" > /tmp/lib.so 2>/dev/null || continue
+            echo "$so: $(readelf -lW /tmp/lib.so 2>/dev/null | awk '/LOAD/ {print $NF}' | sort -u | tr '\n' ' ')"
+          done
+          echo '```'
+          echo
           echo "## Manifest"
           echo '```'
           "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E '^package|sdkVersion|targetSdkVersion|native-code|testOnly|application-label:' || true
           echo '--- first lines ---'
           "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | head -15 || true
+          echo '--- application flags ---'
+          "$BUILD_TOOLS/aapt2" dump xmltree --file AndroidManifest.xml "$APK" 2>&1 | grep -E 'extractNativeLibs|testOnly|isSplitRequired|debuggable|versionCode|compileSdkVersion' || true
           echo '```'
 
       - name: Commit the report
