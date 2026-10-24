@@ -4,7 +4,7 @@ build-tools: /usr/local/lib/android/sdk/build-tools/37.0.0
 
 ## The file
 ```
--rw-r--r-- 1 runner runner 47520190 Oct 24 05:45 /tmp/apk/babelish.apk
+-rw-r--r-- 1 runner runner 47520190 Oct 24 05:47 /tmp/apk/babelish.apk
 8bfa1e2dc671f1693bf10e6049dfa7fc6566eb328ca6c38429331bf12f006c95  /tmp/apk/babelish.apk
 size: 47520190 bytes
 zip magic: PK
@@ -102,6 +102,17 @@ V2 Signer: public key MD5 digest: 49921988ad9941656cd9b95203196f17
 Verification successful
 ```
 
+## 16 KiB alignment (Android 15+ devices with 16 KB pages)
+```
+45564392 res/zq.xml (OK - compressed)
+45564704 res/zw.9.png (OK)
+45566260 resources.arsc (OK)
+Verification successful
+--- page size of the native libs (p_align must be 0x4000) ---
+lib/arm64-v8a/libreactnative.so: 0x4000 
+lib/arm64-v8a/libhermesvm.so: 0x4000 
+```
+
 ## Manifest
 ```
 package: name='app.zelvoca.babelish' versionCode='30400' versionName='3.4.0' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'
@@ -124,4 +135,9 @@ uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'
 uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
 uses-permission: name='android.permission.WAKE_LOCK'
 uses-permission: name='com.google.android.c2dm.permission.RECEIVE'
+--- application flags ---
+    A: http://schemas.android.com/apk/res/android:versionCode(0x0101021b)=30400
+    A: http://schemas.android.com/apk/res/android:compileSdkVersion(0x01010572)=37
+    A: http://schemas.android.com/apk/res/android:compileSdkVersionCodename(0x01010573)="17" (Raw: "17")
+        A: http://schemas.android.com/apk/res/android:extractNativeLibs(0x010104ea)=false
 ```
