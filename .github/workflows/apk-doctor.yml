@@ -36,55 +36,53 @@ jobs:
         run: |
           set -uo pipefail
           APK=/tmp/apk/babelish.apk
-          REPORT=reports/apk-doctor.md
-          mkdir -p reports
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
-          echo "build-tools: $BUILD_TOOLS" > "$REPORT"
-          echo | tee -a "$REPORT"
+          mkdir -p reports
+          exec > >(tee reports/apk-doctor.md) 2>&1
 
-          {
-            echo '## The file'
-            echo '```'
-            ls -l "$APK"
-            sha256sum "$APK"
-            python3 - "$APK" <<'PY'
-import sys
-p = sys.argv[1]
-data = open(p, 'rb').read()
-print('bytes:', len(data))
-print('zip magic:', data[:2])
-print('APK Sig Block 42 present:', b'APK Sig Block 42' in data[-20_000_000:])
-print('zip eocd present:', data.rfind(b'PK\x05\x06') >= 0)
-PY
-            unzip -t "$APK" 2>&1 | tail -3
-            echo '```'
-            echo
-            echo '## Contents'
-            echo '```'
-            unzip -l "$APK" | sed -n '1,5p'
-            echo '...'
-            unzip -l "$APK" | grep -E 'AndroidManifest.xml|classes[0-9]*\.dex|^ *[0-9]+ .*lib/' | awk '{print $4}' | head -30
-            echo '--- signing entries ---'
-            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
-            echo '```'
-            echo
-            echo '## Signature'
-            echo '```'
-            "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" 2>&1 || true
-            echo '```'
-            echo
-            echo '## Alignment'
-            echo '```'
-            "$BUILD_TOOLS/zipalign" -c -v 4 "$APK" 2>&1 | tail -5 || true
-            echo '```'
-            echo
-            echo '## Manifest'
-            echo '```'
-            "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E "^package|sdkVersion|targetSdkVersion|native-code|testOnly|application-label:" || true
-            echo '--- filtered flags ---'
-            "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | head -20 || true
-            echo '```'
-          } | tee -a "$REPORT"
+          echo "# APK doctor"
+          echo
+          echo "build-tools: $BUILD_TOOLS"
+          echo
+          echo "## The file"
+          echo '```'
+          ls -l "$APK"
+          sha256sum "$APK"
+          echo "size: $(stat -c%s "$APK") bytes"
+          echo "zip magic: $(head -c 2 "$APK")"
+          echo "APK Sig Block 42 count: $(grep -a -c 'APK Sig Block 42' "$APK" || true)"
+          echo '```'
+          echo
+          echo "## Zip integrity"
+          echo '```'
+          unzip -t "$APK" 2>&1 | tail -3
+          echo '```'
+          echo
+          echo "## Contents"
+          echo '```'
+          unzip -l "$APK" | head -6
+          echo '--- manifest / dex / libs ---'
+          unzip -l "$APK" | awk '{print $4}' | grep -E '^AndroidManifest\.xml$|^classes[0-9]*\.dex$|^lib/' | head -40
+          echo '--- signature files ---'
+          unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
+          echo '```'
+          echo
+          echo "## Signature"
+          echo '```'
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" 2>&1 || echo "(apksigner failed)"
+          echo '```'
+          echo
+          echo "## Alignment"
+          echo '```'
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$APK" 2>&1 | tail -5 || echo "(zipalign failed)"
+          echo '```'
+          echo
+          echo "## Manifest"
+          echo '```'
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | grep -E '^package|sdkVersion|targetSdkVersion|native-code|testOnly|application-label:' || true
+          echo '--- first lines ---'
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" 2>&1 | head -15 || true
+          echo '```'
 
       - name: Commit the report
         run: |
