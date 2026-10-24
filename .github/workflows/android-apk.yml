@@ -12,9 +12,10 @@ name: Android APK
 # jobs per PR would be waste.
 #
 # Signing: the build is re-signed here with the template's debug keystore using
-# APK Signature Scheme v1 + v2 + v3. v1 costs a few KB and keeps older OEM
-# installers (which only understand JAR signing) from rejecting the file with
-# "package appears to be invalid"; v2 alone is what Gradle produces by default.
+# APK Signature Scheme v2 (plus v3 where the platform applies it). v2 is what
+# every device this app supports (minSdk 24) verifies. v1/JAR signing is
+# deliberately not forced: it only matters for Android 6 and below, and it is
+# the scheme the Janus vulnerability abuses.
 # This is a side-loadable test build, not a Play Store upload — Play needs the
 # EAS production build (eas.json → app-bundle) signed with the real key.
 #
@@ -89,16 +90,14 @@ jobs:
           test -n "$APK"
           echo "gradle produced: $APK ($(stat -c%s "$APK") bytes)"
 
-          # Re-sign so the published file carries v1 + v2 + v3, whatever the
-          # template did. The keystore ships with the Expo template and is the
-          # standard public Android debug key, so every build of this app has
-          # the same signing identity and can update the previous one.
+          # Re-sign with the template's keystore so the published file is
+          # always signed, and always by the same identity — that is what lets
+          # an install update the previous one instead of refusing it.
           "$BUILD_TOOLS/apksigner" sign \
             --ks android/app/debug.keystore \
             --ks-pass pass:android \
             --ks-key-alias androiddebugkey \
             --key-pass pass:android \
-            --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             --out babelish.apk \

@@ -53,8 +53,8 @@ jobs:
             echo
             echo "## Contents"
             echo '```'
-            echo '--- signature files (v1 / JAR signing) ---'
-            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
+            echo '--- v1/JAR signature files (expected: none at minSdk 24) ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none — by design)'
             echo '--- ABIs ---'
             unzip -l "$APK" | awk '{print $4}' | grep -E '^lib/' | cut -d/ -f2 | sort -u
             echo '```'
@@ -85,14 +85,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # v2 is the scheme Android 11+ demands; v1 is what older OEM
-          # installers still want; v3 is what allows a key rotation later.
-          grep -q 'Verified using v1 scheme (JAR signing): true' apk-report.md \
-            || { echo '::error::the published APK has no v1 (JAR) signature — old installers reject it'; exit 1; }
+          # v2 is the scheme every supported device understands (minSdk 24).
+          # v1 (JAR) is deliberately absent: apksigner disables it at minSdk 24,
+          # it is only needed for Android 6 and below, and it is the scheme the
+          # Janus attack (CVE-2017-13156) abuses. v3 lets a future key rotation
+          # reach Android 9+, so it is reported, not required.
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' apk-report.md \
             || { echo '::error::no v2 signature — Android 11+ refuses this file'; exit 1; }
-          grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' apk-report.md \
-            || { echo '::error::no v3 signature'; exit 1; }
           grep -q 'Number of signers: 1' apk-report.md \
             || { echo '::error::expected exactly one signer'; exit 1; }
           grep -q 'zipalign 16 KiB: OK' apk-report.md \
