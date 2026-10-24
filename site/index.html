@@ -492,6 +492,30 @@
             </div>
           </div>
 
+          <div class="install-help">
+            <h3 data-i18n="dl.helpTitle">“App not installed as package appears to be invalid”?</h3>
+            <p data-i18n="dl.helpBody">
+              That is Android's installer talking, not the app. In this order:
+            </p>
+            <ol class="install-help-steps">
+              <li data-i18n="dl.help1">
+                Uninstall an older Babelish first (Settings → Apps → Babelish → Uninstall) — a copy
+                signed by a different key can never be replaced.
+              </li>
+              <li data-i18n="dl.help2">
+                Download again. A partial download is the most common cause; the file is about
+                48 MB.
+              </li>
+              <li data-i18n="dl.help3">
+                Open the file from Chrome or Files, not from inside a ZIP viewer or a chat preview.
+              </li>
+            </ol>
+            <p class="fine-print" data-i18n="dl.helpChecksum">
+              The release also publishes babelish.apk.sha256, so you can check the download:
+              sha256sum babelish.apk.
+            </p>
+          </div>
+
           <div class="build-note">
             <h3 data-i18n="dl.buildTitle">Prefer to build it yourself?</h3>
             <p data-i18n="dl.buildBody">

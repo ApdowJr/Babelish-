@@ -1362,6 +1362,35 @@ html[data-theme='dark'] .phone-screen {
   font-weight: 700;
 }
 
+.install-help {
+  margin-top: 1.5rem;
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.install-help h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.install-help p {
+  margin: 0 0 0.6rem;
+}
+
+.install-help-steps {
+  margin: 0 0 0.8rem;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.install-help .fine-print {
+  margin-bottom: 0;
+}
+
 .build-note {
   margin-top: 30px;
   padding: 26px 28px;

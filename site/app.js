@@ -106,6 +106,16 @@
       'dl.size': 'Size',
       'dl.price': 'Price',
       'dl.free': 'Free',
+      'dl.helpTitle': '“App not installed as package appears to be invalid”?',
+      'dl.helpBody': "That is Android's installer talking, not the app. In this order:",
+      'dl.help1':
+        'Uninstall an older Babelish first (Settings → Apps → Babelish → Uninstall) — a copy signed by a different key can never be replaced.',
+      'dl.help2':
+        'Download again. A partial download is the most common cause; the file is about 48 MB.',
+      'dl.help3':
+        'Open the file from Chrome or Files, not from inside a ZIP viewer or a chat preview.',
+      'dl.helpChecksum':
+        'The release also publishes babelish.apk.sha256, so you can check the download: sha256sum babelish.apk.',
       'dl.buildTitle': 'Prefer to build it yourself?',
       'dl.buildBody':
         "The APK is produced by the repository's own GitHub Actions workflow, from the same commit as the tag. No binaries are committed.",
@@ -231,6 +241,14 @@
       'dl.size': 'Cabbirka',
       'dl.price': 'Qiimaha',
       'dl.free': 'Bilaash',
+      'dl.helpTitle': '“App not installed as package appears to be invalid”?',
+      'dl.helpBody': 'Waa installer-ka Android oo hadlaya, ma aha app-ka. Sidan u raac:',
+      'dl.help1':
+        'Marka hore ka saar Babelish-kii hore (Settings → Apps → Babelish → Uninstall) — nuqul fure kale lagu saxeexay waligeed lama beddeli karo.',
+      'dl.help2': 'Mar kale soo deji. Soo-dejin aan dhammaad lahayn ayaa sababta ugu badan; faylku waa ~48 MB.',
+      'dl.help3': 'Fur faylka Chrome ama Files, ma aha ZIP viewer ama chat preview.',
+      'dl.helpChecksum':
+        'Release-ka waxaa sidoo kale ku jira babelish.apk.sha256, si aad u hubiso soo-dejinta: sha256sum babelish.apk.',
       'dl.buildTitle': 'Ma jeceshahay inaad adigu dhisto?',
       'dl.buildBody':
         'APK waxaa soo saara workflow-ga GitHub Actions ee kaydka, isla commit-ka tag-ga. Binary-yo lama kaydiyo.',
