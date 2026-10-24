@@ -8,6 +8,9 @@ name: APK verification
 # download button uses, so it also proves that URL still resolves.
 
 on:
+  push:
+    paths:
+      - '.github/workflows/apk-doctor.yml'
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * 1' # Mondays: catch a release asset that rotted
@@ -50,8 +53,8 @@ jobs:
             echo
             echo "## Contents"
             echo '```'
-            echo '--- signature files (v1 / JAR signing) ---'
-            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none)'
+            echo '--- v1/JAR signature files (expected: none at minSdk 24) ---'
+            unzip -l "$APK" | awk '{print $4}' | grep -E '^META-INF/.*\.(RSA|DSA|EC|SF)$' || echo '(none — by design)'
             echo '--- ABIs ---'
             unzip -l "$APK" | awk '{print $4}' | grep -E '^lib/' | cut -d/ -f2 | sort -u
             echo '```'
@@ -81,10 +84,27 @@ jobs:
       - name: Fail if the published file would not install
         run: |
           set -euo pipefail
-          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' apk-report.md
-          grep -q 'Number of signers: 1' apk-report.md
-          grep -q 'zipalign 16 KiB: OK' apk-report.md
-          grep -q "native-code: 'arm64-v8a'" apk-report.md
+
+          # v2 is the scheme every supported device understands (minSdk 24).
+          # v1 (JAR) is deliberately absent: apksigner disables it at minSdk 24,
+          # it is only needed for Android 6 and below, and it is the scheme the
+          # Janus attack (CVE-2017-13156) abuses. v3 lets a future key rotation
+          # reach Android 9+, so it is reported, not required.
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' apk-report.md \
+            || { echo '::error::no v2 signature — Android 11+ refuses this file'; exit 1; }
+          grep -q 'Number of signers: 1' apk-report.md \
+            || { echo '::error::expected exactly one signer'; exit 1; }
+          grep -q 'zipalign 16 KiB: OK' apk-report.md \
+            || { echo '::error::not 16 KiB aligned — Android 15 devices with 16 KB pages reject it'; exit 1; }
+          grep -q "native-code: 'arm64-v8a'" apk-report.md \
+            || { echo '::error::no arm64-v8a — most phones cannot run it'; exit 1; }
+
+          # Same certificate as every build since 3.4.0. If this ever changes,
+          # an existing install cannot be updated in place, so the workflow
+          # fails instead of quietly shipping an APK people must uninstall.
+          grep -q 'certificate SHA-1 digest: 5e8f16062ea3cd2c4a0d547876baa6f38cabf625' apk-report.md \
+            || { echo '::error::signing identity changed — existing installs would refuse the update'; exit 1; }
+
           echo "the published APK passes every install gate"
 
       - name: Upload the report

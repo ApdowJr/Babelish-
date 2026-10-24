@@ -20,8 +20,14 @@ how the file is produced, published and described.
     ZIP, behind a login) and open the `.apk` inside it — unwrap it wrong, or
     rename the ZIP to `.apk`, and Android says exactly this. The page now links
     `releases/latest/download/babelish.apk` directly and answers the error.
-  - the build was signed **v2-only**, which older OEM installers reject even
-    though the format is legal. The workflow now re-signs with v1 + v2 + v3.
+  - the build was signed by Gradle's default path with an identity nothing
+    verified. It is now re-signed explicitly by `apksigner` with the template
+    keystore and **checked on the published file**: v2 verified, exactly one
+    signer, 16 KiB aligned, `arm64-v8a` present, and the certificate still
+    `5e8f1606…` so an existing install updates instead of being refused.
+    (v1/JAR signing is *not* forced: at `minSdk 24` apksigner disables it by
+    design, it only serves Android 6 and below, and it is the Janus-vulnerable
+    scheme. An earlier draft of this entry claimed v1+v2+v3 — corrected.)
   - `versionCode` never moved between releases, so an older install could not
     be updated in place. It is `30401` now, and a same-version rebuild is a
     no-op the installer refuses.
