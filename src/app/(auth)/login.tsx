@@ -10,12 +10,16 @@ import { useAuth } from '@/context/AuthContext';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { LANGUAGES } from '@/data/languages';
+import { usePreferences } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { signIn, isDemo } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,9 +62,9 @@ export default function LoginScreen() {
   return (
     <Screen scroll>
       <AuthHero
-        eyebrow="WELCOME BACK"
-        title="Welcome back."
-        subtitle="Pick up where you left off and keep building your language skills."
+        eyebrow={t("WELCOME BACK")}
+        title={t("Welcome back.")}
+        subtitle={t("Pick up where you left off and keep building your language skills.")}
         perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Your progress, saved']}
       />
 
@@ -72,7 +76,7 @@ export default function LoginScreen() {
       ) : null}
 
       <TextField
-        label="Email"
+        label={t("Email")}
         value={email}
         onChangeText={setEmail}
         placeholder="you@example.com"
@@ -81,10 +85,10 @@ export default function LoginScreen() {
         textContentType="emailAddress"
       />
       <TextField
-        label="Password"
+        label={t("Password")}
         value={password}
         onChangeText={setPassword}
-        placeholder="At least 8 characters"
+        placeholder={t("At least 8 characters")}
         secureTextEntry
         autoComplete="password"
         textContentType="password"
@@ -98,15 +102,15 @@ export default function LoginScreen() {
         accessibilityRole="link"
         style={styles.forgot}
       >
-        <Text style={styles.forgotText}>Forgot password?</Text>
+        <Text style={styles.forgotText}>{t("Forgot password?")}</Text>
       </Pressable>
 
-      <Button label="Sign in" onPress={handleSignIn} loading={busy} />
+      <Button label={t("Sign in")} onPress={handleSignIn} loading={busy} />
 
       {isDemo ? (
         <>
           <Button
-            label="Explore the demo — no email"
+            label={t("Explore the demo — no email")}
             variant="secondary"
             onPress={handleDemo}
             disabled={busy}
@@ -120,9 +124,9 @@ export default function LoginScreen() {
       ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>New to Babelish? </Text>
+        <Text style={styles.footerText}>{t("New to Babelish? ")}</Text>
         <Pressable onPress={() => router.push('/signup')} hitSlop={8} accessibilityRole="link">
-          <Text style={styles.footerLink}>Create an account</Text>
+          <Text style={styles.footerLink}>{t("Create an account")}</Text>
         </Pressable>
       </View>
     </Screen>
