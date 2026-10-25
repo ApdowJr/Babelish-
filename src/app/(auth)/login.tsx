@@ -65,7 +65,7 @@ export default function LoginScreen() {
         eyebrow={t("WELCOME BACK")}
         title={t("Welcome back.")}
         subtitle={t("Pick up where you left off and keep building your language skills.")}
-        perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Your progress, saved']}
+        perks={[`${LANGUAGES.length} ${t('languages')}`, t('Offline lessons'), t('Your progress, saved')]}
       />
 
       {error ? (
