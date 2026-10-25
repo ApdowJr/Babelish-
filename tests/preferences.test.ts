@@ -106,3 +106,12 @@ test('the daily XP target is the published minutes × 10 rule', () => {
   assert.equal(dailyGoalXp(0), 1);
   assert.equal(dailyGoalXp(15), 150);
 });
+
+
+test('interface language is validated independently from the learning language', () => {
+  const somali = normalizePreferences({ targetLanguageId: 'fr', interfaceLanguage: 'so' }, returning, validate);
+  assert.equal(somali.interfaceLanguage, 'so');
+  assert.equal(somali.targetLanguageId, 'fr');
+  const invalid = normalizePreferences({ interfaceLanguage: 'ar' }, returning, validate);
+  assert.equal(invalid.interfaceLanguage, DEFAULT_PREFERENCES.interfaceLanguage);
+});
