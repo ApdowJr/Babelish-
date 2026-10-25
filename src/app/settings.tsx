@@ -40,6 +40,7 @@ import { radii, shadows, spacing, typography, type Palette } from '@/theme/token
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
 import { INTERFACE_LANGUAGES, translateUi } from '@/lib/interfaceLocalization';
+import { INTERFACE_LANGUAGES, translateUi } from '@/lib/interfaceLocalization';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
