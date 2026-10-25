@@ -24,11 +24,14 @@ import { tierForXp } from '@/lib/league';
 import { FAMILY_SEATS, referralCode } from '@/lib/plans';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 /** English + every language in the 2.0 atlas. */
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { user, signOut, isDemo } = useAuth();
 
   const {
@@ -72,15 +75,15 @@ export default function ProfileScreen() {
     <Screen scroll tabBarSpace>
       <View style={styles.headerRow}>
         <View style={styles.flex}>
-          <Text style={styles.kicker}>YOUR SPACE</Text>
-          <Text style={styles.title}>You</Text>
+          <Text style={styles.kicker}>{t('YOUR SPACE')}</Text>
+          <Text style={styles.title}>{t('You')}</Text>
         </View>
         <Pressable
           onPress={() => router.push('/settings')}
           style={styles.gear}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Open settings"
+          accessibilityLabel={t("Open settings")}
         >
           <Ionicons name="settings-outline" size={20} color={colors.text} />
         </Pressable>
@@ -118,7 +121,7 @@ export default function ProfileScreen() {
       <Pressable
         onPress={() => router.push('/progress')}
         accessibilityRole="button"
-        accessibilityLabel="Open detailed progress — streak calendar and skill breakdown"
+        accessibilityLabel={t("Open detailed progress — streak calendar and skill breakdown")}
         style={({ pressed }) => [styles.quickRow, pressed && { opacity: 0.85 }]}
       >
         <QuickStat icon="flame" value={`${streak}`} label="DAY STREAK" tint={colors.accentInk} />
@@ -210,7 +213,7 @@ export default function ProfileScreen() {
       <Pressable
         onPress={() => router.push('/profile/edit')}
         accessibilityRole="button"
-        accessibilityLabel="Edit your learning profile"
+        accessibilityLabel={t("Edit your learning profile")}
         accessibilityHint="Name, avatar, bio, interests and goals for your tutor"
         style={({ pressed }) => [styles.card, styles.profileRow, pressed && styles.profileRowPressed]}
       >
@@ -234,7 +237,7 @@ export default function ProfileScreen() {
           <Pill label={plan === 'premium' ? 'SUPPORTER' : 'FREE FOREVER'} tone="free" icon="heart" />
           <Text style={styles.freeTier}>{plan === 'premium' ? 'Thank you 💚' : 'No card needed'}</Text>
         </View>
-        <Text style={styles.freeTitle}>Everything is included</Text>
+        <Text style={styles.freeTitle}>{t('Everything is included')}</Text>
         <Text style={styles.freeBody}>
           {LANGUAGES.length} languages, every lesson, every phrasebook, offline packs, native
           voices and unlimited retakes. No trial timer, no locked chapters, no ads.
@@ -310,7 +313,7 @@ export default function ProfileScreen() {
           <Ionicons name="options-outline" size={20} color={colors.primary} />
         </View>
         <View style={styles.flex}>
-          <Text style={styles.settingsTitle}>Reminders, voice, data & privacy</Text>
+          <Text style={styles.settingsTitle}>{t('Reminders, voice, data & privacy')}</Text>
           <Text style={styles.hint}>
             Daily reminder, offline pack, translations, playback speed, export and account.
           </Text>
@@ -333,7 +336,7 @@ export default function ProfileScreen() {
           Babelish v{Constants.expoConfig?.version ?? '3.4.0'} · {LANGUAGES.length} languages · free
         </Text>
       </View>
-      <Text style={styles.footerSub}>Made for curious people everywhere.</Text>
+      <Text style={styles.footerSub}>{t('Made for curious people everywhere.')}</Text>
     </Screen>
   );
 }
