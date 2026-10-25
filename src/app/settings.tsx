@@ -719,7 +719,17 @@ export default function SettingsScreen() {
     ];
   })();
 
-  const visible = filterSettings(groups, query);
+  const searchableGroups = groups.map((group) => ({
+    ...group,
+    title: t(group.title),
+    rows: group.rows.map((row) => ({
+      ...row,
+      label: t(row.label),
+      hint: row.hint ? t(row.hint) : undefined,
+      keywords: [row.keywords, t(row.label), row.hint ? t(row.hint) : ''].filter(Boolean).join(' '),
+    })),
+  }));
+  const visible = filterSettings(searchableGroups, query);
 
   return (
     <Screen scroll tabBarSpace>
