@@ -98,7 +98,7 @@ export default function ForgotPasswordScreen() {
 
       {!isSupabaseConfigured ? (
         <Text style={styles.demoNote}>
-          Demo mode — password reset needs the Supabase publishable key in .env
+          {t('Demo mode — password reset needs the Supabase publishable key in .env')}
         </Text>
       ) : null}
 
