@@ -77,10 +77,10 @@ test('the Speak screen exposes the controls a screen-reader user needs', () => {
   const source = readFileSync(path.join(SRC, 'app', '(tabs)', 'speak.tsx'), 'utf8');
   // The three controls a learner uses mid-conversation.
   assert.match(source, /accessibilityLabel="Stop the tutor"/);
-  assert.match(source, /accessibilityLabel="Send message"/);
+  assert.match(source, /accessibilityLabel=\{t\('Send message'\)\}/);
   assert.match(source, /accessibilityLabel=\{chatRecording \? 'Stop recording' : 'Speak your reply'\}/);
   // The conversation itself is announced as a region, and status changes are live.
-  assert.match(source, /accessibilityLabel="Conversation with your tutor"/);
+  assert.match(source, /accessibilityLabel=\{t\('Conversation with your tutor'\)\}/);
   assert.match(source, /accessibilityLiveRegion="polite"/);
 });
 
