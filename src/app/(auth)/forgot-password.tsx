@@ -71,7 +71,7 @@ export default function ForgotPasswordScreen() {
         <Logo size={30} />
         <Text style={styles.title}>{t('Reset your password')}</Text>
         <Text style={styles.subtitle}>
-          Enter your email and we’ll send you a link to get back in.
+          {t('Enter your email and we’ll send you a link to get back in.')}
         </Text>
       </View>
 
@@ -83,7 +83,7 @@ export default function ForgotPasswordScreen() {
       ) : null}
 
       <TextField
-        label="Email"
+        label={t("Email")}
         value={email}
         onChangeText={setEmail}
         placeholder="you@example.com"
@@ -94,7 +94,7 @@ export default function ForgotPasswordScreen() {
         onSubmitEditing={handleSubmit}
       />
 
-      <Button label="Send reset link" onPress={handleSubmit} loading={busy} />
+      <Button label={t("Send reset link")} onPress={handleSubmit} loading={busy} />
 
       {!isSupabaseConfigured ? (
         <Text style={styles.demoNote}>
@@ -107,7 +107,7 @@ export default function ForgotPasswordScreen() {
         style={styles.back}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Back to sign in"
+        accessibilityLabel={t("Back to sign in")}
       >
         <Ionicons name="chevron-back" size={16} color={colors.primary} />
             <Text style={styles.backText}>{t('Back to sign in')}</Text>
