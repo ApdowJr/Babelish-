@@ -161,7 +161,7 @@ export default function WordsScreen() {
         </View>
       </View>
 
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+      <SegmentedControl options={TABS.map((item) => ({ ...item, label: t(item.label) }))} value={tab} onChange={setTab} />
 
       {tab === 'practice' ? (
         <PracticeTab
@@ -204,10 +204,10 @@ export default function WordsScreen() {
           <View style={styles.phraseHead}>
             <View style={styles.flex}>
               <Text style={styles.phraseTitle}>
-                {language.flag} {language.name} phrasebook
+                {language.flag} {language.name} {t('phrasebook')}
               </Text>
               <Text style={styles.phraseSub}>
-                {phrasebook.length} words and phrases · works offline
+                {phrasebook.length} {t('words and phrases · works offline')}
               </Text>
             </View>
             <Pressable
@@ -221,7 +221,7 @@ export default function WordsScreen() {
                 color={colors.primary}
               />
               <Text style={styles.addLangText}>
-                {activeLanguageIds.includes(language.id) ? 'Learning' : 'Add'}
+                {t(activeLanguageIds.includes(language.id) ? 'Learning' : 'Add')}
               </Text>
             </Pressable>
           </View>
@@ -232,7 +232,7 @@ export default function WordsScreen() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder={`Search ${language.name} or English…`}
+              placeholder={t('Search course or English…').replace('course', language.name)}
               placeholderTextColor={colors.textFaint}
               autoCapitalize="none"
               accessibilityLabel={t("Search phrases")}
@@ -245,22 +245,22 @@ export default function WordsScreen() {
           </View>
 
           <SegmentedControl
-            options={CATEGORY_OPTIONS}
+            options={CATEGORY_OPTIONS.map((item) => ({ ...item, label: t(item.label) }))}
             value={category}
             onChange={setCategory}
             scroll
           />
 
           <Text style={styles.countLine}>
-            {filtered.length} {filtered.length === 1 ? 'phrase' : 'phrases'}
+            {filtered.length} {t(filtered.length === 1 ? 'phrase' : 'phrases')}
             {category !== 'all' ? ` · ${PHRASE_CATEGORY_LABEL[category]}` : ''}
           </Text>
 
           {filtered.length === 0 ? (
             <EmptyState
               icon="search-outline"
-              title="No phrases match"
-              body="Try an English meaning, the native script, or the transliteration."
+              title={t("No phrases match")}
+              body={t("Try an English meaning, the native script, or the transliteration.")}
             />
           ) : (
             filtered.map((phrase) => (
