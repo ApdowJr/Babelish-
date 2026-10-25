@@ -494,7 +494,7 @@ function PracticeTab({
       <SectionHeader title="Your word bank" action="Review now" onAction={() => router.push('/review')} />
 
       {!ready ? (
-        <Text style={styles.loadingText}>{t('Loading your words…')}</Text>
+        <Text style={styles.loadingText} >{translate('Loading your words…')}</Text>
       ) : vocab.length === 0 ? (
         <EmptyState
           emoji="🌱"
@@ -512,7 +512,7 @@ function PracticeTab({
       ) : null}
 
       <View style={styles.boxCard}>
-        <Text style={styles.boxTitle}>{t('How the boxes work')}</Text>
+        <Text style={styles.boxTitle}>{translate('How the boxes work')}</Text>
         <Text style={styles.boxBody}>
           A new word starts in box 1 and comes back tomorrow. Each correct review moves it one box
           further out — 1, 2, 4, 8, then 15 days. A miss gently returns it to box 1. Nothing is ever
