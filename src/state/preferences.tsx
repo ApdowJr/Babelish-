@@ -13,6 +13,7 @@ import {
 } from '@/lib/preferenceRules';
 import { readScopedItem, writeScopedItem } from '@/lib/scopedStorage';
 import type { ThemeMode } from '@/theme/palette';
+import type { InterfaceLanguage } from '@/lib/interfaceLocalization';
 
 // Re-exported so screens keep importing from one place (`@/state/preferences`).
 export { DAILY_GOALS, dailyGoalXp } from '@/lib/preferenceRules';
@@ -35,6 +36,7 @@ type PreferencesValue = Preferences & {
   setAutoSpeak: (value: boolean) => void;
   setReduceMotion: (value: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setInterfaceLanguage: (language: InterfaceLanguage) => void;
 };
 
 const STORAGE_KEY = 'zelvoca:preferences';
@@ -154,6 +156,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setAutoSpeak: (value) => update({ autoSpeak: value }),
         setReduceMotion: (value) => update({ reduceMotion: value }),
         setThemeMode: (mode) => update({ themeMode: mode }),
+        setInterfaceLanguage: (language) => update({ interfaceLanguage: language }),
       }}
     >
       {children}
