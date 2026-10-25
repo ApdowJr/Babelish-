@@ -143,7 +143,7 @@ export default function SignupScreen() {
           color={passwordLooksGood ? colors.success : colors.textFaint}
         />
         <Text style={[styles.requirementText, passwordLooksGood && styles.requirementMet]}>
-          At least 8 characters
+          {t('At least 8 characters')}
         </Text>
       </View>
 
@@ -155,7 +155,7 @@ export default function SignupScreen() {
           style={styles.legalLink}
           onPress={() => router.push('/terms')}
           accessibilityRole="link"
-          accessibilityLabel="Open Terms of Service"
+          accessibilityLabel={t("Open Terms of Service")}
         >
           Terms of Service
         </Text>{' '}
@@ -164,7 +164,7 @@ export default function SignupScreen() {
           style={styles.legalLink}
           onPress={() => router.push('/privacy')}
           accessibilityRole="link"
-          accessibilityLabel="Open Privacy Policy"
+          accessibilityLabel={t("Open Privacy Policy")}
         >
           Privacy Policy
         </Text>
@@ -173,7 +173,7 @@ export default function SignupScreen() {
 
       {isDemo ? (
         <Text style={styles.demoNote}>
-          Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.
+          {t('Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.')}
         </Text>
       ) : null}
 
