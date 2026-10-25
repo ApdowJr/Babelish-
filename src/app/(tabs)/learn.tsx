@@ -24,7 +24,6 @@ import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
-import { usePreferences } from '@/state/preferences';
 import { translateUi } from '@/lib/interfaceLocalization';
 
 export default function ExploreScreen() {
