@@ -10,6 +10,7 @@
 
 import { DEFAULT_LANGUAGE_ID } from '../data/languages';
 import { isThemeMode, type ThemeMode } from '../theme/palette';
+import type { InterfaceLanguage } from './interfaceLocalization';
 
 /** Daily goal options in minutes; XP target = minutes × 10 (published rule). */
 export const DAILY_GOALS = [5, 10, 15, 20] as const;
@@ -21,6 +22,8 @@ export const VOICE_SPEEDS = ['slow', 'normal', 'fast'] as const;
 export type VoiceSpeed = (typeof VOICE_SPEEDS)[number];
 
 export type Preferences = {
+  /** UI language only; independent from target/native learning languages. */
+  interfaceLanguage: InterfaceLanguage;
   /** Primary language the learner is studying (drives Speak + Home). */
   targetLanguageId: string;
   /** Language the learner speaks natively (used for AI explanations). */
@@ -46,6 +49,7 @@ export type Preferences = {
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
+  interfaceLanguage: 'en',
   targetLanguageId: DEFAULT_LANGUAGE_ID,
   nativeLanguageId: 'en',
   activeLanguageIds: [DEFAULT_LANGUAGE_ID],
@@ -102,6 +106,9 @@ export function normalizePreferences(raw: unknown, fallback: Preferences, valida
     : fallback.dailyGoalMinutes;
 
   return {
+    interfaceLanguage: parsed.interfaceLanguage === 'so' || parsed.interfaceLanguage === 'en'
+      ? parsed.interfaceLanguage
+      : fallback.interfaceLanguage,
     targetLanguageId: target,
     nativeLanguageId:
       typeof parsed.nativeLanguageId === 'string' && parsed.nativeLanguageId.length > 0
