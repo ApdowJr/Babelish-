@@ -59,9 +59,9 @@ export default function LoginScreen() {
     <Screen scroll>
       <AuthHero
         eyebrow="WELCOME BACK"
-        title="Speak like a native."
-        subtitle="Real conversations, real voices, and a tutor that never switches to your language."
-        perks={[`${LANGUAGES.length} languages`, 'Every lesson free', 'Works offline']}
+        title="Welcome back."
+        subtitle="Pick up where you left off and keep building your language skills."
+        perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Your progress, saved']}
       />
 
       {error ? (
