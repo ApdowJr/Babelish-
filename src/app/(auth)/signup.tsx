@@ -87,7 +87,7 @@ export default function SignupScreen() {
         eyebrow={t("JOIN BABELISH")}
         title={t("Start learning today.")}
         subtitle={t("Create your account to save your progress and build a learning habit at your own pace.")}
-        perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Personal progress']}
+        perks={[`${LANGUAGES.length} ${t('languages')}`, t('Offline lessons'), t('Personal progress')]}
       />
 
       {error ? (
