@@ -69,7 +69,7 @@ export default function SignupScreen() {
             <Ionicons name="mail-unread-outline" size={34} color={colors.accentInk} />
           </View>
           <Text style={styles.doneTitle}>{t('You’re almost in')}</Text>
-          <Text style={styles.doneText}>{doneMessage}</Text>
+          <Text style={styles.doneText}>{t(doneMessage)}</Text>
           <Button
             label={t("Back to sign in")}
             variant="secondary"
@@ -93,7 +93,7 @@ export default function SignupScreen() {
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t(error)}</Text>
         </View>
       ) : null}
 
