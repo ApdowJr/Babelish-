@@ -68,6 +68,9 @@ const SO: Record<string, string> = {
   'Personal progress': 'Horumarkaaga gaarka ah', 'languages': 'luqado',
   'Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.': 'Habka tijaabada — akoonnadu telefoonkan ayay ku jiraan. Habee furaha Supabase si aad u isticmaasho akoonno dhab ah.',
   'Cancel': 'Jooji', 'Save': 'Kaydi',
+  'Demo build: accounts, progress and the phrasebook stay on this device. No email is sent and nothing leaves your phone. Any email + 8-character password also works.': 'Habka tijaabada: akoonnada, horumarka iyo buugga weedhuhu telefoonkan ayay ku jiraan. Iimayl lama diro, xogtuna telefoonka kama baxdo. Iimayl kasta iyo furaha sirta ah oo 8 xaraf ah way shaqaynayaan.',
+  'Open Terms of Service': 'Fur shuruudaha adeegga', 'Open Privacy Policy': 'Fur siyaasadda asturnaanta',
+  'Privacy Policy': 'Siyaasadda asturnaanta', 'Demo mode — password reset needs the Supabase publishable key in .env': 'Habka tijaabada — dib-u-dejinta furaha sirta ahi waxay u baahan tahay furaha Supabase ee ku jira .env',
 };
 export function translateUi(text: string, language: InterfaceLanguage): string {
   if (language === 'en') return text;
