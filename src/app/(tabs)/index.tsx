@@ -142,10 +142,6 @@ export default function HomeScreen() {
             <Text style={styles.name}>{firstName}</Text>
           </View>
           <View style={styles.topActions}>
-            <View style={styles.freeChip}>
-              <View style={styles.freeDot} />
-              <Text style={styles.freeText}>FREE</Text>
-            </View>
             <Pressable
               onPress={() => router.push('/profile')}
               accessibilityRole="button"
@@ -552,17 +548,6 @@ const createStyles = (c: Palette) => StyleSheet.create({
   greeting: { ...typography.micro, color: c.textMuted, letterSpacing: 1.1 },
   name: { ...typography.title, color: c.text, marginTop: 1 },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  freeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: c.primaryTint,
-    borderRadius: radii.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  freeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.success },
-  freeText: { ...typography.micro, fontSize: 9.5, color: c.primary },
   avatar: {
     width: 44,
     height: 44,
