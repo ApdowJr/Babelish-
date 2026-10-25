@@ -78,7 +78,7 @@ export default function ForgotPasswordScreen() {
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t(error)}</Text>
         </View>
       ) : null}
 
