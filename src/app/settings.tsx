@@ -40,7 +40,6 @@ import { radii, shadows, spacing, typography, type Palette } from '@/theme/token
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
 import { INTERFACE_LANGUAGES, translateUi } from '@/lib/interfaceLocalization';
-import { INTERFACE_LANGUAGES, translateUi } from '@/lib/interfaceLocalization';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -818,7 +817,7 @@ function RowView({ row, translate }: { row: Row; translate: (value: string) => s
       </View>
       <View style={styles.rowText}>
         <Text style={[styles.rowLabel, danger && { color: colors.danger }]}>{translate(row.label)}</Text>
-        {row.hint ? <Text style={styles.rowHint}>{row.hint ? translate(row.hint) : null}</Text> : null}
+        {row.hint ? <Text style={styles.rowHint}>{translate(row.hint)}</Text> : null}
       </View>
       {children}
     </View>
@@ -830,7 +829,7 @@ function RowView({ row, translate }: { row: Row; translate: (value: string) => s
         onPress={() => row.onChange(!row.value)}
         accessibilityRole="switch"
         accessibilityLabel={translate(row.label)}
-        accessibilityHint={row.hint}
+        accessibilityHint={row.hint ? translate(row.hint) : undefined}
         accessibilityState={{ checked: row.value }}
         style={({ pressed }) => [pressed && styles.rowPressed]}
       >
@@ -858,7 +857,7 @@ function RowView({ row, translate }: { row: Row; translate: (value: string) => s
       <Pressable
         onPress={row.onPress}
         accessibilityRole="button"
-        accessibilityLabel={row.label}
+        accessibilityLabel={translate(row.label)}
         accessibilityHint={row.hint}
         style={({ pressed }) => [pressed && styles.rowPressed]}
       >
