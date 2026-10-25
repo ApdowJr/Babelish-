@@ -87,7 +87,7 @@ export default function ProfileScreen() {
         >
           <Ionicons name="settings-outline" size={20} color={colors.text} />
         </Pressable>
-        <Pill label={`LEVEL ${level.level}`} tone="free" icon="sparkles" />
+        <Pill label={`${t('LEVEL')} ${level.level}`} tone="free" icon="sparkles" />
       </View>
 
       <View style={[styles.profileCard, { backgroundColor: colors.primary }]}>
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Pill
-              label={isDemo ? 'DEMO ACCOUNT' : 'SUPABASE ACCOUNT'}
+              label={isDemo ? t('DEMO ACCOUNT') : t('SUPABASE ACCOUNT')}
               tone="dark"
             />
             <Pill label={`${tier.emoji} ${tier.name.toUpperCase()}`} tone="dark" />
@@ -113,9 +113,9 @@ export default function ProfileScreen() {
       </View>
 
       <SectionHeader
-        title="Momentum"
+        title={t("Momentum")}
         icon="pulse-outline"
-        action="Details"
+        action={t("Details")}
         onAction={() => router.push('/progress')}
       />
       <Pressable
@@ -124,12 +124,12 @@ export default function ProfileScreen() {
         accessibilityLabel={t("Open detailed progress — streak calendar and skill breakdown")}
         style={({ pressed }) => [styles.quickRow, pressed && { opacity: 0.85 }]}
       >
-        <QuickStat icon="flame" value={`${streak}`} label="DAY STREAK" tint={colors.accentInk} />
-        <QuickStat icon="sparkles" value={`${today}`} label="XP TODAY" tint={colors.sunInk} />
-        <QuickStat icon="star" value={`${wordsMastered}`} label="MASTERED" tint={colors.lilacInk} />
+        <QuickStat icon="flame" value={`${streak}`} label={t("DAY STREAK")} tint={colors.accentInk} />
+        <QuickStat icon="sparkles" value={`${today}`} label={t("XP TODAY")} tint={colors.sunInk} />
+        <QuickStat icon="star" value={`${wordsMastered}`} label={t("MASTERED")} tint={colors.lilacInk} />
       </Pressable>
 
-      <SectionHeader title="Daily goal" icon="flag-outline" />
+      <SectionHeader title={t("Daily goal")} icon="flag-outline" />
       <View style={styles.card}>
         <Text style={styles.fieldLabel}>
           A gentle target — {dailyGoalXp(dailyGoalMinutes)} XP a day, about {dailyGoalMinutes}{' '}
@@ -154,7 +154,7 @@ export default function ProfileScreen() {
       </View>
 
       <SectionHeader
-        title={`My languages · ${activeLanguageIds.length}`}
+        title={`${t("My languages")} · ${activeLanguageIds.length}`}
         action="Manage"
         onAction={() => router.push('/learn')}
       />
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
                 <View style={styles.flex}>
                   <View style={styles.langTitleRow}>
                     <Text style={styles.langName}>{language.name}</Text>
-                    {active ? <Pill label="ACTIVE" tone="free" /> : null}
+                    {active ? <Pill label={t("ACTIVE")} tone="free" /> : null}
                   </View>
                   <Text style={styles.langMeta}>
                     {summary.completedLessons}/{summary.lessons} lessons ·{' '}
@@ -205,7 +205,7 @@ export default function ProfileScreen() {
       </View>
 
       <SectionHeader
-        title="Learning profile"
+        title={t("Learning profile")}
         icon="person-outline"
         action={completeness === 1 ? 'Edit' : 'Finish'}
         onAction={() => router.push('/profile/edit')}
@@ -231,11 +231,11 @@ export default function ProfileScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
       </Pressable>
 
-      <SectionHeader title="Plan" icon="pricetag-outline" />
+      <SectionHeader title={t("Plan")} icon="pricetag-outline" />
       <View style={styles.freeCard}>
         <View style={styles.freeTop}>
-          <Pill label={plan === 'premium' ? 'SUPPORTER' : 'FREE FOREVER'} tone="free" icon="heart" />
-          <Text style={styles.freeTier}>{plan === 'premium' ? 'Thank you 💚' : 'No card needed'}</Text>
+          <Pill label={plan === 'premium' ? t('SUPPORTER') : t('FREE FOREVER')} tone="free" icon="heart" />
+          <Text style={styles.freeTier}>{plan === 'premium' ? t('Thank you 💚') : t('No card needed')}</Text>
         </View>
         <Text style={styles.freeTitle}>{t('Everything is included')}</Text>
         <Text style={styles.freeBody}>
@@ -263,7 +263,7 @@ export default function ProfileScreen() {
               features at launch. Nothing about learning changes.
             </Text>
             <Button
-              label="Redeem a supporter code"
+              label={t("Redeem a supporter code")}
               variant="secondary"
               onPress={() => {
                 const label = redeem('BABELISH-BETA');
@@ -279,7 +279,7 @@ export default function ProfileScreen() {
             />
           </>
         ) : (
-          <Button label="Return to the free plan" variant="secondary" onPress={() => resetToFree()} />
+          <Button label={t("Return to the free plan")} variant="secondary" onPress={() => resetToFree()} />
         )}
 
         <View style={styles.rowDivider} />
@@ -292,7 +292,7 @@ export default function ProfileScreen() {
               <Text style={styles.referralCode}>{myReferralCode}</Text>
             </View>
             <Button
-              label="Share"
+              label={t("Share")}
               variant="secondary"
               onPress={shareReferral}
               style={styles.referralShare}
@@ -301,11 +301,11 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <SectionHeader title="App settings" icon="settings-outline" />
+      <SectionHeader title={t("App settings")} icon="settings-outline" />
       <Pressable
         onPress={() => router.push('/settings')}
         accessibilityRole="button"
-        accessibilityLabel="Open settings"
+        accessibilityLabel={t("Open settings")}
         accessibilityHint="Reminders, voice, data, privacy and account"
         style={({ pressed }) => [styles.card, styles.settingsCard, pressed && styles.settingsCardPressed]}
       >
@@ -322,7 +322,7 @@ export default function ProfileScreen() {
       </Pressable>
 
       <Button
-        label="Sign out"
+        label={t("Sign out")}
         variant="danger"
         onPress={() => {
           signOut();
