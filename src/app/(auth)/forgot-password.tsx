@@ -10,12 +10,16 @@ import { useAuth } from '@/context/AuthContext';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { usePreferences } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +50,12 @@ export default function ForgotPasswordScreen() {
           <View style={styles.doneIcon}>
             <Ionicons name="paper-plane-outline" size={30} color={colors.accentInk} />
           </View>
-          <Text style={styles.doneTitle}>Check your inbox</Text>
+          <Text style={styles.doneTitle}>{t('Check your inbox')}</Text>
           <Text style={styles.doneText}>
             If an account exists for {email.trim()}, a reset link is on its way.
           </Text>
           <Button
-            label="Back to sign in"
+            label={t("Back to sign in")}
             variant="secondary"
             onPress={() => router.replace('/login')}
             style={{ alignSelf: 'stretch', marginTop: spacing.xl }}
@@ -65,21 +69,21 @@ export default function ForgotPasswordScreen() {
     <Screen scroll>
       <View style={styles.header}>
         <Logo size={30} />
-        <Text style={styles.title}>Reset your password</Text>
+        <Text style={styles.title}>{t('Reset your password')}</Text>
         <Text style={styles.subtitle}>
-          Enter your email and we’ll send you a link to get back in.
+          {t('Enter your email and we’ll send you a link to get back in.')}
         </Text>
       </View>
 
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t(error)}</Text>
         </View>
       ) : null}
 
       <TextField
-        label="Email"
+        label={t("Email")}
         value={email}
         onChangeText={setEmail}
         placeholder="you@example.com"
@@ -90,11 +94,11 @@ export default function ForgotPasswordScreen() {
         onSubmitEditing={handleSubmit}
       />
 
-      <Button label="Send reset link" onPress={handleSubmit} loading={busy} />
+      <Button label={t("Send reset link")} onPress={handleSubmit} loading={busy} />
 
       {!isSupabaseConfigured ? (
         <Text style={styles.demoNote}>
-          Demo mode — password reset needs the Supabase publishable key in .env
+          {t('Demo mode — password reset needs the Supabase publishable key in .env')}
         </Text>
       ) : null}
 
@@ -103,10 +107,10 @@ export default function ForgotPasswordScreen() {
         style={styles.back}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Back to sign in"
+        accessibilityLabel={t("Back to sign in")}
       >
         <Ionicons name="chevron-back" size={16} color={colors.primary} />
-            <Text style={styles.backText}>Back to sign in</Text>
+            <Text style={styles.backText}>{t('Back to sign in')}</Text>
       </Pressable>
     </Screen>
   );

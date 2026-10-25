@@ -86,8 +86,8 @@ test('the Speak screen exposes the controls a screen-reader user needs', () => {
 
 test('the settings screen and splash are reachable and labelled', () => {
   const settings = readFileSync(path.join(SRC, 'app', 'settings.tsx'), 'utf8');
-  assert.match(settings, /accessibilityLabel="Search settings"/);
-  assert.match(settings, /accessibilityLabel="Go back"/);
+  assert.match(settings, /accessibilityLabel=\{t\("Search settings"\)\}/);
+  assert.match(settings, /accessibilityLabel=\{t\("Go back"\)\}/);
   assert.match(settings, /accessibilityRole="switch"/);
   assert.match(settings, /accessibilityState=\{\{ selected: option.active \}\}/);
 

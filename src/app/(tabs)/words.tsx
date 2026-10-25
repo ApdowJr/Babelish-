@@ -40,6 +40,7 @@ import {
 } from '@/lib/achievements';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 type Tab = 'practice' | 'phrasebook' | 'badges';
 
@@ -58,6 +59,8 @@ const CATEGORY_OPTIONS: { value: PhraseCategory | 'all'; label: string }[] = [
 
 export default function WordsScreen() {
   const styles = useThemedStyles(createStyles);
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ tab?: string }>();
   const requestedTab: Tab =
@@ -150,15 +153,15 @@ export default function WordsScreen() {
     <Screen scroll tabBarSpace>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text style={styles.kicker}>YOUR LIBRARY</Text>
-          <Text style={styles.title}>Words worth keeping</Text>
+          <Text style={styles.kicker}>{t('YOUR LIBRARY')}</Text>
+          <Text style={styles.title}>{t('Words worth keeping')}</Text>
         </View>
         <View style={styles.headerBadge}>
           <Text style={styles.headerEmoji}>📚</Text>
         </View>
       </View>
 
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+      <SegmentedControl options={TABS.map((item) => ({ ...item, label: t(item.label) }))} value={tab} onChange={setTab} />
 
       {tab === 'practice' ? (
         <PracticeTab
@@ -166,6 +169,7 @@ export default function WordsScreen() {
           dueCount={dueCount}
           wordsMastered={wordsMastered}
           ready={ready}
+          translate={t}
         />
       ) : null}
 
@@ -201,10 +205,10 @@ export default function WordsScreen() {
           <View style={styles.phraseHead}>
             <View style={styles.flex}>
               <Text style={styles.phraseTitle}>
-                {language.flag} {language.name} phrasebook
+                {language.flag} {language.name} {t('phrasebook')}
               </Text>
               <Text style={styles.phraseSub}>
-                {phrasebook.length} words and phrases · works offline
+                {phrasebook.length} {t('words and phrases · works offline')}
               </Text>
             </View>
             <Pressable
@@ -218,7 +222,7 @@ export default function WordsScreen() {
                 color={colors.primary}
               />
               <Text style={styles.addLangText}>
-                {activeLanguageIds.includes(language.id) ? 'Learning' : 'Add'}
+                {t(activeLanguageIds.includes(language.id) ? 'Learning' : 'Add')}
               </Text>
             </Pressable>
           </View>
@@ -229,10 +233,10 @@ export default function WordsScreen() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder={`Search ${language.name} or English…`}
+              placeholder={t('Search course or English…').replace('course', language.name)}
               placeholderTextColor={colors.textFaint}
               autoCapitalize="none"
-              accessibilityLabel="Search phrases"
+              accessibilityLabel={t("Search phrases")}
             />
             {query ? (
               <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button">
@@ -242,22 +246,22 @@ export default function WordsScreen() {
           </View>
 
           <SegmentedControl
-            options={CATEGORY_OPTIONS}
+            options={CATEGORY_OPTIONS.map((item) => ({ ...item, label: t(item.label) }))}
             value={category}
             onChange={setCategory}
             scroll
           />
 
           <Text style={styles.countLine}>
-            {filtered.length} {filtered.length === 1 ? 'phrase' : 'phrases'}
+            {filtered.length} {t(filtered.length === 1 ? 'phrase' : 'phrases')}
             {category !== 'all' ? ` · ${PHRASE_CATEGORY_LABEL[category]}` : ''}
           </Text>
 
           {filtered.length === 0 ? (
             <EmptyState
               icon="search-outline"
-              title="No phrases match"
-              body="Try an English meaning, the native script, or the transliteration."
+              title={t("No phrases match")}
+              body={t("Try an English meaning, the native script, or the transliteration.")}
             />
           ) : (
             filtered.map((phrase) => (
@@ -428,11 +432,13 @@ function PracticeTab({
   dueCount,
   wordsMastered,
   ready,
+  translate,
 }: {
   vocab: VocabItem[];
   dueCount: number;
   wordsMastered: number;
   ready: boolean;
+  translate: (value: string) => string;
 }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
@@ -488,7 +494,7 @@ function PracticeTab({
       <SectionHeader title="Your word bank" action="Review now" onAction={() => router.push('/review')} />
 
       {!ready ? (
-        <Text style={styles.loadingText}>Loading your words…</Text>
+        <Text style={styles.loadingText}>{translate('Loading your words…')}</Text>
       ) : vocab.length === 0 ? (
         <EmptyState
           emoji="🌱"
@@ -506,7 +512,7 @@ function PracticeTab({
       ) : null}
 
       <View style={styles.boxCard}>
-        <Text style={styles.boxTitle}>How the boxes work</Text>
+        <Text style={styles.boxTitle}>{translate('How the boxes work')}</Text>
         <Text style={styles.boxBody}>
           A new word starts in box 1 and comes back tomorrow. Each correct review moves it one box
           further out — 1, 2, 4, 8, then 15 days. A miss gently returns it to box 1. Nothing is ever

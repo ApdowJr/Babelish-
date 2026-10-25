@@ -39,6 +39,7 @@ import { createAiTransport, fetchAiStatus, type AiStatus } from '@/lib/ai';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
 import { THEME_MODES, type ThemeMode } from '@/theme/palette';
+import { INTERFACE_LANGUAGES, translateUi } from '@/lib/interfaceLocalization';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -88,7 +89,9 @@ export default function SettingsScreen() {
     setAutoSpeak,
     setReduceMotion,
     setThemeMode,
+    setInterfaceLanguage,
   } = prefs;
+  const t = (value: string) => translateUi(value, prefs.interfaceLanguage);
   const { progress, vocab, resetLearning } = useLearning();
   const { profile, saveProfile } = useProfile();
   const { state: analytics, resetAnalytics } = useAnalytics();
@@ -399,6 +402,19 @@ export default function SettingsScreen() {
         title: 'Appearance',
         rows: [
           {
+            id: 'interface-language',
+            kind: 'chips',
+            icon: 'language-outline',
+            label: 'Interface language',
+            hint: 'Choose the language used for menus and buttons. This does not change your course.',
+            keywords: 'interface app ui language english somali soomaali luqad',
+            options: INTERFACE_LANGUAGES.map((language) => ({
+              label: language.label,
+              active: prefs.interfaceLanguage === language.id,
+              onPress: () => setInterfaceLanguage(language.id),
+            })),
+          },
+          {
             id: 'theme',
             kind: 'chips',
             icon: 'contrast-outline',
@@ -703,7 +719,17 @@ export default function SettingsScreen() {
     ];
   })();
 
-  const visible = filterSettings(groups, query);
+  const searchableGroups = groups.map((group) => ({
+    ...group,
+    title: t(group.title),
+    rows: group.rows.map((row) => ({
+      ...row,
+      label: t(row.label),
+      hint: row.hint ? t(row.hint) : undefined,
+      keywords: [row.keywords, t(row.label), row.hint ? t(row.hint) : ''].filter(Boolean).join(' '),
+    })),
+  }));
+  const visible = filterSettings(searchableGroups, query);
 
   return (
     <Screen scroll tabBarSpace>
@@ -712,13 +738,13 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
           style={styles.iconButton}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("Go back")}
           hitSlop={8}
         >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title} accessibilityRole="header">
-          Settings
+          {t('Settings')}
         </Text>
         <View style={styles.iconButton} />
       </View>
@@ -728,18 +754,18 @@ export default function SettingsScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search settings"
+          placeholder={t("Search settings")}
           placeholderTextColor={colors.textFaint}
           style={styles.searchInput}
           returnKeyType="search"
-          accessibilityLabel="Search settings"
+          accessibilityLabel={t("Search settings")}
           autoCorrect={false}
         />
         {query ? (
           <Pressable
             onPress={() => setQuery('')}
             accessibilityRole="button"
-            accessibilityLabel="Clear search"
+            accessibilityLabel={t("Clear search")}
             hitSlop={8}
           >
             <Ionicons name="close-circle" size={17} color={colors.textFaint} />
@@ -749,21 +775,21 @@ export default function SettingsScreen() {
 
       {visible.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No setting matches “{query.trim()}”</Text>
-          <Text style={styles.emptyBody}>Try “voice”, “language”, “privacy” or “motion”.</Text>
+          <Text style={styles.emptyTitle}>{t("No setting matches")} “{query.trim()}”</Text>
+          <Text style={styles.emptyBody}>{t('Try “voice”, “language”, “privacy” or “motion”.')}</Text>
         </View>
       ) : null}
 
       {visible.map((group) => (
         <View key={group.id} style={styles.group}>
           <Text style={styles.groupTitle} accessibilityRole="header">
-            {group.title.toUpperCase()}
+            {t(group.title).toUpperCase()}
           </Text>
           <View style={styles.card}>
             {group.rows.map((row, index) => (
               <View key={row.id}>
                 {index > 0 ? <View style={styles.divider} /> : null}
-                <RowView row={row} />
+                <RowView row={row} translate={t} />
               </View>
             ))}
           </View>
@@ -787,7 +813,7 @@ export default function SettingsScreen() {
   );
 }
 
-function RowView({ row }: { row: Row }) {
+function RowView({ row, translate }: { row: Row; translate: (value: string) => string }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const danger = row.kind === 'nav' && row.danger === true;
@@ -800,8 +826,8 @@ function RowView({ row }: { row: Row }) {
         <Ionicons name={row.icon} size={17} color={tint} />
       </View>
       <View style={styles.rowText}>
-        <Text style={[styles.rowLabel, danger && { color: colors.danger }]}>{row.label}</Text>
-        {row.hint ? <Text style={styles.rowHint}>{row.hint}</Text> : null}
+        <Text style={[styles.rowLabel, danger && { color: colors.danger }]}>{translate(row.label)}</Text>
+        {row.hint ? <Text style={styles.rowHint}>{translate(row.hint)}</Text> : null}
       </View>
       {children}
     </View>
@@ -812,8 +838,8 @@ function RowView({ row }: { row: Row }) {
       <Pressable
         onPress={() => row.onChange(!row.value)}
         accessibilityRole="switch"
-        accessibilityLabel={row.label}
-        accessibilityHint={row.hint}
+        accessibilityLabel={translate(row.label)}
+        accessibilityHint={row.hint ? translate(row.hint) : undefined}
         accessibilityState={{ checked: row.value }}
         style={({ pressed }) => [pressed && styles.rowPressed]}
       >
@@ -841,13 +867,13 @@ function RowView({ row }: { row: Row }) {
       <Pressable
         onPress={row.onPress}
         accessibilityRole="button"
-        accessibilityLabel={row.label}
+        accessibilityLabel={translate(row.label)}
         accessibilityHint={row.hint}
         style={({ pressed }) => [pressed && styles.rowPressed]}
       >
         {body(
           <View style={styles.rowEnd}>
-            {row.detail ? <Text style={styles.rowDetail}>{row.detail}</Text> : null}
+            {row.detail ? <Text style={styles.rowDetail}>{translate(row.detail)}</Text> : null}
             <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
           </View>
         )}
@@ -865,11 +891,11 @@ function RowView({ row }: { row: Row }) {
               key={option.label}
               onPress={option.onPress}
               accessibilityRole="radio"
-              accessibilityLabel={`${row.label}: ${option.label}`}
+              accessibilityLabel={`${translate(row.label)}: ${translate(option.label)}`}
               accessibilityState={{ selected: option.active }}
               style={[styles.chip, option.active && styles.chipOn]}
             >
-              <Text style={[styles.chipText, option.active && styles.chipTextOn]}>{option.label}</Text>
+              <Text style={[styles.chipText, option.active && styles.chipTextOn]}>{translate(option.label)}</Text>
             </Pressable>
           ))}
         </View>

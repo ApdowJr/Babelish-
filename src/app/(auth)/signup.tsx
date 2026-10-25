@@ -10,12 +10,16 @@ import { useAuth } from '@/context/AuthContext';
 import { LANGUAGES } from '@/data/languages';
 import { radii, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { usePreferences } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { signUp, isDemo } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,10 +68,10 @@ export default function SignupScreen() {
           <View style={styles.doneIcon}>
             <Ionicons name="mail-unread-outline" size={34} color={colors.accentInk} />
           </View>
-          <Text style={styles.doneTitle}>You’re almost in</Text>
-          <Text style={styles.doneText}>{doneMessage}</Text>
+          <Text style={styles.doneTitle}>{t('You’re almost in')}</Text>
+          <Text style={styles.doneText}>{t(doneMessage)}</Text>
           <Button
-            label="Back to sign in"
+            label={t("Back to sign in")}
             variant="secondary"
             onPress={() => router.replace('/login')}
             style={{ alignSelf: 'stretch', marginTop: spacing.xl }}
@@ -80,30 +84,30 @@ export default function SignupScreen() {
   return (
     <Screen scroll>
       <AuthHero
-        eyebrow="JOIN BABELISH"
-        title="Start learning today."
-        subtitle="Create your account to save your progress and build a learning habit at your own pace."
-        perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Personal progress']}
+        eyebrow={t("JOIN BABELISH")}
+        title={t("Start learning today.")}
+        subtitle={t("Create your account to save your progress and build a learning habit at your own pace.")}
+        perks={[`${LANGUAGES.length} ${t('languages')}`, t('Offline lessons'), t('Personal progress')]}
       />
 
       {error ? (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t(error)}</Text>
         </View>
       ) : null}
 
       <TextField
-        label="Name"
+        label={t("Name")}
         value={name}
         onChangeText={setName}
-        placeholder="What should your tutor call you?"
+        placeholder={t("What should your tutor call you?")}
         autoCapitalize="words"
         autoComplete="name"
         textContentType="name"
       />
       <TextField
-        label="Email"
+        label={t("Email")}
         value={email}
         onChangeText={setEmail}
         placeholder="you@example.com"
@@ -112,19 +116,19 @@ export default function SignupScreen() {
         textContentType="emailAddress"
       />
       <TextField
-        label="Password"
+        label={t("Password")}
         value={password}
         onChangeText={setPassword}
-        placeholder="At least 8 characters"
+        placeholder={t("At least 8 characters")}
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
       />
       <TextField
-        label="Confirm password"
+        label={t("Confirm password")}
         value={confirm}
         onChangeText={setConfirm}
-        placeholder="Type it once more"
+        placeholder={t("Type it once more")}
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
@@ -139,11 +143,11 @@ export default function SignupScreen() {
           color={passwordLooksGood ? colors.success : colors.textFaint}
         />
         <Text style={[styles.requirementText, passwordLooksGood && styles.requirementMet]}>
-          At least 8 characters
+          {t('At least 8 characters')}
         </Text>
       </View>
 
-      <Button label="Create account" onPress={handleSignUp} loading={busy} />
+      <Button label={t("Create account")} onPress={handleSignUp} loading={busy} />
 
       <Text style={styles.legalNote}>
         By creating an account you agree to the{' '}
@@ -151,7 +155,7 @@ export default function SignupScreen() {
           style={styles.legalLink}
           onPress={() => router.push('/terms')}
           accessibilityRole="link"
-          accessibilityLabel="Open Terms of Service"
+          accessibilityLabel={t("Open Terms of Service")}
         >
           Terms of Service
         </Text>{' '}
@@ -160,7 +164,7 @@ export default function SignupScreen() {
           style={styles.legalLink}
           onPress={() => router.push('/privacy')}
           accessibilityRole="link"
-          accessibilityLabel="Open Privacy Policy"
+          accessibilityLabel={t("Open Privacy Policy")}
         >
           Privacy Policy
         </Text>
@@ -169,14 +173,14 @@ export default function SignupScreen() {
 
       {isDemo ? (
         <Text style={styles.demoNote}>
-          Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.
+          {t('Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.')}
         </Text>
       ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Text style={styles.footerText}>{t('Already have an account? ')}</Text>
         <Pressable onPress={() => router.replace('/login')} hitSlop={8} accessibilityRole="link">
-          <Text style={styles.footerLink}>Sign in</Text>
+          <Text style={styles.footerLink}>{t('Sign in')}</Text>
         </Pressable>
       </View>
     </Screen>

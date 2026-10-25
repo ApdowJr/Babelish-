@@ -24,9 +24,12 @@ import { usePreferences } from '@/state/preferences';
 import { useLearning } from '@/state/learning';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 export default function ExploreScreen() {
   const styles = useThemedStyles(createStyles);
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<RegionId | 'all'>('all');
@@ -47,15 +50,14 @@ export default function ExploreScreen() {
   return (
     <Screen scroll tabBarSpace>
       <View style={styles.header}>
-        <Text style={styles.kicker}>THE WHOLE ATLAS</Text>
-        <Text style={styles.title}>Explore {LANGUAGE_COUNT} languages</Text>
+        <Text style={styles.kicker}>{t('THE WHOLE ATLAS')}</Text>
+        <Text style={styles.title}>{t('Explore')} {LANGUAGE_COUNT} {t('languages')}</Text>
         <Text style={styles.subtitle}>
-          Real scripts, real dialects, real voices. Every course is free — pick a flag and start
-          today.
+          {t('Real scripts, real dialects, real voices. Every course is free — pick a flag and start today.')}
         </Text>
         <View style={styles.statStrip}>
           <Text style={styles.statText}>
-            {stats.languages} languages · {stats.lessons} lessons · {starterWordCount()}+ words
+            {stats.languages} {t('languages')} · {stats.lessons} {t('lessons')} · {starterWordCount()}+ {t('words')}
           </Text>
           <Pill label="100% FREE" tone="free" icon="sparkles" />
         </View>
@@ -67,10 +69,10 @@ export default function ExploreScreen() {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder="Spanish, العربية, Kansai, Hangul…"
+          placeholder={t("Spanish, العربية, Kansai, Hangul…")}
           placeholderTextColor={colors.textFaint}
           autoCapitalize="none"
-          accessibilityLabel="Search languages"
+          accessibilityLabel={t("Search languages")}
         />
         {query.length > 0 ? (
           <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button">
@@ -198,7 +200,7 @@ export default function ExploreScreen() {
       >
         <View style={styles.footerOrb} />
         <Text style={styles.footerEmoji}>🌍</Text>
-        <Text style={styles.footerTitle}>Why is it all free?</Text>
+        <Text style={styles.footerTitle}>{t('Why is it all free?')}</Text>
         <Text style={styles.footerBody}>
           Because a language should never sit behind a paywall. Babelish is free during beta: every
           lesson, every phrasebook, every native voice. Optional supporter perks arrive at launch —
