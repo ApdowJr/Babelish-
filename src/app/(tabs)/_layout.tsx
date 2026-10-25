@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useWindowDimensions, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,20 +28,9 @@ function SpeakIcon({ focused }: { focused: boolean }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   return (
-    <LinearGradient
-      // The orb keeps the brand gradient in both themes; only its ring reacts
-      // to focus. Using the gradient tokens keeps it in brand sync.
-      colors={
-        focused
-          ? [colors.gradientFrom, colors.gradientTo]
-          : [colors.gradientMid, colors.gradientTo]
-      }
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.orb, focused && styles.orbFocused]}
-    >
+    <View style={[styles.orb, { backgroundColor: colors.primary }, focused && styles.orbFocused]}>
       <Ionicons name="mic" size={21} color={colors.onDark} />
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -151,5 +139,5 @@ const createStyles = (c: Palette) => StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
-  orbFocused: { borderColor: c.sun },
+  orbFocused: { borderColor: c.accent },
 });
