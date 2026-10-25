@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Avatar } from '@/components/Avatar';
@@ -120,10 +119,7 @@ export default function HomeScreen() {
     goal: profile.goals[0],
   });
 
-  const hour = now.getHours();
-  const greeting =
-    hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const firstName = (profile.displayName || user?.displayName || 'friend').split(' ')[0];
+  const firstName = (profile.displayName || user?.displayName || 'Learner').split(' ')[0];
 
   const myLanguages = activeLanguageIds.filter((id) => LANGUAGES.some((l) => l.id === id));
 
@@ -142,7 +138,7 @@ export default function HomeScreen() {
       >
         <View style={styles.topRow}>
           <View style={styles.flex}>
-            <Text style={styles.greeting}>{greeting},</Text>
+            <Text style={styles.greeting}>YOUR LEARNING SPACE</Text>
             <Text style={styles.name}>{firstName}</Text>
           </View>
           <View style={styles.topActions}>
@@ -192,14 +188,7 @@ export default function HomeScreen() {
           accessibilityLabel={next ? `Continue ${next.lesson.title}` : `Open ${language.name}`}
           style={({ pressed }) => [pressed && styles.pressed]}
         >
-          <LinearGradient
-            colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.hero}
-          >
-            <View style={styles.heroOrbA} />
-            <View style={styles.heroOrbB} />
+          <View style={[styles.hero, { backgroundColor: colors.primary }]}>
             <View style={styles.heroTop}>
               <View style={styles.heroFlagWrap}>
                 <Text style={styles.heroFlag}>{language.flag}</Text>
@@ -249,7 +238,7 @@ export default function HomeScreen() {
                 {next ? 'Continue lesson' : 'Start learning'} · {next ? `${Math.max(3, Math.round(next.lesson.exercises.length * 1.2))} min` : '5 min'}
               </Text>
             </View>
-          </LinearGradient>
+          </View>
         </Pressable>
 
         {/* ── Summary ───────────────────────────────────────────────── */}
@@ -560,7 +549,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.md,
   },
-  greeting: { ...typography.caption, color: c.textMuted },
+  greeting: { ...typography.micro, color: c.textMuted, letterSpacing: 1.1 },
   name: { ...typography.title, color: c.text, marginTop: 1 },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   freeChip: {
@@ -601,24 +590,6 @@ const createStyles = (c: Palette) => StyleSheet.create({
     padding: spacing.xl,
     overflow: 'hidden',
     ...shadows.hero,
-  },
-  heroOrbA: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    top: -110,
-    right: -70,
-  },
-  heroOrbB: {
-    position: 'absolute',
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: 'rgba(242,193,78,0.10)',
-    bottom: -60,
-    left: -20,
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   heroFlagWrap: {
