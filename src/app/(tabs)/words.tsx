@@ -40,6 +40,8 @@ import {
 } from '@/lib/achievements';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { usePreferences } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 type Tab = 'practice' | 'phrasebook' | 'badges';
 
@@ -58,6 +60,8 @@ const CATEGORY_OPTIONS: { value: PhraseCategory | 'all'; label: string }[] = [
 
 export default function WordsScreen() {
   const styles = useThemedStyles(createStyles);
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ tab?: string }>();
   const requestedTab: Tab =
@@ -150,8 +154,8 @@ export default function WordsScreen() {
     <Screen scroll tabBarSpace>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text style={styles.kicker}>YOUR LIBRARY</Text>
-          <Text style={styles.title}>Words worth keeping</Text>
+          <Text style={styles.kicker}>{t('YOUR LIBRARY')}</Text>
+          <Text style={styles.title}>{t('Words worth keeping')}</Text>
         </View>
         <View style={styles.headerBadge}>
           <Text style={styles.headerEmoji}>📚</Text>
@@ -232,7 +236,7 @@ export default function WordsScreen() {
               placeholder={`Search ${language.name} or English…`}
               placeholderTextColor={colors.textFaint}
               autoCapitalize="none"
-              accessibilityLabel="Search phrases"
+              accessibilityLabel={t("Search phrases")}
             />
             {query ? (
               <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button">
@@ -488,7 +492,7 @@ function PracticeTab({
       <SectionHeader title="Your word bank" action="Review now" onAction={() => router.push('/review')} />
 
       {!ready ? (
-        <Text style={styles.loadingText}>Loading your words…</Text>
+        <Text style={styles.loadingText}>{t('Loading your words…')}</Text>
       ) : vocab.length === 0 ? (
         <EmptyState
           emoji="🌱"
@@ -506,7 +510,7 @@ function PracticeTab({
       ) : null}
 
       <View style={styles.boxCard}>
-        <Text style={styles.boxTitle}>How the boxes work</Text>
+        <Text style={styles.boxTitle}>{t('How the boxes work')}</Text>
         <Text style={styles.boxBody}>
           A new word starts in box 1 and comes back tomorrow. Each correct review moves it one box
           further out — 1, 2, 4, 8, then 15 days. A miss gently returns it to box 1. Nothing is ever
