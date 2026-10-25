@@ -117,8 +117,7 @@ export default function LoginScreen() {
             style={styles.demoButton}
           />
           <Text style={styles.demoNote}>
-            Demo build: accounts, progress and the phrasebook stay on this device. No email is
-            sent and nothing leaves your phone. Any email + 8-character password also works.
+            {t('Demo build: accounts, progress and the phrasebook stay on this device. No email is sent and nothing leaves your phone. Any email + 8-character password also works.')}
           </Text>
         </>
       ) : null}
