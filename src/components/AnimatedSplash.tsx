@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { BrandMark } from '@/components/BrandMark';
-import { gradients, spacing, typography, type Palette } from '@/theme/tokens';
+import { spacing, typography, type Palette } from '@/theme/tokens';
 import { useThemedStyles } from '@/theme/theme';
 
 /**
@@ -121,8 +120,6 @@ export function AnimatedSplash({
       accessibilityViewIsModal
       accessible
     >
-      <LinearGradient colors={gradients.hero} style={StyleSheet.absoluteFill} />
-      <View style={styles.halo} />
       <View style={styles.center}>
         <Animated.View
           style={{ opacity: markOpacity, transform: [{ scale: markScale }] }}
@@ -159,13 +156,6 @@ export function AnimatedSplash({
 
 const createStyles = (c: Palette) => StyleSheet.create({
   root: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.gradientFrom },
-  halo: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(244, 248, 243, 0.05)',
-  },
   center: { alignItems: 'center', gap: spacing.xl },
   copy: { alignItems: 'center', gap: spacing.xs },
   wordmark: {
