@@ -67,7 +67,7 @@ const SO: Record<string, string> = {
   'Offline lessons': 'Casharro aan internet u baahnayn', 'Your progress, saved': 'Horumarkaaga waa la kaydiyey',
   'Personal progress': 'Horumarkaaga gaarka ah', 'languages': 'luqado',
   'Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.': 'Habka tijaabada — akoonnadu telefoonkan ayay ku jiraan. Habee furaha Supabase si aad u isticmaasho akoonno dhab ah.',
-  'Cancel': 'Jooji', 'Save': 'Kaydi', 'Done': 'Waa la dhammeeyay', 'Close': 'Xir',
+  'Cancel': 'Jooji', 'Save': 'Kaydi',
 };
 export function translateUi(text: string, language: InterfaceLanguage): string {
   if (language === 'en') return text;
