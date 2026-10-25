@@ -26,10 +26,13 @@ import { speakNative } from '@/lib/ai';
 import type { Chapter, Lesson } from '@/lib/curriculum/types';
 import { radii, shadows, spacing, typography, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 export default function HomeScreen() {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { user, isDemo } = useAuth();
   const {
     targetLanguageId,
@@ -138,14 +141,14 @@ export default function HomeScreen() {
       >
         <View style={styles.topRow}>
           <View style={styles.flex}>
-            <Text style={styles.greeting}>YOUR LEARNING SPACE</Text>
+            <Text style={styles.greeting}>{t('YOUR LEARNING SPACE')}</Text>
             <Text style={styles.name}>{firstName}</Text>
           </View>
           <View style={styles.topActions}>
             <Pressable
               onPress={() => router.push('/profile')}
               accessibilityRole="button"
-              accessibilityLabel="Open your profile"
+              accessibilityLabel={t("Open your profile")}
               hitSlop={6}
             >
               <Avatar
@@ -190,7 +193,7 @@ export default function HomeScreen() {
                 <Text style={styles.heroFlag}>{language.flag}</Text>
               </View>
               <View style={styles.flex}>
-                <Text style={styles.heroKicker}>CONTINUE LEARNING</Text>
+                <Text style={styles.heroKicker}>{t('CONTINUE LEARNING')}</Text>
                 <Text style={styles.heroTitle}>{language.name}</Text>
                 <Text style={styles.heroNative}>
                   {language.nativeName} · {language.nativeSpeakers}
@@ -285,7 +288,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             style={styles.goalEdit}
           >
-            <Text style={styles.goalEditText}>Change goal</Text>
+            <Text style={styles.goalEditText}>{t('Change goal')}</Text>
           </Pressable>
         </View>
 
@@ -512,15 +515,15 @@ export default function HomeScreen() {
         <View style={styles.freeCard}>
           <Text style={styles.freeEmoji}>🌍</Text>
           <View style={styles.flex}>
-            <Text style={styles.freeTitle}>Every language. Every lesson. Free.</Text>
+            <Text style={styles.freeTitle}>{t('Every language. Every lesson. Free.')}</Text>
             <Text style={styles.freeBody}>
               No trial timers, no locked chapters, no card required. Babelish is free during beta —
               and the core course stays free after launch.
             </Text>
             <View style={styles.freePerks}>
-              <Text style={styles.freePerk}>✓ Offline packs</Text>
-              <Text style={styles.freePerk}>✓ Native voices</Text>
-              <Text style={styles.freePerk}>✓ No ads</Text>
+              <Text style={styles.freePerk}>{t('✓ Offline packs')}</Text>
+              <Text style={styles.freePerk}>{t('✓ Native voices')}</Text>
+              <Text style={styles.freePerk}>{t('✓ No ads')}</Text>
             </View>
           </View>
         </View>
