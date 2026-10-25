@@ -20,6 +20,7 @@ import { router } from 'expo-router';
 import { Chip } from '@/components/Chip';
 import { useAuth } from '@/context/AuthContext';
 import { usePreferences, languageName } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 import { useLearning } from '@/state/learning';
 import { useProfile } from '@/state/profile';
 import { useAnalytics } from '@/state/analytics';
@@ -129,7 +130,9 @@ export default function SpeakScreen() {
     voiceSpeed,
     autoSpeak,
     reduceMotion,
+    interfaceLanguage,
   } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const { settings } = useModelSettings();
   const { progress } = useLearning();
   const { profile } = useProfile();
@@ -1225,7 +1228,7 @@ export default function SpeakScreen() {
           <View>
             <Text style={styles.headerTitle}>{language.name}</Text>
             <Text style={styles.headerSubtitle}>
-              {scenario ? `${scenario.emoji} ${scenario.title}` : 'Free conversation'}
+              {scenario ? `${scenario.emoji} ${scenario.title}` : t('Free conversation')}
             </Text>
           </View>
         </Pressable>
@@ -1235,7 +1238,7 @@ export default function SpeakScreen() {
             style={styles.headerIcon}
             hitSlop={4}
             accessibilityRole="button"
-            accessibilityLabel="Clear this conversation"
+            accessibilityLabel={t('Clear this conversation')}
           >
             <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
           </Pressable>
@@ -1251,7 +1254,7 @@ export default function SpeakScreen() {
             color={showTranslation ? colors.accent : colors.textFaint}
           />
           <Text style={[styles.translateLabel, showTranslation && styles.translateLabelOn]}>
-            {showTranslation ? 'Translation on' : 'Translation off'}
+            {showTranslation ? t('Translation on') : t('Translation off')}
           </Text>
         </Pressable>
         </View>
@@ -1259,7 +1262,7 @@ export default function SpeakScreen() {
 
       <FlatList
         ref={listRef}
-        accessibilityLabel="Conversation with your tutor"
+        accessibilityLabel={t('Conversation with your tutor')}
         data={messages}
         keyExtractor={(_, index) => String(index)}
         contentContainerStyle={styles.listContent}
@@ -1268,7 +1271,7 @@ export default function SpeakScreen() {
           <View>
             <View style={styles.levelCard}>
               <View style={styles.levelTop}>
-                <Text style={styles.levelLabel}>TUTOR SETUP</Text>
+                <Text style={styles.levelLabel}>{t('TUTOR SETUP')}</Text>
                 <Text style={styles.levelExplain} numberOfLines={1}>
                   {language.flag} {language.name}
                 </Text>
@@ -1291,7 +1294,7 @@ export default function SpeakScreen() {
                   accessibilityLabel={`Explanations in ${explanationLanguage}. Change it`}
                 >
                   <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
-                  <Text style={styles.selectorText}>Explain in {explanationLanguage}</Text>
+                  <Text style={styles.selectorText}>{t('Explain in')} {explanationLanguage}</Text>
                   <Ionicons name="chevron-down" size={12} color={colors.textFaint} />
                 </Pressable>
               </View>
@@ -1308,10 +1311,10 @@ export default function SpeakScreen() {
                       hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: on }}
-                      accessibilityLabel={option === 'auto' ? 'Level follows your progress' : `Level ${option}`}
+                      accessibilityLabel={option === 'auto' ? t('Level follows your progress') : `${t('Level')} ${option}`}
                     >
                       <Text style={[styles.levelChipText, on && styles.levelChipTextOn]}>
-                        {option === 'auto' ? 'Auto' : option}
+                        {option === 'auto' ? t('Auto') : option}
                       </Text>
                     </Pressable>
                   );
@@ -1321,7 +1324,7 @@ export default function SpeakScreen() {
 
             <View style={styles.scenarios}>
               <Chip
-                label="Free chat"
+                label={t('Free chat')}
                 selected={scenarioId === null}
                 onPress={() => setScenarioId(null)}
               />
@@ -1338,7 +1341,7 @@ export default function SpeakScreen() {
               <View style={styles.practiceCard}>
                 <View style={styles.practiceHeaderRow}>
                   <Ionicons name="mic-circle-outline" size={18} color={colors.accentInk} />
-                  <Text style={styles.practiceTitle}>Say it out loud</Text>
+                  <Text style={styles.practiceTitle}>{t('Say it out loud')}</Text>
                 </View>
                 <Text style={styles.practiceSubtitle}>
                   {voiceLive
@@ -1575,7 +1578,7 @@ export default function SpeakScreen() {
             placeholderTextColor={colors.textFaint}
             returnKeyType="send"
             onSubmitEditing={send}
-            accessibilityLabel="Message your tutor"
+            accessibilityLabel={t('Message your tutor')}
           />
           {busy ? (
             <Pressable
@@ -1594,7 +1597,7 @@ export default function SpeakScreen() {
               onPress={send}
               disabled={!input.trim()}
               accessibilityRole="button"
-              accessibilityLabel="Send message"
+              accessibilityLabel={t('Send message')}
               style={({ pressed }) => [styles.sendWrap, (pressed || !input.trim()) && { opacity: 0.6 }]}
             >
               <LinearGradient
@@ -1620,7 +1623,7 @@ export default function SpeakScreen() {
           style={styles.pickerBackdrop}
           onPress={() => setPicker(null)}
           accessibilityRole="button"
-          accessibilityLabel="Close the picker"
+          accessibilityLabel={t('Close the picker')}
         >
           <Pressable
             style={styles.pickerCard}
@@ -1629,12 +1632,12 @@ export default function SpeakScreen() {
             accessibilityViewIsModal
           >
             <Text style={styles.pickerTitle}>
-              {picker === 'explain' ? 'Explain in' : 'Practise which language?'}
+              {picker === 'explain' ? t('Explain in') : t('Practise which language?')}
             </Text>
             <Text style={styles.pickerHint}>
               {picker === 'explain'
-                ? 'Translations and grammar tips are written in this language. The tutor still speaks only the target language.'
-                : 'Switching language starts a new conversation with a fresh opening line.'}
+                ? t('Translations and grammar tips are written in this language. The tutor still speaks only the target language.')
+                : t('Switching language starts a new conversation with a fresh opening line.')}
             </Text>
             <ScrollView style={styles.pickerList} contentContainerStyle={styles.pickerListContent}>
               {LANGUAGES.map((option) => {
