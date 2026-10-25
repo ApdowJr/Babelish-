@@ -4,6 +4,8 @@ import { StyleSheet, useWindowDimensions, View, type ColorValue } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radii, shadows, type Palette } from '@/theme/tokens';
 import { useTheme, useThemedStyles } from '@/theme/theme';
+import { usePreferences } from '@/state/preferences';
+import { translateUi } from '@/lib/interfaceLocalization';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -36,6 +38,8 @@ function SpeakIcon({ focused }: { focused: boolean }) {
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const { interfaceLanguage } = usePreferences();
+  const t = (value: string) => translateUi(value, interfaceLanguage);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   // Full-width on phones, a centred floating pill on wide screens.
@@ -77,7 +81,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('Home'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="home-outline" color={color} focused={focused} />
           ),
@@ -86,7 +90,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="learn"
         options={{
-          title: 'Explore',
+          title: t('Explore'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="compass-outline" color={color} focused={focused} />
           ),
@@ -95,14 +99,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="speak"
         options={{
-          title: 'Speak',
+          title: t('Speak'),
           tabBarIcon: ({ focused }) => <SpeakIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="words"
         options={{
-          title: 'Words',
+          title: t('Words'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="library-outline" color={color} focused={focused} />
           ),
@@ -111,7 +115,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'You',
+          title: t('You'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="person-outline" color={color} focused={focused} />
           ),
