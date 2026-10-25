@@ -81,9 +81,9 @@ export default function SignupScreen() {
     <Screen scroll>
       <AuthHero
         eyebrow="JOIN BABELISH"
-        title="Your first hello starts here."
-        subtitle="Two minutes now, fluency later. Every language and every lesson is free — no card, no trial timer."
-        perks={[`${LANGUAGES.length} languages`, 'Free forever', 'No ads']}
+        title="Start learning today."
+        subtitle="Create your account to save your progress and build a learning habit at your own pace."
+        perks={[`${LANGUAGES.length} languages`, 'Offline lessons', 'Personal progress']}
       />
 
       {error ? (
