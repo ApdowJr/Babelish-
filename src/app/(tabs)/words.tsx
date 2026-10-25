@@ -169,6 +169,7 @@ export default function WordsScreen() {
           dueCount={dueCount}
           wordsMastered={wordsMastered}
           ready={ready}
+          translate={t}
         />
       ) : null}
 
@@ -431,11 +432,13 @@ function PracticeTab({
   dueCount,
   wordsMastered,
   ready,
+  translate,
 }: {
   vocab: VocabItem[];
   dueCount: number;
   wordsMastered: number;
   ready: boolean;
+  translate: (value: string) => string;
 }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
