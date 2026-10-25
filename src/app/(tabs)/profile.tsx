@@ -1,7 +1,6 @@
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
@@ -88,13 +87,7 @@ export default function ProfileScreen() {
         <Pill label={`LEVEL ${level.level}`} tone="free" icon="sparkles" />
       </View>
 
-      <LinearGradient
-        colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.profileCard}
-      >
-        <View style={styles.profileOrb} />
+      <View style={[styles.profileCard, { backgroundColor: colors.primary }]}>
         <Avatar
           name={shownName}
           emoji={profile.avatar}
@@ -114,7 +107,7 @@ export default function ProfileScreen() {
             <Pill label={`${tier.emoji} ${tier.name.toUpperCase()}`} tone="dark" />
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <SectionHeader
         title="Momentum"
@@ -410,16 +403,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     overflow: 'hidden',
-    ...shadows.hero,
-  },
-  profileOrb: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    top: -80,
-    right: -50,
+    ...shadows.card,
   },
   avatarLegacy: {
     width: 62,
