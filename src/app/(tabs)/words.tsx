@@ -494,7 +494,7 @@ function PracticeTab({
       <SectionHeader title="Your word bank" action="Review now" onAction={() => router.push('/review')} />
 
       {!ready ? (
-        <Text style={styles.loadingText} >{translate('Loading your words…')}</Text>
+        <Text style={styles.loadingText}>{translate('Loading your words…')}</Text>
       ) : vocab.length === 0 ? (
         <EmptyState
           emoji="🌱"
