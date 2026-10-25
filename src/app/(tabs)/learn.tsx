@@ -51,14 +51,13 @@ export default function ExploreScreen() {
     <Screen scroll tabBarSpace>
       <View style={styles.header}>
         <Text style={styles.kicker}>{t('THE WHOLE ATLAS')}</Text>
-        <Text style={styles.title}>Explore {LANGUAGE_COUNT} languages</Text>
+        <Text style={styles.title}>{t('Explore')} {LANGUAGE_COUNT} {t('languages')}</Text>
         <Text style={styles.subtitle}>
-          Real scripts, real dialects, real voices. Every course is free — pick a flag and start
-          today.
+          {t('Real scripts, real dialects, real voices. Every course is free — pick a flag and start today.')}
         </Text>
         <View style={styles.statStrip}>
           <Text style={styles.statText}>
-            {stats.languages} languages · {stats.lessons} lessons · {starterWordCount()}+ words
+            {stats.languages} {t('languages')} · {stats.lessons} {t('lessons')} · {starterWordCount()}+ {t('words')}
           </Text>
           <Pill label="100% FREE" tone="free" icon="sparkles" />
         </View>
