@@ -58,7 +58,7 @@ const SO: Record<string, string> = {
   'Type it once more': 'Mar kale qor', 'You’re almost in': 'Wax yar ayaa kuu haray',
   'Create your account to save your progress and build a learning habit at your own pace.': 'Samee akoon si aad u kaydsato horumarkaaga oo aad wax ugu barato xawaarahaaga.',
   'Enter your email and we’ll send you a link to get back in.': 'Geli iimaylkaaga, waxaan kuu soo diri doonnaa xiriir aad dib ugu soo gasho.',
-  'Send reset link': 'Soo dir xiriirka dib-u-dejinta', 'What should your tutor call you?': 'Maxuu macallinkaagu kuugu yeeraa?',
+  'Send reset link': 'Soo dir xiriirka dib-u-dejinta',
   'Tell us your name — your tutor will use it.': 'Qor magacaaga — macallinkaagu wuu isticmaali doonaa.',
   'Enter a valid email address.': 'Geli iimayl sax ah.', 'Password must be at least 8 characters.': 'Furaha sirta ahi ha ahaado ugu yaraan 8 xaraf.',
   'Passwords don’t match.': 'Furayaasha sirta ahi isma waafaqaan.', 'Could not start the demo.': 'Tijaabada lama bilaabi karin.',
@@ -66,7 +66,7 @@ const SO: Record<string, string> = {
   'Account ready — welcome to Babelish!': 'Akoonku waa diyaar — ku soo dhowow Babelish!',
   'Offline lessons': 'Casharro aan internet u baahnayn', 'Your progress, saved': 'Horumarkaaga waa la kaydiyey',
   'Personal progress': 'Horumarkaaga gaarka ah', 'languages': 'luqado',
-  'At least 8 characters': 'Ugu yaraan 8 xaraf', 'Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.': 'Habka tijaabada — akoonnadu telefoonkan ayay ku jiraan. Habee furaha Supabase si aad u isticmaasho akoonno dhab ah.',
+  'Demo mode — accounts stay on this device. Configure the Supabase publishable key to use real accounts.': 'Habka tijaabada — akoonnadu telefoonkan ayay ku jiraan. Habee furaha Supabase si aad u isticmaasho akoonno dhab ah.',
   'Cancel': 'Jooji', 'Save': 'Kaydi', 'Done': 'Waa la dhammeeyay', 'Close': 'Xir',
 };
 export function translateUi(text: string, language: InterfaceLanguage): string {
