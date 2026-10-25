@@ -31,7 +31,7 @@ on:
           - all
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: babelish-build-mobile-${{ github.ref }}
@@ -93,6 +93,18 @@ jobs:
           path: build-output/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: babelish-android-build-${{ github.run_number }}
+          name: Babelish Android APK (build ${{ github.run_number }})
+          body: |
+            Android APK built from commit ${{ github.sha }}.
+
+            Install this APK directly on an Android phone. This is a debug-signed build for testing and direct installation, not a Google Play Store release.
+          prerelease: true
+          files: build-output/*.apk
 
   ios-simulator:
     name: iOS build (simulator — real iPhone needs Apple account)
