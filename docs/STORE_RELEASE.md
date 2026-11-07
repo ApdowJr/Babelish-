@@ -1,10 +1,10 @@
-# Shipping Babelish to the Play Store (and the App Store)
+# Shipping Babelish to the Play Store
 
-> **Native-only:** Babelish ships as an Android APK/AAB + iPhone app. There is
-> no browser version of the app. Vercel hosts only a static download/legal
-> page (`website/`); lessons and accounts do not run there. For a direct-install
-> APK without the stores, see `docs/BUILD_MOBILE.md` (GitHub Actions →
-> “Build mobile (APK + iOS)”).
+> **Native-only, Android only:** Babelish ships as an Android APK/AAB — there is
+> no browser version of the app and no iPhone build. Vercel hosts only a static
+> download/legal page (`website/`); lessons and accounts do not run there. For a
+> direct-install APK without the stores, see `docs/BUILD_MOBILE.md` (GitHub
+> Actions → “Build mobile (Android APK)”).
 
 Everything in this file is either **done in code** or an **explicit action only you can take**
 (accounts, uploads, legal identity). Nothing here is claimed to be done on your behalf.
@@ -19,15 +19,12 @@ Run `npm run check:release` before every upload — it blocks the mistakes that 
 |---|---|---|
 | App name / slug | Babelish / `babelish` | `app.json` |
 | Android package | `app.zelvoca.babelish` | `app.json` |
-| iOS bundle id | `app.zelvoca.babelish` | `app.json` |
 | Version | `3.4.1` (must match `package.json`) | `app.json`, `package.json` |
 | Android versionCode | `30401` = major·10000 + minor·100 + patch | `app.json` |
 | Permissions | `RECORD_AUDIO`, `POST_NOTIFICATIONS` only | `app.json` |
-| iOS mic string | set | `app.json` → `ios.infoPlist` |
-| Encryption question | answered (`false`) | `app.json` → `ios.infoPlist` |
 | Icons / splash | generated, all sizes | `assets/`, `assets/store/` |
 | Play icon + feature graphic | 512² RGB, 1024×500 | `assets/store/` |
-| Build profiles | development / apk (.apk) / preview (.apk) / production (.aab + iOS) | `eas.json` |
+| Build profiles | development / apk (.apk) / preview (.apk) / production (.aab) | `eas.json` |
 | Submit profile | internal track, **draft** | `eas.json` |
 | Legal pages | `/privacy`, `/terms` | `src/app/` + public static copies in `website/privacy.html`, `website/terms.html` |
 | Consent | shown before onboarding completes | `src/app/onboarding.tsx` |
@@ -47,7 +44,6 @@ eas init                # links the project, writes extra.projectId
 
 # build (cloud, no local Android SDK needed)
 npm run build:aab     # → .aab for Google Play      (= --profile production, Android)
-npm run build:iphone  # → iPhone build for the App Store (needs a paid Apple Developer account)
 npm run build:apk     # → .apk you can install directly on an Android phone (not for Play)
 
 # upload
@@ -164,7 +160,6 @@ New in 3.4:
 ## 5. Screenshots
 
 Play needs **at least 2 phone screenshots** (min 320 px, max 3840 px, ratio between 1:2 and 2:1).
-App Store wants 6.7", 5.5" and (optional) iPad.
 
 Capture these five, in this order — they mirror the first-run experience:
 
@@ -179,32 +174,18 @@ Rules that keep the listing honest: no text overlays claiming features that are 
 screen, no stock photos, and no screenshot showing a limit as a failure.
 
 > Screenshots are **not** included in this repository: they must be captured from a real device
-> or simulator running the built app. Babelish is native-only, so there is no browser build to
-> screenshot — capture from the Android APK / iOS simulator build (`docs/BUILD_MOBILE.md`).
+> or emulator running the built app. Babelish is native-only and Android-only, so there is no
+> browser build to screenshot — capture from the built Android APK (`docs/BUILD_MOBILE.md`).
 
 ---
 
-## 6. iOS specifics
-
-- `ITSAppUsesNonExemptEncryption: false` is set — the app only uses HTTPS.
-- `NSMicrophoneUsageDescription` is set; the wording matches the in-app permission rationale.
-- App Review will exercise the tutor. If `AI_API_KEY` is not deployed, they see **Coach mode**,
-  which is labelled — that is acceptable, but a live tutor is a better demo. Deploy it first:
-
-```bash
-AI_API_KEY=sk-or-… npm run deploy:tutor      # runs the live gate afterwards
-```
-
----
-
-## 7. Release checklist
+## 6. Release checklist
 
 ```bash
 npm run check:release     # versions, ids, permissions, assets, secrets, legal pages, native-only
 npm test                  # unit tests
 npx tsc --noEmit && npx expo lint
 npm run build:android     # Android JS bundle builds
-npm run build:ios         # iOS JS bundle builds
 npm run build:aab         # Play-ready Android App Bundle (EAS)
 eas submit --platform android --profile production
 ```

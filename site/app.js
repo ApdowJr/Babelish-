@@ -39,13 +39,11 @@
       'hero.badge': 'Free · no ads · open source',
       'hero.title': 'Learn to <em>actually speak</em> a new language.',
       'hero.lede':
-        'Babelish is a free language tutor for Android and iPhone — 25 languages, real lessons, voice practice from the first day, and a coach that keeps teaching when the internet does not.',
+        'Babelish is a free language tutor for Android — 25 languages, real lessons, voice practice from the first day, and a coach that keeps teaching when the internet does not.',
       'hero.cta': 'Download for Android',
       'hero.secondary': 'See how it works',
       'hero.meta': 'APK · Android 7+ ·',
       'hero.releases': 'all releases',
-      'hero.iphone':
-        'iPhone build: the project compiles for iOS, but Apple will only install it through TestFlight or the App Store — those need an Apple Developer account.',
       'hero.notPublished':
         'No APK has been published yet — the release build is one workflow run away. See “Where is the Play Store listing?” below.',
       'hero.point1': 'No account needed to start',
@@ -98,7 +96,7 @@
       'dl.eyebrow': 'GET BABELISH',
       'dl.title': 'Install the Android app',
       'dl.body':
-        'One signed APK, built from this repository by its own workflow, plus an iPhone build for anyone with an Apple Developer account. No account, no subscription, no ads.',
+        'One signed APK, built from this repository by its own workflow. No account, no subscription, no ads.',
       'dl.cta': 'Download the APK',
       'dl.secondary': 'Release notes',
       'dl.step1': 'Tap the download and open the file.',
@@ -137,9 +135,6 @@
       'faq.q4': 'Which languages are included?',
       'faq.a4':
         'Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Polish, Russian, Ukrainian, Greek, Turkish, Arabic, Hebrew, Persian, Hindi, Bengali, Mandarin, Japanese, Korean, Vietnamese, Thai, Indonesian, Swahili and Somali.',
-      'faq.q7': 'Can I install it on an iPhone?',
-      'faq.a7':
-        'The app compiles for iOS, but Apple does not allow installing an app outside TestFlight or the App Store. Both need an Apple Developer account (US$99 a year), so for now the iPhone build is for testing — Android is the platform you can install today.',
       'faq.q5': 'Where is the Play Store listing?',
       'faq.a5':
         'Not live yet. The store package, version code, permissions and artwork are ready, but publishing needs a signed build and a review. Until then the APK here is the same app, signed with a test key and installed directly.',
@@ -173,13 +168,11 @@
       'hero.badge': 'Bilaash · xayeysiis ma leh · furan',
       'hero.title': 'Baro inaad <em>dhab ahaan u hadasho</em> luqad cusub.',
       'hero.lede':
-        'Babelish waa macalin luqadeed bilaash ah oo Android iyo iPhone — 25 luqadood, casharro dhab ah, tababar cod maalinta koowaad, iyo tababare sii wada waxbaridda xitaa marka internet-ku maqan yahay.',
+        'Babelish waa macalin luqadeed bilaash ah oo Android — 25 luqadood, casharro dhab ah, tababar cod maalinta koowaad, iyo tababare sii wada waxbaridda xitaa marka internet-ku maqan yahay.',
       'hero.cta': 'Soo dejiso Android',
       'hero.secondary': 'Arag sida ay u shaqeyso',
       'hero.meta': 'APK · Android 7+ ·',
       'hero.releases': 'dhammaan sii-dejinta',
-      'hero.iphone':
-        'Dhiska iPhone: mashruucu wuu u soo baxaa iOS, laakiin Apple waxay u ogolaataa kaliya TestFlight ama App Store — labaduba waxay u baahan yihiin akoon Apple Developer.',
       'hero.notPublished':
         'Weli APK lama daabicin — dhiska sii-dejinta waa hal socod-checklist uun. Hoos ka eeg “Meesha liiska Play Store?”.',
       'hero.point1': 'Akoon looma baahna inaad bilowdo',
@@ -233,7 +226,7 @@
       'dl.eyebrow': 'HEL BABELISH',
       'dl.title': 'Ku rakib abka Android',
       'dl.body':
-        'Hal APK la saxeexay oo laga dhisay kaydkan iyada oo adeegsanaysa workflow-giisa, iyo dhis iPhone oo loogu talagalay cid kasta oo leh akoon Apple Developer. Akoon ma leh, rukhsad ma leh, xayeysiis ma leh.',
+        'Hal APK la saxeexay oo laga dhisay kaydkan iyada oo adeegsanaysa workflow-giisa. Akoon ma leh, rukhsad ma leh, xayeysiis ma leh.',
       'dl.cta': 'Soo dejiso APK',
       'dl.secondary': 'Qoraalka sii-dejinta',
       'dl.step1': 'Taabo soo-dejinta oo fur faylka.',
@@ -270,9 +263,6 @@
       'faq.q4': 'Luqaddee ayaa ku jira?',
       'faq.a4':
         'Isbaanish, Faransiis, Jarmal, Talyaani, Boortaqiis, Hollandays, Iswiidhish, Boolish, Ruush, Yukreeniyaan, Giriig, Turkiga, Carabi, Cibraani, Faarisi, Hindi, Bengal, Shiinaha Mandarin, Jabbaan, Kuuriya, Fiyetnaam, Tayaland, Indoneesiya, Sawaaxili iyo Soomaali.',
-      'faq.q7': 'Ma ku rakibi karaa iPhone?',
-      'faq.a7':
-        'Abku wuu u soo baxaa iOS, laakiin Apple ma ogola in ab lagu rakibo TestFlight ama App Store ka baxsan. Labaduba waxay u baahan yihiin akoon Apple Developer (US$99 sannadkii), marka hadda dhiska iPhone waa tijaabo — Android waa tan aad maanta rakibi karto.',
       'faq.q5': 'Meesha liiska Play Store?',
       'faq.a5':
         'Weli ma socoto. Xirmada dukaanka, koodhka nooca, ogolaanshaha iyo sawirrada waa diyaar, laakiin daabacaaddu waxay u baahan tahay dhis la saxeexay iyo dib-u-eegis. Intaas ka hor, APK-ga halkan waa isla abkaas, lagu saxeexay fure tijaabo oo si toos ah loo rakibay.',
@@ -301,12 +291,12 @@
     en: {
       title: 'Babelish — learn 25 languages free, with a tutor you can host yourself',
       description:
-        'Babelish is a free language tutor for 25 languages on Android and iPhone: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK.',
+        'Babelish is a free language tutor for 25 languages on Android: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK.',
     },
     so: {
       title: 'Babelish — baro 25 luqadood bilaash, macalin adigu martigelin karto',
       description:
-        'Babelish waa macalin luqadeed bilaash ah oo 25 luqadood, Android iyo iPhone: casharro dhab ah, tababar cod, tababare daacad ah oo offline shaqeeya. Soo dejiso APK-ga Android.',
+        'Babelish waa macalin luqadeed bilaash ah oo 25 luqadood, Android: casharro dhab ah, tababar cod, tababare daacad ah oo offline shaqeeya. Soo dejiso APK-ga Android.',
     },
   };
 

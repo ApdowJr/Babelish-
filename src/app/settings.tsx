@@ -138,7 +138,7 @@ export default function SettingsScreen() {
   }, [prefs.targetLanguageId]);
 
   const tutorLive = aiStatus?.chat === true;
-  // Native-only (Android + iOS): voice input goes through the tutor
+  // Native-only (Android): voice input goes through the tutor
   // server's speech-to-text. There is no browser speech engine to fall
   // back to, so the badge must reflect the server probe and nothing else.
   const voiceLive = aiStatus?.stt === true;

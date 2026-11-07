@@ -93,7 +93,7 @@ export function consumeScenario(
   return { ...current, used: [...current.used, lessonId] };
 }
 
-/** Supporter codes — beta stand-in for the App Store / Play billing flow. */
+/** Supporter codes — beta stand-in for the Play in-app billing flow. */
 export function redeemCode(state: ScenarioState, raw: string): { state: ScenarioState; label: string } | null {
   const label = PREMIUM_CODES[String(raw ?? '').trim().toUpperCase()];
   if (!label) return null;

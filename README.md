@@ -2,12 +2,12 @@
 
 **Learn any of 25 languages free — with an open-source tutor you can host yourself.**
 
-Babelish is a **native-only** AI language tutor for **Android and iPhone** — there is no web version. Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
+Babelish is a **native-only** AI language tutor for **Android** (Android only — no iPhone build, no web version). Supabase Auth and PostgreSQL provide accounts and learning progress. Tutor responses use an optional owner-operated gateway or the bundled offline coach.
 
 Behind it, the app uses a Supabase Edge Function for optional hosted AI. A live model is available only after the operator configures server-side provider secrets; otherwise the clearly labelled offline coach remains available. Courses, review, the phrasebook and device audio work without a hosted model.
 
-> 📱 **APK + iPhone kaliya — web ma jiro.** Sida APK-ga loo helo (GitHub Actions /
-> EAS / local) iyo runta ku saabsan iPhone-ka: **`docs/BUILD_MOBILE.md`** (Soomaali + English).
+> 📱 **Android APK kaliya — web ma jiro.** Sida APK-ga loo helo (GitHub Actions /
+> EAS / local): **`docs/BUILD_MOBILE.md`** (Soomaali + English).
 >
 > 🌐 **Website:** [`site/`](docs/WEBSITE.md) — a static, bilingual page that explains the
 > app, publishes the privacy policy and terms the stores require, and links the APK.
@@ -98,7 +98,6 @@ npm install
 cp .env.example .env
 # Add EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env
 npm run android        # Android emulator / device
-npm run ios            # iPhone simulator (Mac) / device
 ```
 
 ### Build the phone apps
@@ -106,14 +105,13 @@ npm run ios            # iPhone simulator (Mac) / device
 ```bash
 npm run build:apk      # Android .apk — install directly on a phone (EAS)
 npm run build:aab      # Android .aab — Google Play upload (EAS)
-npm run build:iphone   # iOS build — App Store / TestFlight (paid Apple account needed)
 ```
 
-No Expo account? Use **GitHub → Actions → “Build mobile (APK + iOS)”** and
+No Expo account? Use **GitHub → Actions → “Build mobile (Android APK)”** and
 download the APK from the run's Artifacts. Full Soomaali + English guide:
-`docs/BUILD_MOBILE.md`. Babelish is native-only — `app.json` declares
-`platforms: ["android", "ios"]`; there is no `web` script any more, and
-`npm run check:release` fails if a web target is re-added.
+`docs/BUILD_MOBILE.md`. Babelish is native-only and Android-only — `app.json`
+declares `platforms: ["android"]`; there is no `web` or iOS script any more,
+and `npm run check:release` fails if a web or iOS target is re-added.
 
 The app keeps its authored curriculum bundled so lessons and reviews work
 offline. Supabase Auth handles accounts; Supabase PostgreSQL stores approved
@@ -214,5 +212,4 @@ npx tsc --noEmit
 npm run lint
 npm run check:release
 npm run build:android   # Android JS bundle
-npm run build:ios       # iOS JS bundle
 ```

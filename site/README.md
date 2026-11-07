@@ -8,9 +8,9 @@ analytics, no requests to any host except `api.github.com` (to check that the
 APK link is alive). That is deliberate — the app promises no trackers, and its
 landing page should not be the exception.
 
-**This is not a web version of the app.** Babelish is native-only (Android +
-iPhone); this folder is a static page that explains it. Nothing here imports
-`react-native-web`, and `expo export --platform web` stays refused.
+**This is not a web version of the app.** Babelish is native-only and
+Android-only; this folder is a static page that explains it. Nothing here
+imports `react-native-web`, and `expo export --platform web` stays refused.
 
 ## Files
 

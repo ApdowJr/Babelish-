@@ -11,18 +11,8 @@
     ],
     "userInterfaceStyle": "automatic",
     "platforms": [
-      "android",
-      "ios"
+      "android"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "app.zelvoca.babelish",
-      "buildNumber": "3.4.1",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "Babelish uses your microphone so you can practise speaking with your AI tutor.",
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
     "android": {
       "package": "app.zelvoca.babelish",
       "versionCode": 30401,

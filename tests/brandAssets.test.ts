@@ -63,8 +63,10 @@ test('app.json points at the new assets and configures the splash', () => {
     assert.ok(existsSync(path.join(root, candidate)), `${candidate} does not exist`);
   }
 
-  // Native-only: there must be no web target or favicon config left.
-  assert.deepEqual(expo.platforms, ['android', 'ios']);
+  // Native-only, Android-only: there must be no web target, no iOS section,
+  // or favicon config left.
+  assert.deepEqual(expo.platforms, ['android']);
+  assert.equal((expo as Record<string, unknown>).ios, undefined, 'app.json must not declare an iOS section');
   assert.equal(expo.web, undefined, 'app.json must not declare a web target');
 
   const splash = expo.plugins.find(
