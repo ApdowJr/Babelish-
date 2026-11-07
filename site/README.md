@@ -27,10 +27,16 @@ imports `react-native-web`, and `expo export --platform web` stays refused.
 
 ## Brand
 
-The page wears the mascot's violet — `#3A2FB8` by day, `#A99CFF` at night —
-sampled from `assets/icon.png`, with every text pair checked against WCAG AA.
-The phone mock-ups keep the **app's own forest palette**, because they show what
-actually opens on the phone.
+The page uses a blue/indigo palette — `#4338ca` over `#f4f6fe` by day and
+`#a5b4fc` over the `#080b1f` night canvas. The phone mock-ups use a fixed
+night-indigo palette (`--p-*` in `styles.css`). They are **illustrative
+previews**, not screenshots of the app, which has its own palette and layout.
+
+Motion is CSS/class-driven: scroll reveals, pointer-zone 3D tilt and the
+interactive walkthrough. The walkthrough can be paused or controlled manually,
+and runs only while visible. Reduced-motion visitors get manual controls without
+autoplay. The deployed CSP forbids inline styles, so `app.js` only toggles
+classes and attributes.
 
 `site/assets/icon.png` and `site/assets/feature-graphic.png` must stay identical
 to `assets/icon.png` and `assets/store/feature-graphic.png`; a test fails if they
@@ -102,7 +108,7 @@ https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk
 and attaches it to the release:
 
 ```bash
-git tag v3.4.0 && git push origin v3.4.0
+git tag v3.4.1 && git push origin v3.4.1
 ```
 
 Until a release exists, `app.js` says so and sends the buttons to the releases
