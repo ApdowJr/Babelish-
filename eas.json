@@ -14,9 +14,6 @@
       },
       "android": {
         "buildType": "apk"
-      },
-      "ios": {
-        "simulator": true
       }
     },
     "apk": {
@@ -37,9 +34,6 @@
       },
       "android": {
         "buildType": "apk"
-      },
-      "ios": {
-        "simulator": false
       }
     },
     "production": {
@@ -49,9 +43,6 @@
       },
       "android": {
         "buildType": "app-bundle"
-      },
-      "ios": {
-        "simulator": false
       }
     }
   },
@@ -61,8 +52,7 @@
         "serviceAccountKeyPath": "./secrets/play-service-account.json",
         "track": "internal",
         "releaseStatus": "draft"
-      },
-      "ios": {}
+      }
     }
   }
 }

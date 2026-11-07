@@ -11,7 +11,7 @@
  *   permissions · store artwork at the wrong size · a committed signing key ·
  *   a secret in an EXPO_PUBLIC_* variable · missing legal routes · an eas.json
  *   that would upload to production instead of internal testing · a web
- *   target creeping back in (Babelish is native-only: Android + iOS).
+ *   target creeping back in (Babelish is native-only, Android only).
  *
  * Exit codes: 0 = clear to build, 1 = blockers, 2 = warnings only.
  */
@@ -57,7 +57,7 @@ if (app.android?.versionCode !== expectedCode) {
 }
 
 // ── identifiers ─────────────────────────────────────────────────────────────
-const ids = [['android.package', app.android?.package], ['ios.bundleIdentifier', app.ios?.bundleIdentifier]];
+const ids = [['android.package', app.android?.package]];
 for (const [name, value] of ids) {
   if (!value) block(`${name} is missing — the store cannot accept the build`);
   else if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(value)) block(`${name} "${value}" is not reverse-DNS`);
@@ -76,15 +76,6 @@ if (!permissions.includes('RECORD_AUDIO')) {
   warn('RECORD_AUDIO is not declared, but the Speak tab records audio');
 }
 if (permissions.length > 0) ok(`${permissions.length} Android permission(s) declared`);
-
-if (!app.ios?.infoPlist?.NSMicrophoneUsageDescription) {
-  block('iOS NSMicrophoneUsageDescription is missing — App Review rejects the build');
-} else {
-  ok('iOS microphone string is present');
-}
-if (app.ios?.infoPlist?.ITSAppUsesNonExemptEncryption === undefined) {
-  warn('ITSAppUsesNonExemptEncryption is not set; every submission will ask the same question');
-}
 
 // ── assets ──────────────────────────────────────────────────────────────────
 const png = (file) => {
@@ -142,11 +133,11 @@ for (const line of envExample.split('\n')) {
 
 
 // ── native-only (no web) ────────────────────────────────────────────────────
-// Babelish ships ONLY as an Android APK/AAB and an iPhone app. If any of
-// these creep back, someone re-added the web target by accident.
+// Babelish is Android-only (owner decision). If any other platform —
+// web, or a revived iOS target — creeps back, this gate fails.
 const platforms = app.platforms ?? [];
-if (JSON.stringify([...platforms].sort()) !== JSON.stringify(['android', 'ios'])) {
-  block(`app.json platforms must be ["android","ios"] only, found ${JSON.stringify(platforms)}`);
+if (JSON.stringify([...platforms].sort()) !== JSON.stringify(['android'])) {
+  block(`app.json platforms must be ["android"] only, found ${JSON.stringify(platforms)}`);
 }
 if ('web' in app) block('app.json still has a "web" section — Babelish is native-only, remove it');
 // Vercel is allowed to deploy only the committed static download/legal site
@@ -243,9 +234,8 @@ try {
       'Install unknown apps',
       'APK',
       'not a web app',
-      'cannot be installed on a physical iPhone',
-      'Apple Developer Program ($99/year)',
-      'TestFlight',
+      'Android kaliya',
+      'for Android',
       'href="/privacy"',
       'href="/terms"',
     ];
@@ -287,7 +277,7 @@ for (const webScript of ['web', 'build:web']) {
   if (pkg.scripts?.[webScript]) block(`package.json script "${webScript}" is a web target — remove it`);
 }
 if (!blockers.some((msg) => /web|vercel|platforms/i.test(msg))) {
-  ok('native-only app: Android + iOS only; Vercel serves only the static download/legal site');
+  ok('native-only app: Android only; Vercel serves only the static download/legal site');
 }
 
 // ── legal + eas ─────────────────────────────────────────────────────────────
@@ -323,8 +313,11 @@ if (eas) {
   if (eas.build?.preview?.android?.buildType !== 'apk') {
     block('eas.json preview profile must build an APK so testers can install it directly');
   }
-  if (eas.build?.production?.ios?.simulator !== false) {
-    block('eas.json production.ios.simulator must be false (a real iPhone / App Store build)');
+  for (const [profile, cfg] of Object.entries(eas.build ?? {})) {
+    if (cfg?.ios) block(`eas.json profile "${profile}" still declares an iOS build target`);
+  }
+  if (eas.submit?.production?.ios) {
+    block('eas.json submit.production still declares an iOS submission target');
   }
   if (eas.submit?.production?.android?.track === 'production') {
     warn('submit targets the production track — use internal first, then promote');
@@ -351,4 +344,4 @@ if (warnings.length > 0) {
   console.log(`\n! ${warnings.length} warning(s), nothing blocking. Clear to build.\n`);
   process.exit(2);
 }
-console.log('\n✓ Clear to build. APK: npm run build:apk · iPhone: npm run build:iphone · Play (.aab): npm run build:aab\n');
+console.log('\n✓ Clear to build. APK: npm run build:apk · Play (.aab): npm run build:aab\n');

@@ -4,8 +4,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 /**
  * Terms of Service — the counterpart to /privacy, written in the same plain
- * voice. Play Console and the App Store both require a reachable terms page,
- * and a listing that links only a privacy policy is a common rejection.
+ * voice. Play Console requires a reachable terms page, and a listing that
+ * links only a privacy policy is a common rejection.
  *
  * Keep this accurate: it describes what the code actually does (device-local
  * practice data, progress-only sync, no ads, no sale of data, user-requested

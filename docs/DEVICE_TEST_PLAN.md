@@ -6,12 +6,12 @@ This is the **on-device** verification plan for the things that cannot be
 checked from a build container (no physical device, microphone, or speaker
 here). **None of the rows below have been executed yet** — record a result for
 each on real hardware; do not call the release ready until rows 1–8 pass on at
-least one iOS device and one Android device.
+least two Android devices (Babelish is Android-only).
 
 ## Preconditions
 
 - A **development build** (`eas build --profile development`, or
-  `npx expo run:ios|android` locally). Expo Go only bundles its own native
+  `npx expo run:android` locally). Expo Go only bundles its own native
   modules; audio/notification behaviour must be checked in a dev build.
 - Backend reachable: the app talks to the Supabase `babelish-ai` Edge Function by default. For live AI, configure `AI_API_URL`, `AI_API_KEY`, and `AI_CHAT_MODEL` as Supabase Edge Function secrets; voice also needs `AI_STT_API_URL` and (optionally) `AI_STT_API_KEY`. Without these secrets, the app must show the honest offline coach/not-configured state.
 - A quiet room for the microphone rows.

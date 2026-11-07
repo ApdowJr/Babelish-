@@ -126,7 +126,7 @@ export type RootGuardInput = {
 
 /**
  * Public legal routes (`/privacy` and `/terms`) must ALWAYS be reachable:
- * - when signed out (Google Play / App Store policy URLs & sign-up links),
+ * - when signed out (Google Play policy URLs & sign-up links),
  * - during onboarding (the consent links at the bottom of `onboarding.tsx`),
  * - and when signed in (from `Settings`).
  *

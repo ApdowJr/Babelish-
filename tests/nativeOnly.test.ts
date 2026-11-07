@@ -1,13 +1,13 @@
 /**
- * Native-only invariant — Babelish is an Android APK + iPhone app, NOT a
- * web app (owner request: "Apk ubadal kaliy android iyo iPhone haku
- * shaqeyo web lama rabo" — convert to APK only, work on Android and
- * iPhone, no web).
+ * Native-only, Android-only invariant — Babelish is an Android APK, NOT a
+ * web app and NOT an iPhone app (owner decision: "Android kaliya waa,
+ * remove all iphone resources" — Android only, no iPhone build any more).
  *
- * These tests read the real config files so the Expo web target cannot creep
- * back in through a dependency, a script, a deployment file, or CI. The one
- * approved public web surface is the committed static download/legal site in
- * `website/`; it contains no app bundle, routes, scripts, or lesson player.
+ * These tests read the real config files so the Expo web target or a
+ * revived iOS target cannot creep back in through a dependency, a script,
+ * a deployment file, or CI. The one approved public web surface is the
+ * committed static download/legal site in `website/`; it contains no app
+ * bundle, routes, scripts, or lesson player — and no iPhone promise.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,16 +28,17 @@ const listFiles = (relativeDir: string): string[] => {
   return walk(base).sort();
 };
 
-test('app.json targets exactly Android + iOS and declares no web section', () => {
+test('app.json targets Android only and declares no web or iOS section', () => {
   const app = JSON.parse(read('app.json')) as {
-    expo: { platforms?: string[]; web?: unknown; icon: string };
+    expo: { platforms?: string[]; web?: unknown; ios?: unknown; icon: string };
   };
-  assert.deepEqual(app.expo.platforms, ['android', 'ios']);
+  assert.deepEqual(app.expo.platforms, ['android']);
   assert.equal(app.expo.web, undefined, 'web target must stay removed');
+  assert.equal(app.expo.ios, undefined, 'the iOS section must stay removed (Android only)');
   assert.ok(!JSON.stringify(app.expo).includes('favicon'), 'no web favicon config');
 });
 
-test('package.json has no web dependencies or web scripts', () => {
+test('package.json has no web dependencies, no web scripts, and no iOS scripts', () => {
   const pkg = JSON.parse(read('package.json')) as {
     dependencies: Record<string, string>;
     devDependencies: Record<string, string>;
@@ -49,18 +50,20 @@ test('package.json has no web dependencies or web scripts', () => {
   }
   assert.equal(pkg.scripts['web'], undefined, 'no "web" script');
   assert.equal(pkg.scripts['build:web'], undefined, 'no "build:web" script');
+  assert.equal(pkg.scripts['ios'], undefined, 'no "ios" start script (Android only)');
+  assert.equal(pkg.scripts['build:ios'], undefined, 'no "build:ios" script (Android only)');
+  assert.equal(pkg.scripts['build:iphone'], undefined, 'no "build:iphone" script (Android only)');
   for (const [name, cmd] of Object.entries(pkg.scripts)) {
     assert.ok(!/--web\b|--platform web\b/.test(cmd), `script "${name}" targets web: ${cmd}`);
+    assert.ok(!/--platform ios\b|--platform all\b/.test(cmd), `script "${name}" targets iOS/all: ${cmd}`);
   }
 });
 
-test('the phone build scripts exist (APK, AAB, iPhone)', () => {
+test('the phone build scripts exist (APK, AAB) and nothing iOS', () => {
   const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
   assert.match(pkg.scripts['build:apk'] ?? '', /eas-cli.*build.*--platform android.*--profile apk/);
   assert.match(pkg.scripts['build:aab'] ?? '', /--platform android.*--profile production/);
-  assert.match(pkg.scripts['build:iphone'] ?? '', /--platform ios.*--profile production/);
   assert.equal(pkg.scripts['build:android'], 'expo export --platform android');
-  assert.equal(pkg.scripts['build:ios'], 'expo export --platform ios');
   assert.ok(existsSync(path.join(root, 'scripts/build-apk-local.sh')), 'local APK script missing');
 });
 
@@ -104,7 +107,7 @@ test('Vercel deploys only the static download/legal site, never the Expo app', (
   }
 });
 
-test('the Vercel output is only static download/legal files with honest platform copy', () => {
+test('the Vercel output is only static download/legal files with honest Android-only copy', () => {
   assert.deepEqual(listFiles('website'), [
     '404.html',
     'feature-graphic.png',
@@ -136,31 +139,29 @@ test('the Vercel output is only static download/legal files with honest platform
     assert.ok(!forbidden.test(allSiteText), `static site must not contain ${forbidden}`);
   }
 
+  // Android only: the public site must not promise, hint at, or link an
+  // iPhone build, a simulator run, or an Apple-account path.
+  for (const forbidden of [/iphone/i, /testflight/i, /app store/i, /apple developer/i]) {
+    assert.ok(!forbidden.test(allSiteText), `static site must not mention ${forbidden} (Android only)`);
+  }
+
   const app = JSON.parse(read('app.json')) as { expo: { version: string } };
   assert.ok(index.includes(app.expo.version), 'download page version drifted from app.json');
   assert.ok(
     index.includes('https://github.com/ApdowJr/Babelish-/releases/latest/download/babelish.apk'),
     'Android card must link the release APK itself, not an Actions artifact'
   );
-  // The Android card must not send anyone to an artifact (a ZIP behind a
-  // login) — that is how "package appears to be invalid" happens. The iPhone
-  // section may still link the simulator run as evidence; it is not a download.
-  const androidCard = index.slice(index.indexOf('id="download"'), index.indexOf('id="iphone"'));
-  assert.ok(
-    !androidCard.includes('/actions/runs/'),
-    'the Android download must be the APK itself, not an Actions artifact'
-  );
+  // The download must be the APK itself, never an artifact (a ZIP behind a
+  // login) — that is how "package appears to be invalid" happens.
+  assert.ok(!index.includes('/actions/runs/'), 'the download must be the APK itself, not an Actions run');
   assert.ok(index.includes('babelish.apk.sha256'), 'the published checksum must be findable');
   assert.ok(
     index.includes('package appears to be invalid'),
     'the page must answer the install error people actually hit'
   );
   assert.ok(index.includes('not a web app'), 'landing page must say it is not a web app');
-  assert.ok(
-    index.includes('cannot be installed on a physical iPhone'),
-    'iPhone copy must not pretend the simulator build installs on a real device'
-  );
-  assert.ok(index.includes('Apple Developer Program ($99/year)'), 'iPhone cost must stay explicit');
+  assert.ok(index.includes('Android kaliya'), 'the page must say Android only, in Somali');
+  assert.ok(index.includes('for Android'), 'the English summary must say the app is for Android');
   assert.ok(index.includes('href="/privacy"') && index.includes('href="/terms"'), 'legal links missing');
 
   for (const heading of [
@@ -200,31 +201,26 @@ test('the Vercel output is only static download/legal files with honest platform
   assert.equal(read('website/robots.txt').trim(), 'User-agent: *\nAllow: /');
 });
 
-test('CI bundles Android + iOS and never the web platform', () => {
+test('CI bundles Android only and never the web or iOS platform', () => {
   const ci = read('.github/workflows/ci.yml');
   assert.ok(!ci.includes('build:web'), 'CI must not build the web target');
+  assert.ok(!ci.includes('build:ios'), 'CI must not build the iOS target (Android only)');
   assert.ok(!/--platform web/.test(ci), 'CI must not export the web platform');
+  assert.ok(!/--platform ios/.test(ci), 'CI must not export the iOS platform');
   assert.ok(ci.includes('build:android'), 'CI must bundle Android');
-  assert.ok(ci.includes('build:ios'), 'CI must bundle iOS');
 });
 
-test('the manual "Build mobile" workflow really builds an APK and an iOS app', () => {
+test('the manual "Build mobile" workflow really builds an APK and nothing iOS', () => {
   const workflow = read('.github/workflows/build-mobile.yml');
   assert.match(workflow, /workflow_dispatch/);
   assert.match(workflow, /expo prebuild --platform android/);
   assert.match(workflow, /gradlew assembleRelease/, 'Android job must produce a real release APK');
   assert.match(workflow, /upload-artifact/, 'APK must be downloadable from the run');
   assert.match(workflow, /babelish-android-apk/);
-  assert.match(workflow, /expo prebuild --platform ios/);
-  // Expo SDK 58 needs Xcode 26.4+; old macOS images fail xcodebuild
-  // instantly (exit 66). The job must stay on an Xcode 27 runner.
-  assert.match(workflow, /runs-on: xcode-27/, 'iOS job must use the Xcode 27 runner (SDK 58)');
-  assert.ok(!workflow.includes('macos-14'), 'macos-14 ships an Xcode too old for SDK 58');
-  assert.match(workflow, /pod install/, 'pods must be installed explicitly if prebuild skips them');
-  assert.match(workflow, /iphonesimulator/, 'iOS job must be honest: unsigned = simulator build');
-  assert.match(workflow, /CODE_SIGNING_ALLOWED=NO/);
-  // The workflow must say the quiet part out loud: no fake iPhone installs.
-  assert.match(workflow, /Apple Developer|Apple account/i);
+  // Android only: no iOS job, no simulator build, no Apple runner.
+  assert.ok(!workflow.includes('--platform ios'), 'workflow must not prebuild iOS');
+  assert.ok(!/iphonesimulator/.test(workflow), 'workflow must not build a simulator app');
+  assert.ok(!/runs-on: xcode/.test(workflow), 'workflow must not use an Xcode runner');
 });
 
 test('the referral message does not send people to a website', () => {
@@ -234,15 +230,16 @@ test('the referral message does not send people to a website', () => {
   assert.match(profile, /Share\.share/);
 });
 
-test('the build guide documents APK + the honest iPhone limits in Somali and English', () => {
+test('the build guide documents the Android APK and the Android-only decision, in Somali and English', () => {
   const guide = read('docs/BUILD_MOBILE.md');
   assert.match(guide, /Soomaali/);
   assert.match(guide, /build:apk/);
-  assert.match(guide, /TestFlight/);
-  assert.match(guide, /Apple Developer/);
-  assert.match(guide, /\$99/, 'guide must state the Apple Developer cost honestly');
+  assert.match(guide, /Android only|Android kaliya/i);
   assert.match(guide, /GitHub Actions/);
   assert.match(guide, /website\/privacy\.html/, 'guide must identify the static public privacy copy');
   assert.match(guide, /static download\/legal/i, 'guide must keep the Vercel exception narrow');
   assert.ok(!guide.includes('deploymentEnabled: false'), 'guide must not describe the removed kill switch as current');
+  // The iPhone build paths (TestFlight, Apple account, $99) are gone.
+  assert.ok(!guide.includes('TestFlight'), 'guide must not document the removed TestFlight path');
+  assert.ok(!guide.includes('npm run build:iphone'), 'guide must not reference the removed iPhone script');
 });

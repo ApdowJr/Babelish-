@@ -3,7 +3,7 @@
 #
 # SOOMAALI: Kani wuxuu kuu dhisayaa APK aad taleefanka Android ku rakibi
 # karto. Waxaad u baahan tahay: Node.js, JDK 17, iyo Android SDK
-# (Android Studio). Mac/iPhone looma isticmaalo script-kan.
+# (Android Studio). Android SDK lahayn meesha looma isticmaalo script-kan.
 #
 # Requirements: Node.js ≥ 22, JDK 17, Android SDK (via Android Studio),
 # ANDROID_HOME set. Output: build-output/Babelish.apk
@@ -21,7 +21,7 @@ if ! command -v java >/dev/null 2>&1; then
 fi
 if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ]; then
   echo "✘ ANDROID_HOME is not set. Install Android Studio / the Android SDK first." >&2
-  echo "  No local SDK? Use GitHub instead: Actions → 'Build mobile (APK + iOS)'." >&2
+  echo "  No local SDK? Use GitHub instead: Actions → 'Build mobile (Android APK)'." >&2
   exit 1
 fi
 

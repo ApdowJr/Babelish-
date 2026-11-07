@@ -329,7 +329,7 @@ test('the site stays a site: it never promises a web app', () => {
     assert.ok(!copy.includes(claim), `“${claim}” contradicts the native-only decision`);
   }
   const app = JSON.parse(read('app.json')).expo;
-  assert.deepEqual(app.platforms, ['android', 'ios']);
+  assert.deepEqual(app.platforms, ['android']);
 });
 
 /* ---------- the APK pipeline ---------- */

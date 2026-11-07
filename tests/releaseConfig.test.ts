@@ -19,7 +19,6 @@ type AppJson = {
     version: string;
     name: string;
     slug: string;
-    ios: { bundleIdentifier?: string; buildNumber?: string; infoPlist?: Record<string, unknown> };
     android: {
       package?: string;
       versionCode?: number;
@@ -47,21 +46,11 @@ test('the Android version code can only move forward', () => {
   assert.ok(versionCode! > 0 && versionCode! < 2_100_000_000, 'Play rejects codes above 2.1e9');
 });
 
-test('both stores have a reverse-DNS identifier', () => {
-  for (const id of [app.expo.android.package, app.expo.ios.bundleIdentifier]) {
-    assert.equal(typeof id, 'string');
-    assert.match(id!, /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/, `${id} is not reverse-DNS`);
-    assert.equal(id, 'app.zelvoca.babelish');
-  }
-});
-
-test('iOS declares the microphone and the encryption question', () => {
-  const plist = app.expo.ios.infoPlist ?? {};
-  assert.match(String(plist.NSMicrophoneUsageDescription), /microphone/i);
-  // Without this, every App Store submission asks the same question again.
-  assert.equal(plist.ITSAppUsesNonExemptEncryption, false);
-  // The app has no ads and no tracking SDK, so it must not declare tracking.
-  assert.equal(plist.NSUserTrackingUsageDescription, undefined);
+test('the Android package is a reverse-DNS identifier', () => {
+  const id = app.expo.android.package;
+  assert.equal(typeof id, 'string');
+  assert.match(id!, /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/, `${id} is not reverse-DNS`);
+  assert.equal(id, 'app.zelvoca.babelish');
 });
 
 test('Android requests only permissions the app uses', () => {
@@ -97,13 +86,10 @@ test('Play artwork exists at the sizes the console enforces', () => {
   }
 });
 
-test('eas.json defines the native profiles (APK + AAB + iPhone) and submits to internal first', () => {
+test('eas.json defines the Android profiles (APK + AAB), no iOS target, and submits to internal first', () => {
   const eas = JSON.parse(read('eas.json')) as {
-    build: Record<
-      string,
-      { android?: { buildType?: string }; ios?: { simulator?: boolean } }
-    >;
-    submit: Record<string, { android?: { track?: string; releaseStatus?: string } }>;
+    build: Record<string, { android?: { buildType?: string }; ios?: unknown }>;
+    submit: Record<string, { android?: { track?: string; releaseStatus?: string }; ios?: unknown }>;
   };
   for (const profile of ['development', 'apk', 'preview', 'production']) {
     assert.ok(eas.build[profile], `missing build profile ${profile}`);
@@ -112,7 +98,11 @@ test('eas.json defines the native profiles (APK + AAB + iPhone) and submits to i
   assert.equal(eas.build.apk.android?.buildType, 'apk', 'apk profile must produce an .apk');
   assert.equal(eas.build.preview.android?.buildType, 'apk', 'preview must produce an .apk');
   assert.equal(eas.build.production.android?.buildType, 'app-bundle', 'Play needs an AAB');
-  assert.equal(eas.build.production.ios?.simulator, false, 'production iOS must be a device build');
+  // Android only: no build or submit profile may declare an iOS target.
+  for (const [profile, cfg] of Object.entries(eas.build)) {
+    assert.equal(cfg.ios, undefined, `build profile "${profile}" must not declare an iOS target`);
+  }
+  assert.equal(eas.submit.production.ios, undefined, 'submit profile must not declare an iOS target');
   assert.equal(eas.submit.production.android?.track, 'internal');
   assert.equal(eas.submit.production.android?.releaseStatus, 'draft');
 });
