@@ -8,8 +8,8 @@
       name="description"
       content="Babelish is a free language tutor for 25 languages on Android and iPhone: real lessons, voice practice, an honest coach that keeps working offline. Download the Android APK."
     />
-    <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0D0A1C" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F4F6FE" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080B1F" media="(prefers-color-scheme: dark)" />
     <!-- Small copies of the launcher icon, so a 34 px mark is not a 540 KB
          download. The master asset stays byte-identical to the app's icon;
          these are generated from it (see site/README.md). -->
@@ -96,7 +96,7 @@
       <section class="hero" id="top">
         <div class="hero-glow" aria-hidden="true"></div>
         <div class="wrap hero-grid">
-          <div class="hero-copy">
+          <div class="hero-copy" data-reveal>
             <p class="eyebrow">
               <span class="dot"></span>
               <span data-i18n="hero.badge">Free · no ads · open source</span>
@@ -153,159 +153,163 @@
           </div>
 
           <!-- Phone cluster: the three screens that matter, rebuilt from the
-               app's own tokens. CSS only — no screenshots to go stale. -->
+               app's own tokens. CSS only — no screenshots to go stale. The
+               inner layer carries the idle float (styles.css) so the
+               responsive scale and the hover fan keep working. -->
           <div class="phones" aria-hidden="true">
-            <div class="phone phone-back">
-              <div class="phone-screen">
-                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
-                <div class="app-head">
-                  <div>
-                    <p class="app-greeting">Good morning,</p>
-                    <p class="app-name">Amina</p>
+            <div class="phones-inner" data-reveal data-delay="1">
+              <div class="phone phone-back">
+                <div class="phone-screen">
+                  <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                  <div class="app-head">
+                    <div>
+                      <p class="app-greeting">Good morning,</p>
+                      <p class="app-name">Amina</p>
+                    </div>
+                    <div class="avatar">A</div>
                   </div>
-                  <div class="avatar">A</div>
-                </div>
 
-                <div class="hero-card">
-                  <p class="card-kicker">CONTINUE LEARNING</p>
-                  <p class="card-title">Spanish</p>
-                  <p class="card-sub">Ordering at a café · Chapter 2</p>
-                  <div class="card-bar"><span class="pct-62"></span></div>
-                  <div class="card-foot"><span>62%</span><span class="card-go">Continue ›</span></div>
-                </div>
-
-                <div class="tile-row">
-                  <div class="tile"><span class="tile-ico flame">▲</span><b>12</b><i>STREAK</i></div>
-                  <div class="tile"><span class="tile-ico sun">✦</span><b>40</b><i>XP TODAY</i></div>
-                  <div class="tile"><span class="tile-ico lilac">★</span><b>86</b><i>WORDS</i></div>
-                </div>
-
-                <p class="section-mini">WORD OF THE DAY</p>
-                <div class="word-card">
-                  <div>
-                    <b>hola</b>
-                    <span>hello</span>
+                  <div class="hero-card">
+                    <p class="card-kicker">CONTINUE LEARNING</p>
+                    <p class="card-title">Spanish</p>
+                    <p class="card-sub">Ordering at a café · Chapter 2</p>
+                    <div class="card-bar"><span class="pct-62"></span></div>
+                    <div class="card-foot"><span>62%</span><span class="card-go">Continue ›</span></div>
                   </div>
-                  <span class="speaker">◔</span>
-                </div>
 
-                <div class="tabbar">
-                  <span class="tab on">⌂</span><span class="tab">◈</span>
-                  <span class="tab-mic">◉</span>
-                  <span class="tab">▤</span><span class="tab">☺</span>
+                  <div class="tile-row">
+                    <div class="tile"><span class="tile-ico flame">▲</span><b>12</b><i>STREAK</i></div>
+                    <div class="tile"><span class="tile-ico sun">✦</span><b>40</b><i>XP TODAY</i></div>
+                    <div class="tile"><span class="tile-ico lilac">★</span><b>86</b><i>WORDS</i></div>
+                  </div>
+
+                  <p class="section-mini">WORD OF THE DAY</p>
+                  <div class="word-card">
+                    <div>
+                      <b>hola</b>
+                      <span>hello</span>
+                    </div>
+                    <span class="speaker">◔</span>
+                  </div>
+
+                  <div class="tabbar">
+                    <span class="tab on">⌂</span><span class="tab">◈</span>
+                    <span class="tab-mic">◉</span>
+                    <span class="tab">▤</span><span class="tab">☺</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="phone phone-front">
-              <div class="phone-screen">
-                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
-                <div class="app-head">
-                  <div>
-                    <p class="app-greeting">Speak</p>
-                    <p class="app-name">Spanish · B1</p>
+              <div class="phone phone-front">
+                <div class="phone-screen">
+                  <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                  <div class="app-head">
+                    <div>
+                      <p class="app-greeting">Speak</p>
+                      <p class="app-name">Spanish · B1</p>
+                    </div>
+                    <span class="pill-live">LIVE</span>
                   </div>
-                  <span class="pill-live">LIVE</span>
-                </div>
 
-                <div class="phrase-card">
-                  <p class="phrase-target">¿Me trae la cuenta, por favor?</p>
-                  <p class="phrase-translation">Could you bring me the bill, please?</p>
-                  <div class="phrase-actions">
-                    <span>▷ Listen</span><span>🐢 Slow</span><span>⌨ Type</span>
+                  <div class="phrase-card">
+                    <p class="phrase-target">¿Me trae la cuenta, por favor?</p>
+                    <p class="phrase-translation">Could you bring me the bill, please?</p>
+                    <div class="phrase-actions">
+                      <span>▷ Listen</span><span>🐢 Slow</span><span>⌨ Type</span>
+                    </div>
                   </div>
-                </div>
 
-                <div class="mic-wrap">
-                  <div class="mic-ring"></div>
-                  <div class="mic-orb">◉</div>
-                  <p class="mic-hint">Tap and say it</p>
-                </div>
-
-                <div class="score-card">
-                  <div class="score-head"><b>92%</b><span>word match</span></div>
-                  <div class="chips">
-                    <span class="ok">me</span><span class="ok">trae</span><span class="ok">la</span>
-                    <span class="ok">cuenta</span><span class="near">por</span><span class="ok">favor</span>
+                  <div class="mic-wrap">
+                    <div class="mic-ring"></div>
+                    <div class="mic-orb">◉</div>
+                    <p class="mic-hint">Tap and say it</p>
                   </div>
-                </div>
 
-                <div class="tabbar">
-                  <span class="tab">⌂</span><span class="tab">◈</span>
-                  <span class="tab-mic on">◉</span>
-                  <span class="tab">▤</span><span class="tab">☺</span>
+                  <div class="score-card">
+                    <div class="score-head"><b>92%</b><span>word match</span></div>
+                    <div class="chips">
+                      <span class="ok">me</span><span class="ok">trae</span><span class="ok">la</span>
+                      <span class="ok">cuenta</span><span class="near">por</span><span class="ok">favor</span>
+                    </div>
+                  </div>
+
+                  <div class="tabbar">
+                    <span class="tab">⌂</span><span class="tab">◈</span>
+                    <span class="tab-mic on">◉</span>
+                    <span class="tab">▤</span><span class="tab">☺</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="phone phone-side">
-              <div class="phone-screen">
-                <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
-                <div class="app-head">
-                  <div>
-                    <p class="app-greeting">Progress</p>
-                    <p class="app-name">Last 6 weeks</p>
+              <div class="phone phone-side">
+                <div class="phone-screen">
+                  <div class="status-bar"><span>9:41</span><span class="status-icons">▮▮▮ ⌁ ▰</span></div>
+                  <div class="app-head">
+                    <div>
+                      <p class="app-greeting">Progress</p>
+                      <p class="app-name">Last 6 weeks</p>
+                    </div>
                   </div>
-                </div>
 
-                <div class="progress-hero">
-                  <div><b>12</b><i>day streak</i></div>
-                  <div><b>34</b><i>active days</i></div>
-                  <div><b>1.2k</b><i>lifetime XP</i></div>
-                </div>
+                  <div class="progress-hero">
+                    <div><b>12</b><i>day streak</i></div>
+                    <div><b>34</b><i>active days</i></div>
+                    <div><b>1.2k</b><i>lifetime XP</i></div>
+                  </div>
 
-                <div class="calendar">
-                  <div class="cal-col">
-                    <em>Sep</em>
-                    <span class="c1"></span><span class="c0"></span><span class="c1"></span
-                    ><span class="c2"></span><span class="c0"></span><span class="c3"></span
-                    ><span class="c1"></span>
+                  <div class="calendar">
+                    <div class="cal-col">
+                      <em>Sep</em>
+                      <span class="c1"></span><span class="c0"></span><span class="c1"></span
+                      ><span class="c2"></span><span class="c0"></span><span class="c3"></span
+                      ><span class="c1"></span>
+                    </div>
+                    <div class="cal-col">
+                      <em></em>
+                      <span class="c2"></span><span class="c3"></span><span class="c1"></span
+                      ><span class="c0"></span><span class="c1"></span><span class="c2"></span
+                      ><span class="c3"></span>
+                    </div>
+                    <div class="cal-col">
+                      <em></em>
+                      <span class="c3"></span><span class="c2"></span><span class="c0"></span
+                      ><span class="c1"></span><span class="c3"></span><span class="c2"></span
+                      ><span class="c1"></span>
+                    </div>
+                    <div class="cal-col">
+                      <em></em>
+                      <span class="c1"></span><span class="c2"></span><span class="c3"></span
+                      ><span class="c0"></span><span class="c2"></span><span class="c3"></span
+                      ><span class="c1"></span>
+                    </div>
+                    <div class="cal-col">
+                      <em>Oct</em>
+                      <span class="c3"></span><span class="c1"></span><span class="c2"></span
+                      ><span class="c3"></span><span class="c2"></span><span class="c0"></span
+                      ><span class="c1"></span>
+                    </div>
+                    <div class="cal-col">
+                      <em></em>
+                      <span class="c2"></span><span class="c3"></span><span class="c3"></span
+                      ><span class="c1"></span><span class="c0"></span><span class="c2"></span
+                      ><span class="c3 today"></span>
+                    </div>
                   </div>
-                  <div class="cal-col">
-                    <em></em>
-                    <span class="c2"></span><span class="c3"></span><span class="c1"></span
-                    ><span class="c0"></span><span class="c1"></span><span class="c2"></span
-                    ><span class="c3"></span>
-                  </div>
-                  <div class="cal-col">
-                    <em></em>
-                    <span class="c3"></span><span class="c2"></span><span class="c0"></span
-                    ><span class="c1"></span><span class="c3"></span><span class="c2"></span
-                    ><span class="c1"></span>
-                  </div>
-                  <div class="cal-col">
-                    <em></em>
-                    <span class="c1"></span><span class="c2"></span><span class="c3"></span
-                    ><span class="c0"></span><span class="c2"></span><span class="c3"></span
-                    ><span class="c1"></span>
-                  </div>
-                  <div class="cal-col">
-                    <em>Oct</em>
-                    <span class="c3"></span><span class="c1"></span><span class="c2"></span
-                    ><span class="c3"></span><span class="c2"></span><span class="c0"></span
-                    ><span class="c1"></span>
-                  </div>
-                  <div class="cal-col">
-                    <em></em>
-                    <span class="c2"></span><span class="c3"></span><span class="c3"></span
-                    ><span class="c1"></span><span class="c0"></span><span class="c2"></span
-                    ><span class="c3 today"></span>
-                  </div>
-                </div>
 
-                <div class="skills">
-                  <div class="skill"><span>Reading</span><b>82%</b></div>
-                  <div class="skill-bar"><i class="pct-82"></i></div>
-                  <div class="skill"><span>Listening</span><b>76%</b></div>
-                  <div class="skill-bar"><i class="pct-76"></i></div>
-                  <div class="skill"><span>Speaking</span><b>87%</b></div>
-                  <div class="skill-bar"><i class="pct-87"></i></div>
-                </div>
+                  <div class="skills">
+                    <div class="skill"><span>Reading</span><b>82%</b></div>
+                    <div class="skill-bar"><i class="pct-82"></i></div>
+                    <div class="skill"><span>Listening</span><b>76%</b></div>
+                    <div class="skill-bar"><i class="pct-76"></i></div>
+                    <div class="skill"><span>Speaking</span><b>87%</b></div>
+                    <div class="skill-bar"><i class="pct-87"></i></div>
+                  </div>
 
-                <div class="tabbar">
-                  <span class="tab">⌂</span><span class="tab">◈</span>
-                  <span class="tab-mic">◉</span>
-                  <span class="tab">▤</span><span class="tab on">☺</span>
+                  <div class="tabbar">
+                    <span class="tab">⌂</span><span class="tab">◈</span>
+                    <span class="tab-mic">◉</span>
+                    <span class="tab">▤</span><span class="tab on">☺</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -318,9 +322,69 @@
         </p>
       </section>
 
+      <!-- ── Language ticker (decorative: the 25 courses, native names) ── -->
+      <div class="tick" aria-hidden="true">
+        <div class="tick-track">
+          <div class="tick-group">
+            <span class="tick-item" lang="es">Español</span>
+            <span class="tick-item" lang="fr">Français</span>
+            <span class="tick-item" lang="de">Deutsch</span>
+            <span class="tick-item" lang="it">Italiano</span>
+            <span class="tick-item" lang="pt">Português</span>
+            <span class="tick-item" lang="nl">Nederlands</span>
+            <span class="tick-item" lang="sv">Svenska</span>
+            <span class="tick-item" lang="pl">Polski</span>
+            <span class="tick-item" lang="ru">Русский</span>
+            <span class="tick-item" lang="uk">Українська</span>
+            <span class="tick-item" lang="el">Ελληνικά</span>
+            <span class="tick-item" lang="tr">Türkçe</span>
+            <span class="tick-item" lang="ar">العربية</span>
+            <span class="tick-item" lang="he">עברית</span>
+            <span class="tick-item" lang="fa">فارسی</span>
+            <span class="tick-item" lang="hi">हिन्दी</span>
+            <span class="tick-item" lang="bn">বাংলা</span>
+            <span class="tick-item" lang="zh">中文</span>
+            <span class="tick-item" lang="ja">日本語</span>
+            <span class="tick-item" lang="ko">한국어</span>
+            <span class="tick-item" lang="vi">Tiếng Việt</span>
+            <span class="tick-item" lang="th">ไทย</span>
+            <span class="tick-item" lang="id">Bahasa Indonesia</span>
+            <span class="tick-item" lang="sw">Kiswahili</span>
+            <span class="tick-item" lang="so">Soomaali</span>
+          </div>
+          <div class="tick-group">
+            <span class="tick-item" lang="es">Español</span>
+            <span class="tick-item" lang="fr">Français</span>
+            <span class="tick-item" lang="de">Deutsch</span>
+            <span class="tick-item" lang="it">Italiano</span>
+            <span class="tick-item" lang="pt">Português</span>
+            <span class="tick-item" lang="nl">Nederlands</span>
+            <span class="tick-item" lang="sv">Svenska</span>
+            <span class="tick-item" lang="pl">Polski</span>
+            <span class="tick-item" lang="ru">Русский</span>
+            <span class="tick-item" lang="uk">Українська</span>
+            <span class="tick-item" lang="el">Ελληνικά</span>
+            <span class="tick-item" lang="tr">Türkçe</span>
+            <span class="tick-item" lang="ar">العربية</span>
+            <span class="tick-item" lang="he">עברית</span>
+            <span class="tick-item" lang="fa">فارسی</span>
+            <span class="tick-item" lang="hi">हिन्दी</span>
+            <span class="tick-item" lang="bn">বাংলা</span>
+            <span class="tick-item" lang="zh">中文</span>
+            <span class="tick-item" lang="ja">日本語</span>
+            <span class="tick-item" lang="ko">한국어</span>
+            <span class="tick-item" lang="vi">Tiếng Việt</span>
+            <span class="tick-item" lang="th">ไทย</span>
+            <span class="tick-item" lang="id">Bahasa Indonesia</span>
+            <span class="tick-item" lang="sw">Kiswahili</span>
+            <span class="tick-item" lang="so">Soomaali</span>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Numbers ──────────────────────────────────────────────────── -->
       <section class="band" aria-label="What ships in the app">
-        <div class="wrap band-grid">
+        <div class="wrap band-grid" data-reveal>
           <div class="stat"><b>25</b><span data-i18n="stats.languages">languages</span></div>
           <div class="stat"><b>101</b><span data-i18n="stats.chapters">chapters</span></div>
           <div class="stat"><b>212</b><span data-i18n="stats.lessons">lessons</span></div>
@@ -335,18 +399,28 @@
       <!-- ── Features ─────────────────────────────────────────────────── -->
       <section class="section" id="features">
         <div class="wrap">
-          <p class="section-eyebrow" data-i18n="features.eyebrow">WHY BABELISH</p>
-          <h2 class="section-title" data-i18n="features.title">
+          <p class="section-eyebrow" data-i18n="features.eyebrow" data-reveal>WHY BABELISH</p>
+          <h2 class="section-title" data-i18n="features.title" data-reveal data-delay="1">
             A tutor that tells you the truth
           </h2>
-          <p class="section-lede" data-i18n="features.lede">
+          <p class="section-lede" data-i18n="features.lede" data-reveal data-delay="2">
             No fake “AI” badges, no invented fluency scores, no streak guilt. The app shows what it
             can do and says so when it cannot.
           </p>
 
           <div class="cards">
-            <article class="card">
-              <span class="card-icon">💬</span>
+            <article class="card" data-reveal="true" data-delay="1">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path
+                    d="M12 4c4.97 0 9 3.36 9 7.5S16.97 19 12 19c-1.02 0-2-.13-2.9-.37L5 20l1.35-3.4C4.87 15.46 3 13.6 3 11.5 3 7.36 7.03 4 12 4Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
               <h3 data-i18n="f1.title">A tutor, not a phrasebook</h3>
               <p data-i18n="f1.body">
                 Conversations in your target language, corrected gently. Your tutor knows your
@@ -354,8 +428,28 @@
               </p>
             </article>
 
-            <article class="card">
-              <span class="card-icon">🎙️</span>
+            <article class="card" data-reveal="true" data-delay="2">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <rect
+                    x="9"
+                    y="3"
+                    width="6"
+                    height="11"
+                    rx="3"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  />
+                  <path
+                    d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
               <h3 data-i18n="f2.title">Speak from the first day</h3>
               <p data-i18n="f2.body">
                 Tap the orb, say the phrase, and see exactly which words matched — per word, not a
@@ -363,8 +457,19 @@
               </p>
             </article>
 
-            <article class="card">
-              <span class="card-icon">✈️</span>
+            <article class="card" data-reveal="true" data-delay="3">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path
+                    d="M5 9.5a10 10 0 0 1 5.2-2.7M12.5 6.8A10 10 0 0 1 19 9.5M8.5 13a5.5 5.5 0 0 1 3-1.45M12 17.5h.01"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                  <path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+              </span>
               <h3 data-i18n="f3.title">Works without a connection</h3>
               <p data-i18n="f3.body">
                 Courses, review, the phrasebook and device voices ship inside the app. On a plane,
@@ -372,8 +477,19 @@
               </p>
             </article>
 
-            <article class="card">
-              <span class="card-icon">🧭</span>
+            <article class="card" data-reveal="true" data-delay="1">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+                  <path
+                    d="m15.5 8.5-2 5-5 2 2-5 5-2Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
               <h3 data-i18n="f4.title">Honest by design</h3>
               <p data-i18n="f4.body">
                 When the model is unreachable the app says “bundled coach”, not “AI”. When there is
@@ -381,8 +497,28 @@
               </p>
             </article>
 
-            <article class="card">
-              <span class="card-icon">🔒</span>
+            <article class="card" data-reveal="true" data-delay="2">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <rect
+                    x="5"
+                    y="10.5"
+                    width="14"
+                    height="9.5"
+                    rx="2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  />
+                  <path
+                    d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
               <h3 data-i18n="f5.title">Your data stays yours</h3>
               <p data-i18n="f5.body">
                 No ads, no third-party analytics, no brokers. Progress lives on your device, syncs
@@ -390,8 +526,18 @@
               </p>
             </article>
 
-            <article class="card">
-              <span class="card-icon">🌙</span>
+            <article class="card" data-reveal="true" data-delay="3">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path
+                    d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.8 6.8 0 0 0 9.7 9.7Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
               <h3 data-i18n="f6.title">Dark mode that is actually dark</h3>
               <p data-i18n="f6.body">
                 A full night palette for every screen, with contrast checked against WCAG AA —
@@ -405,11 +551,13 @@
       <!-- ── How it works ─────────────────────────────────────────────── -->
       <section class="section section-alt" id="how">
         <div class="wrap">
-          <p class="section-eyebrow" data-i18n="how.eyebrow">HOW IT WORKS</p>
-          <h2 class="section-title" data-i18n="how.title">Three taps to a conversation</h2>
+          <p class="section-eyebrow" data-i18n="how.eyebrow" data-reveal>HOW IT WORKS</p>
+          <h2 class="section-title" data-i18n="how.title" data-reveal data-delay="1">
+            Three taps to a conversation
+          </h2>
 
           <ol class="steps">
-            <li>
+            <li data-reveal="true" data-delay="1">
               <span class="step-num">01</span>
               <h3 data-i18n="how.s1.title">Pick a language</h3>
               <p data-i18n="how.s1.body">
@@ -417,7 +565,7 @@
                 phrasebook for real situations.
               </p>
             </li>
-            <li>
+            <li data-reveal="true" data-delay="2">
               <span class="step-num">02</span>
               <h3 data-i18n="how.s2.title">Practise out loud</h3>
               <p data-i18n="how.s2.body">
@@ -425,7 +573,7 @@
                 match. Slow playback when a phrase will not stick.
               </p>
             </li>
-            <li>
+            <li data-reveal="true" data-delay="3">
               <span class="step-num">03</span>
               <h3 data-i18n="how.s3.title">Watch the streak grow</h3>
               <p data-i18n="how.s3.body">
@@ -435,7 +583,7 @@
             </li>
           </ol>
 
-          <div class="quote">
+          <div class="quote" data-reveal="true">
             <p data-i18n="how.quote">
               “Missing a day never costs you anything. The streak is a mirror, not a debt.”
             </p>
@@ -447,7 +595,7 @@
       <!-- ── Download ─────────────────────────────────────────────────── -->
       <section class="section" id="download">
         <div class="wrap">
-          <div class="download-card">
+          <div class="download-card" data-reveal="true">
             <div class="download-copy">
               <p class="section-eyebrow light" data-i18n="dl.eyebrow">GET BABELISH</p>
               <h2 data-i18n="dl.title">Install the Android app</h2>
@@ -492,7 +640,7 @@
             </div>
           </div>
 
-          <div class="install-help">
+          <div class="install-help" data-reveal="true">
             <h3 data-i18n="dl.helpTitle">“App not installed as package appears to be invalid”?</h3>
             <p data-i18n="dl.helpBody">
               That is Android's installer talking, not the app. In this order:
@@ -516,7 +664,7 @@
             </p>
           </div>
 
-          <div class="build-note">
+          <div class="build-note" data-reveal="true">
             <h3 data-i18n="dl.buildTitle">Prefer to build it yourself?</h3>
             <p data-i18n="dl.buildBody">
               The APK is produced by the repository's own GitHub Actions workflow, from the same
@@ -540,10 +688,12 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
       <!-- ── FAQ ──────────────────────────────────────────────────────── -->
       <section class="section section-alt" id="faq">
         <div class="wrap narrow">
-          <p class="section-eyebrow" data-i18n="faq.eyebrow">QUESTIONS</p>
-          <h2 class="section-title" data-i18n="faq.title">Straight answers</h2>
+          <p class="section-eyebrow" data-i18n="faq.eyebrow" data-reveal>QUESTIONS</p>
+          <h2 class="section-title" data-i18n="faq.title" data-reveal data-delay="1">
+            Straight answers
+          </h2>
 
-          <details class="faq-item" open>
+          <details class="faq-item" open data-reveal="true">
             <summary data-i18n="faq.q1">Is it really free?</summary>
             <p data-i18n="faq.a1">
               Yes. No ads, no subscription, no “premium” wall in front of the lessons. The tutor
@@ -552,7 +702,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q2">Do I need an account?</summary>
             <p data-i18n="faq.a2">
               No. A guest profile keeps your progress on the device. Signing in is only for syncing
@@ -560,7 +710,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q3">What happens to my microphone audio?</summary>
             <p data-i18n="faq.a3">
               It is transcribed when you ask for a score and then discarded. Recordings are never
@@ -569,7 +719,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q4">Which languages are included?</summary>
             <p data-i18n="faq.a4">
               Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Polish, Russian,
@@ -578,7 +728,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q7">Can I install it on an iPhone?</summary>
             <p data-i18n="faq.a7">
               The app compiles for iOS, but Apple does not allow installing an app outside
@@ -588,7 +738,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q5">Where is the Play Store listing?</summary>
             <p data-i18n="faq.a5">
               Not live yet. The store package, version code, permissions and artwork are ready, but
@@ -597,7 +747,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
             </p>
           </details>
 
-          <details class="faq-item">
+          <details class="faq-item" data-reveal="true">
             <summary data-i18n="faq.q6">Is it safe to install an APK?</summary>
             <p data-i18n="faq.a6">
               This one is built in public by GitHub Actions from the source in this repository — you
@@ -610,7 +760,7 @@ cd android &amp;&amp; ./gradlew :app:assembleRelease</code></pre>
 
       <!-- ── Closing CTA ──────────────────────────────────────────────── -->
       <section class="section closing">
-        <div class="wrap closing-inner">
+        <div class="wrap closing-inner" data-reveal>
           <h2 data-i18n="close.title">Your first conversation is one tap away.</h2>
           <p data-i18n="close.body">Free, offline-friendly, and honest about what it can do.</p>
           <a

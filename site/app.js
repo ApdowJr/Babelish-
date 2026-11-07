@@ -1,13 +1,16 @@
 /* ==========================================================================
    Babelish landing page — behaviour
    --------------------------------------------------------------------------
-   Three small jobs, no dependencies, no network calls except an optional
-   check that the APK link actually has something behind it:
+   Small jobs, no dependencies, no network calls except an optional check
+   that the APK link actually has something behind it:
 
      1. language   English / Somali, remembered in localStorage
      2. theme      light / dark, following the OS until the learner chooses
      3. honesty    if no APK is published, say so instead of handing out a
                    dead download link
+     4. motion     scroll reveals, count-up stats, active nav highlight —
+                   all IntersectionObserver, all skipped under
+                   prefers-reduced-motion
 
    Everything is progressive: with JavaScript off the page is the English
    version, the CSS still follows the OS colour scheme, and every link works.
@@ -324,6 +327,13 @@
     }
   }
 
+  function prefersReducedMotion() {
+    return !!(
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
   /* ---------- language ---------- */
 
   var lang = store(LANG_KEY);
@@ -380,7 +390,7 @@
     document.documentElement.setAttribute('data-theme', theme);
     store(THEME_KEY, theme);
     $$('meta[name="theme-color"]').forEach(function (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#0D0A1C' : '#F6F4FB');
+      meta.setAttribute('content', theme === 'dark' ? '#080B1F' : '#F4F6FE');
       meta.removeAttribute('media');
     });
     var toggle = $('#theme-toggle');
@@ -413,6 +423,103 @@
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  /* ---------- scroll reveals ----------
+     theme-boot.js marked <html> with .js before first paint, so [data-reveal]
+     elements start hidden only when this script is present. Without
+     IntersectionObserver — or with reduced motion — everything shows at once. */
+
+  var revealEls = $$('[data-reveal]');
+  if (revealEls.length) {
+    if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
+      revealEls.forEach(function (el) {
+        el.classList.add('is-in');
+      });
+    } else {
+      var revealObserver = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-in');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+      );
+      revealEls.forEach(function (el) {
+        revealObserver.observe(el);
+      });
+    }
+  }
+
+  /* ---------- count-up stats ---------- */
+
+  function countUp(node) {
+    var target = parseInt(node.textContent.replace(/[^0-9]/g, ''), 10);
+    if (!target || prefersReducedMotion() || !window.requestAnimationFrame) return;
+    var duration = 1200;
+    var start = null;
+    node.textContent = '0';
+    window.requestAnimationFrame(function frame(timestamp) {
+      if (start === null) start = timestamp;
+      var t = Math.min(1, (timestamp - start) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      node.textContent = Math.round(target * eased).toLocaleString('en-US');
+      if (t < 1) window.requestAnimationFrame(frame);
+    });
+  }
+
+  var stats = $$('.stat b');
+  if (stats.length && 'IntersectionObserver' in window && !prefersReducedMotion()) {
+    var statObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            statObserver.unobserve(entry.target);
+            countUp(entry.target);
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    stats.forEach(function (el) {
+      statObserver.observe(el);
+    });
+  }
+
+  /* ---------- active nav highlight ---------- */
+
+  var navLinks = $$('.nav-links a');
+  if (navLinks.length && 'IntersectionObserver' in window) {
+    var linkById = {};
+    navLinks.forEach(function (a) {
+      var id = (a.getAttribute('href') || '').slice(1);
+      if (id) linkById[id] = a;
+    });
+    var sections = Object.keys(linkById)
+      .map(function (id) {
+        return document.getElementById(id);
+      })
+      .filter(Boolean);
+    if (sections.length) {
+      var navObserver = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            navLinks.forEach(function (a) {
+              a.classList.remove('is-active');
+            });
+            linkById[entry.target.id].classList.add('is-active');
+          });
+        },
+        { rootMargin: '-45% 0px -50% 0px', threshold: 0 }
+      );
+      sections.forEach(function (section) {
+        navObserver.observe(section);
+      });
+    }
   }
 
   /* ---------- honest download button ---------- */
