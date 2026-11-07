@@ -169,10 +169,10 @@ test('the page does not claim a release that has not happened', () => {
 test('the landing page has both palettes and follows the device', () => {
   assert.match(css, /html\[data-theme='dark'\]\s*\{/);
   assert.match(css, /@media \(prefers-color-scheme: dark\)/);
-  // The page wears the mascot's brand, sampled from the launcher icon.
-  assert.ok(css.includes('#3a2fb8'), 'the brand violet, from assets/icon.png');
-  assert.ok(css.includes('#0d0a1c'), 'the night canvas');
-  assert.ok(css.includes('#f6f4fb'), 'the daylight canvas');
+  // The page wears the minimal blue/indigo brand (see :root in styles.css).
+  assert.ok(css.includes('#4338ca'), 'the brand indigo of the blue/indigo palette');
+  assert.ok(css.includes('#080b1f'), 'the night canvas');
+  assert.ok(css.includes('#f4f6fe'), 'the daylight canvas');
   assert.ok(js.includes('prefers-color-scheme'), 'the toggle must know the OS state');
   assert.ok(js.includes("'babelish-theme'"), 'and remember an explicit choice');
   // No flash: the saved choice is applied in <head>, before the stylesheet.
@@ -188,18 +188,18 @@ test('the browser chrome matches the page, on every page', () => {
     const markup = read(page);
     assert.match(
       markup,
-      /<meta name="theme-color" content="#F6F4FB" media="\(prefers-color-scheme: light\)" \/>/,
+      /<meta name="theme-color" content="#F4F6FE" media="\(prefers-color-scheme: light\)" \/>/,
       `${page} needs a daylight theme-color`
     );
     assert.match(
       markup,
-      /<meta name="theme-color" content="#0D0A1C" media="\(prefers-color-scheme: dark\)" \/>/,
+      /<meta name="theme-color" content="#080B1F" media="\(prefers-color-scheme: dark\)" \/>/,
       `${page} needs a night theme-color`
     );
   }
   const boot = read('site/theme-boot.js');
-  assert.ok(boot.includes('#F6F4FB') && boot.includes('#0D0A1C'));
-  assert.ok(js.includes('#F6F4FB') && js.includes('#0D0A1C'), 'the toggle must repaint it');
+  assert.ok(boot.includes('#F4F6FE') && boot.includes('#080B1F'));
+  assert.ok(js.includes('#F4F6FE') && js.includes('#080B1F'), 'the toggle must repaint it');
   for (const [file, source] of [
     ['site/app.js', js],
     ['site/theme-boot.js', boot],

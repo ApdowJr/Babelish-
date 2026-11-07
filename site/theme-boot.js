@@ -4,13 +4,18 @@
  * otherwise the page would flash daylight and then swap to night. With no
  * stored choice we deliberately set nothing, so the CSS media query keeps
  * following the device (and keeps following it if the OS switches later).
+ *
+ * We also mark <html> with .js so the CSS scroll-reveal styles only arm when
+ * this script (and therefore app.js) is actually running.
  */
 (function () {
   /* Matches --bg in styles.css for each side; the two <meta name="theme-color">
    * tags in the markup carry these for the OS-driven case. */
-  var CHROME = { light: '#F6F4FB', dark: '#0D0A1C' };
+  var CHROME = { light: '#F4F6FE', dark: '#080B1F' };
 
   try {
+    document.documentElement.classList.add('js');
+
     var saved = localStorage.getItem('babelish-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.setAttribute('data-theme', saved);
